@@ -28,7 +28,7 @@ The app also includes inherited notes and recording features. **Notes are not ye
 
 ## Current development status
 
-As of **October 22, 2026**, the latest owner-accepted phone build is **WagLock Dev 1.3.8 (35)**. Build 35 fixed a photo-viewer teardown crash and passed the owner's checks, with one Notes background defect corrected in installed build 36. Build 37 completes the remaining Figma UI implementation; its current validation is recorded in the [UI implementation record](docs/portable-vault/figma-ui-implementation.md). The build 35 validation included **172 unit/security tests and repeated simulator UI workflows**. These results cover specific behavior, not the entire security model.
+As of **October 22, 2026**, the latest owner-accepted phone build is **WagLock Dev 1.3.8 (35)**. Build 35 fixed a photo-viewer teardown crash and passed the owner's checks, with one Notes background defect corrected in installed build 36. Installed build 37 completes the remaining Figma UI implementation; its validation is recorded in the [UI implementation record](docs/portable-vault/figma-ui-implementation.md). Build 38 adds [session-bound note saves](docs/portable-vault/note-write-boundary.md), with 181 unit/security tests and the editor integration check passing; phone acceptance remains separate. The build 35 validation included **172 unit/security tests and repeated simulator UI workflows**. These results cover specific behavior, not the entire security model.
 
 | Capability | Status |
 | --- | --- |

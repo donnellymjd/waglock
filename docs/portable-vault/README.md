@@ -6,6 +6,7 @@ WagLock is an independent fork of [SealedPocket / ZeroNet Space](https://github.
 
 - [Portable export implementation experiment](portable-export-design.md): iOS-simulator/macOS writer, independent CLI recovery, nested passwords and integrity gates; not linked to the app.
 - [Prioritized backlog](backlog-priorities.md): security/recovery, alternative vault, encrypted Trash, beta preparation and later sharing work.
+- [Note write boundary](note-write-boundary.md): build 38 cancellation, draft clearing and owner-session checks; persisted note encryption remains open.
 - [Document preview boundary](document-preview-boundary.md): build 33 revocation and rejection of late PDF/text results.
 - [Shared-album discovery](shared-albums.md): two-person E2E sharing, mutual consent, revocation limits, transport options and prototype gates (D2S-139).
 - [Session-bound exports](export-session-boundary.md): build 32 operation-owned plaintext output, revocation, safe filenames and cleanup isolation.

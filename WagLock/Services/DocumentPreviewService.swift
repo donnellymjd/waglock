@@ -1,7 +1,7 @@
 internal import Combine
 import Foundation
 
-/// Revocable capability for legacy owner document previews. No key or plaintext cache.
+/// Revocable owner-session capability for document previews and note writes. No key or plaintext cache.
 @MainActor
 final class DocumentPreviewService: ObservableObject {
     static let shared = DocumentPreviewService()

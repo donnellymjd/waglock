@@ -22,17 +22,17 @@ final class SecretNoteDraftManager {
         return try? JSONDecoder().decode(SecretNoteDraft.self, from: data)
     }
 
-    func saveDraft(title: String, content: String) {
+    @discardableResult
+    func saveDraft(title: String, content: String) -> Bool {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty || !trimmedContent.isEmpty else {
             clearDraft()
-            return
+            return true
         }
         let draft = SecretNoteDraft(title: title, content: content, updatedAt: Date())
-        if let data = try? JSONEncoder().encode(draft) {
-            keychainService.saveSecretNoteDraft(data)
-        }
+        guard let data = try? JSONEncoder().encode(draft) else { return false }
+        return keychainService.saveSecretNoteDraft(data)
     }
 
     func clearDraft() {

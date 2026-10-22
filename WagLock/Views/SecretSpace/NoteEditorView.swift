@@ -14,21 +14,30 @@ struct NoteEditorView: View {
 
     @State private var title: String
     @State private var content: String
-    @State private var lastAutoSaved: Date?
-    @State private var autoSaveTask: Task<Void, Never>?
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var autosave = NoteAutosaveCoordinator()
+    @State private var savedExplicitly = false
 
     let isNewNote: Bool
-    let onSave: (String, String) -> Void
-    let onAutoSave: (String, String) -> Void
+    let loadDraft: (() -> SecretNoteDraft?)?
+    let sessionID: UUID?
+    let maySave: @MainActor () -> Bool
+    let onSave: (String, String) -> Bool
+    let onAutoSave: (String, String) -> Bool
 
     init(
         initialTitle: String, initialContent: String, isNewNote: Bool,
-        onSave: @escaping (String, String) -> Void,
-        onAutoSave: @escaping (String, String) -> Void
+        loadDraft: (() -> SecretNoteDraft?)? = nil,
+        sessionID: UUID? = nil, maySave: @escaping @MainActor () -> Bool = { false },
+        onSave: @escaping (String, String) -> Bool,
+        onAutoSave: @escaping (String, String) -> Bool
     ) {
         self._title = State(initialValue: initialTitle)
         self._content = State(initialValue: initialContent)
         self.isNewNote = isNewNote
+        self.loadDraft = loadDraft
+        self.sessionID = sessionID
+        self.maySave = maySave
         self.onSave = onSave
         self.onAutoSave = onAutoSave
     }
@@ -50,7 +59,11 @@ struct NoteEditorView: View {
                     .background(ColorTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 16))
                     .accessibilityIdentifier("note.content")
                 bottomToolbar
-                Button("Save note") { onSave(title, content); dismiss() }
+                if let error = autosave.error {
+                    Text(error).font(.footnote).foregroundStyle(ColorTheme.destructive)
+                        .accessibilityIdentifier("note.save.error")
+                }
+                Button("Save note", action: saveAndDismiss)
                     .buttonStyle(WagLockPrimaryButtonStyle()).disabled(isEmpty)
                     .accessibilityIdentifier("note.save")
             }.padding(24)
@@ -61,14 +74,25 @@ struct NoteEditorView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("Done") { onSave(title, content); dismiss() }.disabled(isEmpty)
+                Button("Done", action: saveAndDismiss).disabled(isEmpty)
             }
         }
         .onAppear {
+            // Navigation destinations may be constructed before the preceding editor saves.
+            if isNewNote, let loadDraft {
+                let draft = loadDraft()
+                title = draft?.title ?? ""
+                content = draft?.content ?? ""
+            }
+            savedExplicitly = false
             focusedField = .content
         }
         .onChange(of: title) { _ in scheduleAutoSave() }
         .onChange(of: content) { _ in scheduleAutoSave() }
+        .onChange(of: scenePhase) { _, phase in if phase != .active { autosave.flush() } }
+        .onDisappear {
+            if savedExplicitly { autosave.cancel() } else { autosave.flush() }
+        }
     }
 
     // MARK: - View Components
@@ -92,7 +116,7 @@ struct NoteEditorView: View {
             Spacer()
 
             // 自动保存状态
-            if let lastSaved = lastAutoSaved {
+            if let lastSaved = autosave.lastSavedAt {
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.caption2)
@@ -112,13 +136,19 @@ struct NoteEditorView: View {
     }
 
     private func scheduleAutoSave() {
-        autoSaveTask?.cancel()
-        autoSaveTask = Task.detached(priority: .background) { [title, content] in
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
-            await MainActor.run {
-                onAutoSave(title, content)
-                lastAutoSaved = Date()
-            }
+        guard let sessionID else { return }
+        let title = title, content = content
+        autosave.schedule(session: sessionID, authorize: maySave) {
+            onAutoSave(title, content)
+        }
+    }
+
+    private func saveAndDismiss() {
+        guard let sessionID else { return }
+        let title = title, content = content
+        if autosave.saveNow(session: sessionID, authorize: maySave, commit: { onSave(title, content) }) {
+            savedExplicitly = true
+            dismiss()
         }
     }
 
@@ -142,8 +172,8 @@ struct NoteEditorView: View {
             initialTitle: "",
             initialContent: "",
             isNewNote: true,
-            onSave: { _, _ in },
-            onAutoSave: { _, _ in }
+            onSave: { _, _ in true },
+            onAutoSave: { _, _ in true }
         )
     }
 }

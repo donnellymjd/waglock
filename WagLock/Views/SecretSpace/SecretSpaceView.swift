@@ -13,9 +13,10 @@ import SwiftUI
 struct SecretSpaceView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \SecretNote.modifiedAt, order: .reverse) private var notes: [SecretNote]
+    @EnvironmentObject private var auth: AuthenticationViewModel
     @EnvironmentObject private var guestModeManager: GuestModeManager
 
-    private let draftManager = SecretNoteDraftManager.shared
+    private var draftManager: SecretNoteDraftManager { .shared }
 
     var body: some View {
         NavigationStack {
@@ -102,16 +103,19 @@ struct SecretSpaceView: View {
 
     @ViewBuilder
     private func createNoteEditor() -> some View {
-        let draft = draftManager.loadDraft()
+        let session = auth.librarySessionID
         NoteEditorView(
-            initialTitle: draft?.title ?? "",
-            initialContent: draft?.content ?? "",
+            initialTitle: "",
+            initialContent: "",
             isNewNote: true,
+            loadDraft: { mayWrite(session) ? draftManager.loadDraft() : nil },
+            sessionID: session, maySave: { mayWrite(session) },
             onSave: { title, content in
-                saveNote(existing: nil, title: title, content: content, clearDraft: true)
+                saveNote(existing: nil, title: title, content: content, clearDraft: true, session: session)
             },
             onAutoSave: { title, content in
-                draftManager.saveDraft(title: title, content: content)
+                guard mayWrite(session) else { return false }
+                return draftManager.saveDraft(title: title, content: content)
             }
         )
         .environment(\.modelContext, modelContext)
@@ -119,15 +123,17 @@ struct SecretSpaceView: View {
 
     @ViewBuilder
     private func editNoteEditor(note: SecretNote) -> some View {
+        let session = auth.librarySessionID
         NoteEditorView(
             initialTitle: note.title,
             initialContent: note.content,
             isNewNote: false,
+            sessionID: session, maySave: { mayWrite(session) },
             onSave: { title, content in
-                saveNote(existing: note, title: title, content: content)
+                saveNote(existing: note, title: title, content: content, session: session)
             },
             onAutoSave: { title, content in
-                saveNote(existing: note, title: title, content: content)
+                saveNote(existing: note, title: title, content: content, session: session)
             }
         )
         .environment(\.modelContext, modelContext)
@@ -157,8 +163,9 @@ struct SecretSpaceView: View {
     }
 
     private func saveNote(
-        existing: SecretNote?, title: String, content: String, clearDraft: Bool = false
-    ) {
+        existing: SecretNote?, title: String, content: String, clearDraft: Bool = false, session: UUID
+    ) -> Bool {
+        guard mayWrite(session) else { return false }
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalTitle = trimmed.isEmpty ? String(localized: "note.title.placeholder") : trimmed
         let now = Date()
@@ -176,14 +183,19 @@ struct SecretSpaceView: View {
             modelContext.insert(newNote)
         }
 
-        if clearDraft {
-            draftManager.clearDraft()
-        }
-
         do {
             try modelContext.save()
+            if clearDraft { draftManager.clearDraft() }
+            return true
         } catch {
+            modelContext.rollback()
+            return false
         }
+    }
+
+    private func mayWrite(_ session: UUID) -> Bool {
+        auth.isAuthenticated && guestModeManager.isOwnerMode && auth.librarySessionID == session
+            && DocumentPreviewService.shared.permits(session, revision: DocumentPreviewService.shared.revision)
     }
 
 }

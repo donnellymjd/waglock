@@ -132,3 +132,15 @@ Build 35 launch request was refused because the phone is locked. Installation su
 ## Build 37 — completed current-feature UI
 
 Completes the remaining Figma layouts and native runtime counterparts. See the [70-state implementation map](../../design/ui-refinement/IMPLEMENTATION-COVERAGE.md) and [validation](figma-ui-implementation.md). Complete units: 173 passed. Corrected final UI workflows and generated-video import/player passed; signed device compilation passed. Physical hardware acceptance remains separate from the passing simulator checks. Existing app identity and encrypted storage are preserved.
+
+Build 37 installation succeeded on the owner phone over the same app identity, preserving data. Installation is not physical acceptance.
+
+## Build 38 — note save lifecycle
+
+Continues D2S-116 after the UI push. Canceled autosaves cannot restore cleared drafts or write into a revoked owner session. Explicit Save clears the draft after database success and stays open on save failure. Presentation-time draft reload fixes the stale Back/reopen snapshot exposed by the integration check. See [note-write boundary](note-write-boundary.md).
+
+Final combined result: 181 unit/security tests and one real editor workflow passed (`/private/tmp/waglock-notes-boundary-corrected.xcresult`). The first editor run failed on Back/reopen and was corrected, not waived. Signed build passed (`/private/tmp/waglock-build38-device-final.log`). Phone installation/acceptance are recorded separately.
+
+Physical check uses disposable notes: Save a new note, reopen New and confirm its fields are empty; type another draft, use Back, reopen New and confirm the latest text; save, background/lock, unlock and reopen the saved note. Verify normal password/Face ID. Do not send passwords or private note text. Persisted notes remain plaintext SwiftData; this is not D2S-143 encrypted notes.
+
+**Build 38 installed (2026-10-22):** installation succeeded on the owner phone with the same bundle identity and without uninstalling/resetting the library (`/private/tmp/waglock-build38-install.log`). Physical acceptance is pending.

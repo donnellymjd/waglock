@@ -3,6 +3,50 @@ import XCTest
 /// Uses only the explicitly disposable, already-initialized QA simulator.
 final class UICompletionUITests: XCTestCase {
     @MainActor
+    func testExplicitNoteSaveClearsDraftAndBackPreservesLatestEdit() throws {
+        guard ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"]?.hasPrefix("Vaultito Import QA") == true else {
+            throw XCTSkip("Requires the disposable initialized QA simulator")
+        }
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-waglock.passwordKeyboard", "fullKeyboard", "-autoLockTimeout", "-1"]
+        app.launch()
+        let password = app.secureTextFields["Enter password"]
+        XCTAssertTrue(password.waitForExistence(timeout: 15))
+        password.tap(); password.typeText("album-ui-test-password\n")
+        XCTAssertTrue(app.tabBars.buttons["Notes"].waitForExistence(timeout: 15))
+        app.tabBars.buttons["Notes"].tap()
+        app.navigationBars.buttons["New"].tap()
+        let title = app.textFields["note.title"], body = app.textViews["note.content"]
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        func replace(_ field: XCUIElement, with text: String) {
+            field.tap()
+            let old = (field.value as? String) ?? ""
+            if !old.isEmpty { field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: old.count)) }
+            field.typeText(text)
+        }
+        let name = "Save boundary " + UUID().uuidString.prefix(6)
+        replace(title, with: name)
+        replace(body, with: "Disposable note saved explicitly.")
+        app.navigationBars.buttons["Done"].tap()
+        XCTAssertTrue(app.staticTexts[name].firstMatch.waitForExistence(timeout: 5))
+        app.navigationBars.buttons["New"].tap()
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        XCTAssertEqual(body.value as? String, "", "Explicit Save must clear the draft")
+        XCTAssertFalse((title.value as? String ?? "").contains(name))
+        let backDraft = "Back boundary " + UUID().uuidString.prefix(6)
+        replace(title, with: backDraft)
+        replace(body, with: "Latest edit survives Back.")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.navigationBars.buttons["New"].tap()
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        XCTAssertEqual(title.value as? String, backDraft)
+        XCTAssertEqual(body.value as? String, "Latest edit survives Back.")
+        app.navigationBars.buttons["Done"].tap()
+        XCTAssertTrue(app.staticTexts[backDraft].firstMatch.waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testGeneratedVideoImportAndPlayer() throws {
         guard ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"]?.hasPrefix("Vaultito Import QA") == true else {
             throw XCTSkip("Requires the seeded disposable QA simulator")
