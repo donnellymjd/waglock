@@ -17,6 +17,8 @@ import subprocess
 import sys
 import uuid
 
+from age_bootstrap import AgeSetupError, age_executable
+
 MAX_METADATA = 64 * 1024 * 1024
 DEFAULT_MAX_BYTES = 1024 ** 4
 DEFAULT_MAX_ENTRIES = 200000
@@ -404,7 +406,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("encrypted", type=Path)
     parser.add_argument("destination", type=Path)
-    parser.add_argument("--age", default="age")
+    parser.add_argument("--age", help="Use this age executable instead of automatic discovery/setup")
+    parser.add_argument("--no-install-age", action="store_true", help="Do not download age; use an installed or verified cached copy")
     parser.add_argument("--identity", type=Path)
     parser.add_argument("--outer-only", action="store_true", help="Explicitly retain child ciphertext without decrypting it")
     parser.add_argument("--max-bytes", type=int, default=DEFAULT_MAX_BYTES)
@@ -413,9 +416,15 @@ def main():
     if args.max_bytes <= 0 or args.max_entries <= 0:
         parser.error("Recovery limits must be positive")
     try:
-        report = recover(args.encrypted, args.destination.absolute(), args.age, identity=args.identity,
-            outer_only=args.outer_only, max_bytes=args.max_bytes, max_entries=args.max_entries)
-    except (InvalidBackup, OSError) as error:
+        if not args.encrypted.is_file():
+            raise InvalidBackup("Backup file not found. Check the encrypted file path.")
+        destination = args.destination.absolute()
+        if destination.exists() or destination.is_symlink() or destination.with_name(destination.name + ".partial").exists() or destination.with_name(destination.name + ".partial").is_symlink():
+            raise InvalidBackup("Choose a new recovery directory; the destination or its .partial staging folder already exists.")
+        with age_executable(args.age, allow_install=not args.no_install_age) as age:
+            report = recover(args.encrypted, destination, age, identity=args.identity,
+                outer_only=args.outer_only, max_bytes=args.max_bytes, max_entries=args.max_entries)
+    except (InvalidBackup, AgeSetupError, OSError) as error:
         print("Recovery stopped without publishing a destination: " + str(error), file=sys.stderr)
         raise SystemExit(1)
     print(json.dumps(report, indent=2))

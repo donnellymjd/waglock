@@ -91,5 +91,20 @@
     "resultBundle": "/private/tmp/waglock-backup-ui-save.xcresult",
     "actualProviderCopiedCiphertextRecoveredIndependently": true,
     "expectedDisposableNotePresent": true
+  },
+  "recoveryHelperAutomaticAgeSetup": {
+    "date": "2026-10-22",
+    "ageVersion": "1.3.2",
+    "sourcePinnedReleaseSHA256": true,
+    "automaticDownloadAndNativeFixtureRecoveryOnMacOS": true,
+    "verifiedCacheWorksWithDownloadsDisabled": true,
+    "publicFixturePayloadsVerified": 7,
+    "nestedParentOnlyRejections": 2,
+    "tamperAndTruncationRejections": 2,
+    "pythonToolTestsPassed": 52,
+    "testsLog": "/private/tmp/waglock-age-setup-tests.log",
+    "phoneOrPrivateMediaAccessed": false,
+    "otherOSBootstrapValidation": "archive/platform unit checks only; no native Windows/Linux execution claimed",
+    "systemPackageManagerOrAdminAccessRequired": false
   }
 }

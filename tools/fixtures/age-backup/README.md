@@ -2,7 +2,7 @@
 
 **All content and credentials here are intentionally public disposable test data. Never use these passwords for real content.** No owner media, phone credentials or Keychain entries were exported. The 248 KiB encrypted fixture was produced by `PortableExportSnapshotTests.testCompleteNativeBackupFixtureForIndependentRecovery()` using the actual iOS backup writer on the disposable simulator. It includes seven generated payloads, notes/drafts, Unicode metadata and two independently password-protected nested domains. Original plaintext source files are not required for verification; expected hashes and values are recorded separately.
 
-`provenance.json` pins the encrypted fixture SHA-256. `expected.public.json` contains public-only fixture credentials and expected values. Recover using Python and the **unmodified official age CLI**:
+`provenance.json` pins the encrypted fixture SHA-256. `expected.public.json` contains public-only fixture credentials and expected values. Recover using Python and the **unmodified official age CLI** (this fixture checker takes an explicit installed age path; the user-facing recovery helper also supports automatic setup):
 
 ```sh
 python3 tools/check_backup_interop.py --age /path/to/age
