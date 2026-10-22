@@ -46,7 +46,8 @@ final class LegacyMetadataTransitionPrototype {
         var records: [Record] = []
         func append<T: Encodable>(_ value: T, kind: String, id: UUID) throws {
             guard records.count < maxRecords else { throw Failure.tooLarge }
-            let payload = try JSONEncoder().encode(value)
+            let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+            let payload = try encoder.encode(value)
             guard payload.count <= maxRecordBytes else { throw Failure.tooLarge }
             records.append(Record(kind: kind, id: id, payload: payload))
         }
