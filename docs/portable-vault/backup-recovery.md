@@ -49,6 +49,14 @@ python3 "$HOME/repos/WagLock/tools/backup_recovery.py" \
 
 Replace the identity path with your actual file. Keep that private identity separately from your backup; the public `age1…` recipient entered in WagLock cannot decrypt it.
 
+### If age reports “incorrect passphrase”
+
+If no protected-album UUID appeared beforehand, the outer archive has not opened. Use the exact password chosen when **that copy** was exported; it may differ from your app unlock password. Passwords are case-sensitive and spaces count. Do not put the password on the command line or send it in a bug report.
+
+If you are already using the correct backup password, treat this as an unresolved recovery failure. Keep the original backup and the phone library. Create a fresh export with a new password of your own, save it under a **different filename** (for example `WagLock-Backup-Test.tar.age`), and try that file with a new output folder such as `WagLock-Recovered-Test`. This separates a fresh export from an older or incomplete provider copy. Verify the new file has finished copying before retrying. Do not replace the only backup or delete source media.
+
+Report whether the fresh export succeeds. Passing fixture tests does not prove that a particular phone backup is recoverable. A protected-album failure is identified separately by its domain UUID and requires that album's own password, including the separately chosen export password for a Face ID-only album.
+
 ### Automatic age setup and optional controls
 
 **age sets itself up automatically.** If the official [age tool](https://github.com/FiloSottile/age#installation) is already available in your terminal, the helper uses it. Otherwise, on supported macOS/Linux/Windows Intel/ARM64 computers, it downloads the official **age 1.3.2** release over HTTPS, checks a SHA-256 checksum pinned in WagLock's source, and uses a private local copy. No Homebrew, administrator password or system-wide install is required. The first download is about 20 MB and needs internet access; your backup, passwords and keys are never uploaded. Later runs can reuse the verified cached release offline.

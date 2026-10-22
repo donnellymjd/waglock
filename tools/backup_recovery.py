@@ -348,8 +348,19 @@ def recover(encrypted, destination, age, *, identity=None, outer_only=False, max
                 command += ["--identity", str(identity)]
             command += [str(source)]
             # age owns interactive passphrase entry; no secret goes through argv/environment.
+            if depth == 0:
+                if identity is None:
+                    print("Opening the outer backup. At the age prompt, enter the password chosen when this backup was exported.", file=sys.stderr)
+                else:
+                    print("Opening the outer backup with your supplied private identity.", file=sys.stderr)
             if subprocess.run(command).returncode != 0:
-                raise InvalidBackup("age rejected the password, identity or encrypted content")
+                if depth > 0:
+                    message = "Unable to decrypt protected album " + label + ". It needs its own album/export password; the outer backup password cannot replace it."
+                elif identity is not None:
+                    message = "Unable to decrypt the outer backup with this private identity. Check that the identity matches the recipient used for this backup."
+                else:
+                    message = "Unable to decrypt the outer backup with the entered export password. Check that this is the intended backup file. If the correct backup password still fails, keep this file and report the failure; do not send the password."
+                raise InvalidBackup(message + " The age error above may also indicate damaged encrypted content.")
             target.mkdir(mode=0o700)
             result = unpack_verified(candidate, target, expected_domain=label, expected_parent=parent, max_bytes=remaining["bytes"], max_entries=remaining["entries"])
             candidate.unlink()

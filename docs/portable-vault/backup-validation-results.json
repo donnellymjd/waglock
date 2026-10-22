@@ -74,8 +74,8 @@
   "physicalPhone": {
     "signedBuild": true,
     "installed": true,
-    "ownerAcceptance": "pending",
-    "cloudProviderUpload": "pending",
+    "ownerAcceptance": "Blocked: owner reports incorrect passphrase for phone export and confirms using export backup password; root cause unresolved.",
+    "cloudProviderUpload": "End-to-end recovery unverified; outer archive password rejection reported.",
     "installedVersion": "1.3.8 (39)",
     "automatedLaunch": "blocked by locked device, CoreDeviceError 10002"
   },
@@ -106,5 +106,18 @@
     "phoneOrPrivateMediaAccessed": false,
     "otherOSBootstrapValidation": "archive/platform unit checks only; no native Windows/Linux execution claimed",
     "systemPackageManagerOrAdminAccessRequired": false
+  },
+  "phonePassphraseFailureInvestigation": {
+    "date": "2026-10-22",
+    "ownerConfirmsBackupExportPassword": true,
+    "phoneFailureRootCause": "unresolved",
+    "installedOfficialAgeVersion": "v1.3.2",
+    "publicNativeFixtureRecoveryPasses": true,
+    "actualSimulatorUIPasswordEntryBackupIndependentlyRecovers": true,
+    "publicDisposableNotesVerified": 7,
+    "passwordUIArtifactCapturedBeforeFilesHandoff": true,
+    "repeatFilesUITest": "blocked by expected Replace Existing Items confirmation for previously saved public fixture; no production regression inferred",
+    "privatePhoneBackupOrPasswordAccessed": false,
+    "pythonTestsPassed": 52
   }
 }
