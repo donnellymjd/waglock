@@ -1,17 +1,19 @@
 /*
   InfoPlist.strings
-  ZeroNet-Space (English)
+  WagLock (English)
 
   Created by Claude on 2025-11-16.
 
 */
 
 /* App name displayed on home screen */
-"CFBundleDisplayName" = "ZeroNet Space";
+"CFBundleDisplayName" = "WagLock Dev";
 
 /* App name in Settings and other system locations */
-"CFBundleName" = "ZeroNet Space";
+"CFBundleName" = "WagLock";
 
 "NSMicrophoneUsageDescription" = "Record audio memos and store them encrypted on this device.";
 
 "NSPhotoLibraryUsageDescription" = "Access your photo library to encrypt photos and videos in your private space on this device. Your content stays on your device, with no uploads or tracking.";
+
+"NSFaceIDUsageDescription" = "Use Face ID to unlock WagLock and albums you choose to protect with biometrics.";

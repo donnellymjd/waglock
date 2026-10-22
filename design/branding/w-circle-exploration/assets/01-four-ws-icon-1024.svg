@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1024">
+	<rect fill="#241E32" width="1024" height="1024"/>
+	<defs>
+		<linearGradient id="gradient_0" gradientUnits="userSpaceOnUse" x1="361" y1="178" x2="663" y2="178">
+			<stop offset="0" stop-color="#ED87B5"/>
+			<stop offset="0.5" stop-color="#FF797E"/>
+			<stop offset="1" stop-color="#FFB36C"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_0)" stroke-width="53" stroke-linecap="round" stroke-linejoin="round" d="M361 178L436.5 352L512 221.5L587.5 352L663 178"/>
+	<defs>
+		<linearGradient id="gradient_1" gradientUnits="userSpaceOnUse" x1="361" y1="178" x2="663" y2="178">
+			<stop offset="0" stop-color="#FEB66C"/>
+			<stop offset="0.5" stop-color="#E5D579"/>
+			<stop offset="1" stop-color="#92D4A0"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_1)" stroke-width="53" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0 1 -1 0 1024 0)" d="M361 178L436.5 352L512 221.5L587.5 352L663 178"/>
+	<defs>
+		<linearGradient id="gradient_2" gradientUnits="userSpaceOnUse" x1="361" y1="178" x2="663" y2="178">
+			<stop offset="0" stop-color="#8DD4A4"/>
+			<stop offset="0.5" stop-color="#69C8DC"/>
+			<stop offset="1" stop-color="#8A9FEA"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_2)" stroke-width="53" stroke-linecap="round" stroke-linejoin="round" transform="matrix(-1 0 0 -1 1024 1024)" d="M361 178L436.5 352L512 221.5L587.5 352L663 178"/>
+	<defs>
+		<linearGradient id="gradient_3" gradientUnits="userSpaceOnUse" x1="361" y1="178" x2="663" y2="178">
+			<stop offset="0" stop-color="#8D9CEB"/>
+			<stop offset="0.5" stop-color="#BC8CE1"/>
+			<stop offset="1" stop-color="#EA88B9"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_3)" stroke-width="53" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0 -1 1 0 0 1024)" d="M361 178L436.5 352L512 221.5L587.5 352L663 178"/>
+</svg>

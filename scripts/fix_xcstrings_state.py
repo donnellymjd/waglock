@@ -5,7 +5,7 @@ import json
 
 
 def fix_xcstrings():
-    input_file = "/Users/WangQiao/Desktop/github/ios-dev/ZeroNet-Space/ZeroNet_Space/Resources/Localizable.xcstrings"
+    input_file = "/Users/WangQiao/Desktop/github/ios-dev/WagLock/WagLock/Resources/Localizable.xcstrings"
 
     print("📖 Reading Localizable.xcstrings...")
     with open(input_file, "r", encoding="utf-8") as f:

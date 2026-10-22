@@ -274,7 +274,7 @@ def main():
         ["python3", "find_chinese.py"],
         capture_output=True,
         text=True,
-        cwd="/Users/WangQiao/Desktop/github/ios-dev/ZeroNet-Space/ZeroNet_Space",
+        cwd="/Users/WangQiao/Desktop/github/ios-dev/WagLock/WagLock",
     )
 
     # Parse output to extract unique strings with context

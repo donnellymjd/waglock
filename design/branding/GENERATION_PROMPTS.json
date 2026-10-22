@@ -1,0 +1,24 @@
+{
+  "tool": "built-in image_gen",
+  "purpose": "Unapproved exploration references for the designer brief",
+  "generatedOn": "2026-10-18",
+  "transparent_background": false,
+  "briefs": [
+    [
+      "v-window",
+      "Use case: logo-brand. Asset type: original iOS app icon for Vaultito, a friendly premium personal photo vault. Create one finished square 1024x1024 icon, full-bleed opaque deep plum #271C38 background. A large confident custom coral #FF755F V symbol made of two rounded unequal strokes; one small square negative-space window at its upper-right suggests a photo frame. Beautiful simple vector-like geometry, generous negative space, extremely legible silhouette at 40px, subtle soft tonal depth allowed but mostly flat. Symbol occupies middle 65%. No words, letters other than the abstract V, numbers, badges, padlocks, shields, keys, loops, ribbons, paper textures, borders, outer rounded corners, drop shadow outside tile, mockup or watermark. Original independent identity, warm and approachable rather than enterprise cybersecurity. One icon only, no presentation sheet."
+    ],
+    [
+      "photo-stack",
+      "Use case: logo-brand. Asset type: original iOS app icon for Vaultito. Create one finished square 1024x1024 icon with full-bleed opaque ink #191B2B background. Central two offset solid photographic tiles, a large clean angular V cut through the front tangerine #FF993E tile revealing the dark background, rear tile in soft peach #FFE2C7. Bold contemporary vector-like geometric symbol. No actual photos/landscapes/camera lens. Distinct silhouette, charming precision, thoughtful negative space, simple enough to recognize at 40px; symbol occupies middle 65%. No words, labels, logo sheet, lock/shield/key, loop, folded ribbon, literal document or utility-app disguise. No baked outer corner mask, no border, no external shadows or watermark. One polished icon only."
+    ],
+    [
+      "mosaic",
+      "Use case: logo-brand. Asset type: original iOS app icon for Vaultito. Create one finished square 1024x1024 icon, full-bleed opaque midnight #151D49 background. Three oversized asymmetrical rounded geometric blocks arranged to form a strong V-shaped negative-space opening. Ultramarine #4657EA and sky blue #ACC9FF blocks, restrained contrast, bold generous proportions. Quiet modern Swiss-influenced geometry with friendly rounded terminals, independent distinctive identity for a private photo gallery. Symbol occupies middle 65%, very legible at 40px, mostly flat with impeccable edges. No words, numbers, logo sheets, padlocks, shields, keys, Möbius loops, ribbons, paper textures, actual photographs, outer rounded corners, borders or watermark. One icon only."
+    ],
+    [
+      "night-bloom",
+      "Use case: logo-brand. Asset type: original iOS app icon for Vaultito. Create one finished square 1024x1024 icon, full-bleed opaque aubergine #29142A background. Four broad asymmetrical abstract petals surrounding a small diamond of negative space, one petal with a distinct V-shaped notch. Berry #9C3F71 and pink #FFB4CA tones, a quiet personal night-bloom symbol, sophisticated and playful. Simple bold vector-like geometry and beautiful asymmetric balance; not a multicolor rainbow flower and not a camera shutter. Clear silhouette at 40px, middle 65% symbol scale. No text, labels, comparison sheet, padlock/shield/key, loops, ribbons, utility objects, outer rounded corner mask, borders, shadows outside tile or watermark. One icon only."
+    ]
+  ]
+}

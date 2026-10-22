@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1024">
+	<rect fill="#241E32" width="1024" height="1024"/>
+	<defs>
+		<linearGradient id="gradient_0" gradientUnits="userSpaceOnUse" x1="429" y1="182.5" x2="595" y2="182.5">
+			<stop offset="0" stop-color="#F68099"/>
+			<stop offset="0.5" stop-color="#FF797E"/>
+			<stop offset="1" stop-color="#FF9675"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_0)" stroke-width="33" stroke-linecap="round" stroke-linejoin="round" d="M429 182.5L470.5 305.5L512 213.25L553.5 305.5L595 182.5"/>
+	<defs>
+		<linearGradient id="gradient_1" gradientUnits="userSpaceOnUse" x1="429" y1="182.5" x2="595" y2="182.5">
+			<stop offset="0" stop-color="#FF9874"/>
+			<stop offset="0.5" stop-color="#FFB56B"/>
+			<stop offset="1" stop-color="#F3C472"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_1)" stroke-width="33" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.707107 0.707107 -0.707107 0.707107 512 -212.077)" d="M429 182.5L470.5 305.5L512 213.25L553.5 305.5L595 182.5"/>
+	<defs>
+		<linearGradient id="gradient_2" gradientUnits="userSpaceOnUse" x1="429" y1="182.5" x2="595" y2="182.5">
+			<stop offset="0" stop-color="#F1C672"/>
+			<stop offset="0.5" stop-color="#E5D579"/>
+			<stop offset="1" stop-color="#BCD58D"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_2)" stroke-width="33" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0 1 -1 0 1024 0)" d="M429 182.5L470.5 305.5L512 213.25L553.5 305.5L595 182.5"/>
+	<defs>
+		<linearGradient id="gradient_3" gradientUnits="userSpaceOnUse" x1="429" y1="182.5" x2="595" y2="182.5">
+			<stop offset="0" stop-color="#B8D48E"/>
+			<stop offset="0.5" stop-color="#8FD4A2"/>
+			<stop offset="1" stop-color="#7DCEBE"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_3)" stroke-width="33" stroke-linecap="round" stroke-linejoin="round" transform="matrix(-0.707107 0.707107 -0.707107 -0.707107 1236.08 512)" d="M429 182.5L470.5 305.5L512 213.25L553.5 305.5L595 182.5"/>
+	<defs>
+		<linearGradient id="gradient_4" gradientUnits="userSpaceOnUse" x1="429" y1="182.5" x2="595" y2="182.5">
+			<stop offset="0" stop-color="#7BCEC0"/>
+			<stop offset="0.5" stop-color="#69C8DC"/>
+			<stop offset="1" stop-color="#79B3E3"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_4)" stroke-width="33" stroke-linecap="round" stroke-linejoin="round" transform="matrix(-1 0 0 -1 1024 1024)" d="M429 182.5L470.5 305.5L512 213.25L553.5 305.5L595 182.5"/>
+	<defs>
+		<linearGradient id="gradient_5" gradientUnits="userSpaceOnUse" x1="429" y1="182.5" x2="595" y2="182.5">
+			<stop offset="0" stop-color="#7BB2E4"/>
+			<stop offset="0.5" stop-color="#8B9DEB"/>
+			<stop offset="1" stop-color="#A395E6"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_5)" stroke-width="33" stroke-linecap="round" stroke-linejoin="round" transform="matrix(-0.707107 -0.707107 0.707107 -0.707107 512 1236.08)" d="M429 182.5L470.5 305.5L512 213.25L553.5 305.5L595 182.5"/>
+	<defs>
+		<linearGradient id="gradient_6" gradientUnits="userSpaceOnUse" x1="429" y1="182.5" x2="595" y2="182.5">
+			<stop offset="0" stop-color="#A494E6"/>
+			<stop offset="0.5" stop-color="#BC8CE1"/>
+			<stop offset="1" stop-color="#D38ACD"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_6)" stroke-width="33" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0 -1 1 0 0 1024)" d="M429 182.5L470.5 305.5L512 213.25L553.5 305.5L595 182.5"/>
+	<defs>
+		<linearGradient id="gradient_7" gradientUnits="userSpaceOnUse" x1="429" y1="182.5" x2="595" y2="182.5">
+			<stop offset="0" stop-color="#D58ACB"/>
+			<stop offset="0.5" stop-color="#EC88B7"/>
+			<stop offset="1" stop-color="#F5819C"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_7)" stroke-width="33" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.707107 -0.707107 0.707107 0.707107 -212.077 512)" d="M429 182.5L470.5 305.5L512 213.25L553.5 305.5L595 182.5"/>
+</svg>

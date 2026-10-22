@@ -1,0 +1,6 @@
+"CFBundleDisplayName" = "Vaultito Dev";
+"CFBundleName" = "Vaultito";
+"NSMicrophoneUsageDescription" = "Grave notas de áudio e armazene-as criptografadas neste dispositivo.";
+"NSPhotoLibraryUsageDescription" = "Acesse sua fototeca para criptografar fotos e vídeos no espaço privado deste dispositivo. Seu conteúdo permanece no dispositivo, sem uploads ou rastreamento.";
+
+"NSFaceIDUsageDescription" = "Use Face ID to unlock Vaultito and albums you choose to protect with biometrics.";

@@ -1,0 +1,57 @@
+{
+  "cliArchiveSHA256": "9252f8765db5068931d78f1ee74f7fe4d653605bf691d30e05c119eb5fa5d0d3",
+  "cliCodeSignatureTeam": "YZQJQUHA3L",
+  "cliCodeSignatureVerified": true,
+  "cliVersion": "0.6.1",
+  "fixtureOnly": true,
+  "independentCLIContentHashesMatch": true,
+  "innerRecovery": {
+    "directories": 1,
+    "files": 1,
+    "nestedVaults": []
+  },
+  "iosSimulatorWriter": {
+    "recovery": {
+      "cliVersion": "0.6.1",
+      "fixtureOnly": true,
+      "independentCLIContentHashesMatch": true,
+      "innerRecovery": {
+        "directories": 1,
+        "files": 1,
+        "nestedVaults": []
+      },
+      "missing-manifestRejectedByVerifiedRecovery": true,
+      "nativeReaderAcceptsTruncatedPrefix": true,
+      "outerPasswordCannotUnlockInner": true,
+      "outerRecovery": {
+        "directories": 9,
+        "files": 8,
+        "nestedVaults": [
+          "Protected"
+        ]
+      },
+      "tamperedRejectedByVerifiedRecovery": true,
+      "truncatedRejectedByVerifiedRecovery": true,
+      "wholeVaultAppExportShipped": false
+    },
+    "runtime": "iOS 18.4",
+    "target": "arm64-apple-ios17.6-simulator"
+  },
+  "missing-manifestRejectedByVerifiedRecovery": true,
+  "nativeReaderAcceptsTruncatedPrefix": true,
+  "nativeStorageAdopted": false,
+  "outerPasswordCannotUnlockInner": true,
+  "outerRecovery": {
+    "directories": 9,
+    "files": 8,
+    "nestedVaults": [
+      "Protected"
+    ]
+  },
+  "platformTested": "macOS arm64",
+  "productionAppDependencyAdded": false,
+  "swiftFixtureExecutable": "WagLockPortableExportFixture",
+  "tamperedRejectedByVerifiedRecovery": true,
+  "truncatedRejectedByVerifiedRecovery": true,
+  "wholeVaultAppExportShipped": false
+}

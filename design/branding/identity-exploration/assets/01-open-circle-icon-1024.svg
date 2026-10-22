@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1024">
+	<rect fill="#241E32" width="1024" height="1024"/>
+	<defs>
+		<linearGradient id="gradient_0" gradientUnits="userSpaceOnUse" x1="398" y1="191" x2="626" y2="191">
+			<stop offset="0" stop-color="#F383A2"/>
+			<stop offset="0.5" stop-color="#FF797E"/>
+			<stop offset="1" stop-color="#FF9F72"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_0)" stroke-width="64" stroke-linecap="round" stroke-linejoin="round" d="M398 191L512 337L626 191"/>
+	<defs>
+		<linearGradient id="gradient_1" gradientUnits="userSpaceOnUse" x1="398" y1="191" x2="626" y2="191">
+			<stop offset="0" stop-color="#FFA371"/>
+			<stop offset="0.5" stop-color="#F6C070"/>
+			<stop offset="1" stop-color="#E6D479"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_1)" stroke-width="64" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.5 0.866025 -0.866025 0.5 699.405 -187.405)" d="M398 191L512 337L626 191"/>
+	<defs>
+		<linearGradient id="gradient_2" gradientUnits="userSpaceOnUse" x1="398" y1="191" x2="626" y2="191">
+			<stop offset="0" stop-color="#E3D57A"/>
+			<stop offset="0.5" stop-color="#ACD494"/>
+			<stop offset="1" stop-color="#83D0B4"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_2)" stroke-width="64" stroke-linecap="round" stroke-linejoin="round" transform="matrix(-0.5 0.866025 -0.866025 -0.5 1211.41 324.595)" d="M398 191L512 337L626 191"/>
+	<defs>
+		<linearGradient id="gradient_3" gradientUnits="userSpaceOnUse" x1="398" y1="191" x2="626" y2="191">
+			<stop offset="0" stop-color="#81D0B7"/>
+			<stop offset="0.5" stop-color="#69C8DC"/>
+			<stop offset="1" stop-color="#7FACE6"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_3)" stroke-width="64" stroke-linecap="round" stroke-linejoin="round" transform="matrix(-1 0 0 -1 1024 1024)" d="M398 191L512 337L626 191"/>
+	<defs>
+		<linearGradient id="gradient_4" gradientUnits="userSpaceOnUse" x1="398" y1="191" x2="626" y2="191">
+			<stop offset="0" stop-color="#81AAE6"/>
+			<stop offset="0.5" stop-color="#9B97E8"/>
+			<stop offset="1" stop-color="#BB8CE1"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_4)" stroke-width="64" stroke-linecap="round" stroke-linejoin="round" transform="matrix(-0.5 -0.866025 0.866025 -0.5 324.595 1211.41)" d="M398 191L512 337L626 191"/>
+	<defs>
+		<linearGradient id="gradient_5" gradientUnits="userSpaceOnUse" x1="398" y1="191" x2="626" y2="191">
+			<stop offset="0" stop-color="#BD8CE0"/>
+			<stop offset="0.5" stop-color="#DC89C5"/>
+			<stop offset="1" stop-color="#F283A6"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_5)" stroke-width="64" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.5 -0.866025 0.866025 0.5 -187.405 699.405)" d="M398 191L512 337L626 191"/>
+</svg>

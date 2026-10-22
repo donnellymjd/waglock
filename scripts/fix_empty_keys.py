@@ -5,7 +5,7 @@ import json
 
 
 def find_and_fix_empty_keys():
-    file_path = "/Users/WangQiao/Desktop/github/ios-dev/ZeroNet-Space/ZeroNet_Space/Resources/Localizable.xcstrings"
+    file_path = "/Users/WangQiao/Desktop/github/ios-dev/WagLock/WagLock/Resources/Localizable.xcstrings"
 
     with open(file_path, "r", encoding="utf-8") as f:
         data = json.load(f)

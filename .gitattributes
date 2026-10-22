@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Preserve verbatim third-party licensing and archived upstream Markdown.
+design/branding/identity-exploration/fonts/OFL.txt -whitespace
+docs/portable-vault/provenance/README-before-waglock.md -whitespace

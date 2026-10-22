@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1024">
+	<rect fill="#241E32" width="1024" height="1024"/>
+	<defs>
+		<linearGradient id="gradient_0" gradientUnits="userSpaceOnUse" x1="456" y1="198" x2="568" y2="198">
+			<stop offset="0" stop-color="#F97E90"/>
+			<stop offset="0.5" stop-color="#FF797E"/>
+			<stop offset="1" stop-color="#FF8C78"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_0)" stroke-width="37" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.978148 0.207912 -0.207912 0.978148 117.639 -95.2624)" d="M456 198L512 306L568 198"/>
+	<defs>
+		<linearGradient id="gradient_1" gradientUnits="userSpaceOnUse" x1="456" y1="198" x2="568" y2="198">
+			<stop offset="0" stop-color="#FF8E77"/>
+			<stop offset="0.5" stop-color="#FFA171"/>
+			<stop offset="1" stop-color="#FFB46B"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_1)" stroke-width="37" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.743145 0.669131 -0.669131 0.743145 474.105 -211.085)" d="M456 198L512 306L568 198"/>
+	<defs>
+		<linearGradient id="gradient_2" gradientUnits="userSpaceOnUse" x1="456" y1="198" x2="568" y2="198">
+			<stop offset="0" stop-color="#FFB56B"/>
+			<stop offset="0.5" stop-color="#F6C070"/>
+			<stop offset="1" stop-color="#EECA74"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_2)" stroke-width="37" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.309017 0.951057 -0.951057 0.309017 840.724 -133.158)" d="M456 198L512 306L568 198"/>
+	<defs>
+		<linearGradient id="gradient_3" gradientUnits="userSpaceOnUse" x1="456" y1="198" x2="568" y2="198">
+			<stop offset="0" stop-color="#EDCB75"/>
+			<stop offset="0.5" stop-color="#E5D579"/>
+			<stop offset="1" stop-color="#C9D586"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_3)" stroke-width="37" stroke-linecap="round" stroke-linejoin="round" transform="matrix(-0.207912 0.978148 -0.978148 -0.207912 1119.26 117.639)" d="M456 198L512 306L568 198"/>
+	<defs>
+		<linearGradient id="gradient_4" gradientUnits="userSpaceOnUse" x1="456" y1="198" x2="568" y2="198">
+			<stop offset="0" stop-color="#C7D587"/>
+			<stop offset="0.5" stop-color="#ACD494"/>
+			<stop offset="1" stop-color="#90D4A1"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_4)" stroke-width="37" stroke-linecap="round" stroke-linejoin="round" transform="matrix(-0.669131 0.743145 -0.743145 -0.669131 1235.09 474.105)" d="M456 198L512 306L568 198"/>
+	<defs>
+		<linearGradient id="gradient_5" gradientUnits="userSpaceOnUse" x1="456" y1="198" x2="568" y2="198">
+			<stop offset="0" stop-color="#8ED4A3"/>
+			<stop offset="0.5" stop-color="#82D0B5"/>
+			<stop offset="1" stop-color="#76CCC8"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_5)" stroke-width="37" stroke-linecap="round" stroke-linejoin="round" transform="matrix(-0.951056 0.309017 -0.309017 -0.951056 1157.16 840.724)" d="M456 198L512 306L568 198"/>
+	<defs>
+		<linearGradient id="gradient_6" gradientUnits="userSpaceOnUse" x1="456" y1="198" x2="568" y2="198">
+			<stop offset="0" stop-color="#75CCC9"/>
+			<stop offset="0.5" stop-color="#69C8DC"/>
+			<stop offset="1" stop-color="#74BAE1"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_6)" stroke-width="37" stroke-linecap="round" stroke-linejoin="round" transform="matrix(-0.978148 -0.207912 0.207912 -0.978148 906.361 1119.26)" d="M456 198L512 306L568 198"/>
+	<defs>
+		<linearGradient id="gradient_7" gradientUnits="userSpaceOnUse" x1="456" y1="198" x2="568" y2="198">
+			<stop offset="0" stop-color="#75B9E1"/>
+			<stop offset="0.5" stop-color="#80ABE6"/>
+			<stop offset="1" stop-color="#8B9EEB"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_7)" stroke-width="37" stroke-linecap="round" stroke-linejoin="round" transform="matrix(-0.743145 -0.669131 0.669131 -0.743145 549.895 1235.08)" d="M456 198L512 306L568 198"/>
+	<defs>
+		<linearGradient id="gradient_8" gradientUnits="userSpaceOnUse" x1="456" y1="198" x2="568" y2="198">
+			<stop offset="0" stop-color="#8C9DEB"/>
+			<stop offset="0.5" stop-color="#9B97E8"/>
+			<stop offset="1" stop-color="#AB92E4"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_8)" stroke-width="37" stroke-linecap="round" stroke-linejoin="round" transform="matrix(-0.309017 -0.951056 0.951056 -0.309017 183.276 1157.16)" d="M456 198L512 306L568 198"/>
+	<defs>
+		<linearGradient id="gradient_9" gradientUnits="userSpaceOnUse" x1="456" y1="198" x2="568" y2="198">
+			<stop offset="0" stop-color="#AC91E4"/>
+			<stop offset="0.5" stop-color="#BC8CE1"/>
+			<stop offset="1" stop-color="#CB8BD4"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_9)" stroke-width="37" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.207911 -0.978148 0.978148 0.207911 -95.2623 906.361)" d="M456 198L512 306L568 198"/>
+	<defs>
+		<linearGradient id="gradient_10" gradientUnits="userSpaceOnUse" x1="456" y1="198" x2="568" y2="198">
+			<stop offset="0" stop-color="#CD8BD2"/>
+			<stop offset="0.5" stop-color="#DC89C5"/>
+			<stop offset="1" stop-color="#EB88B8"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_10)" stroke-width="37" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.669131 -0.743145 0.743145 0.669131 -211.085 549.895)" d="M456 198L512 306L568 198"/>
+	<defs>
+		<linearGradient id="gradient_11" gradientUnits="userSpaceOnUse" x1="456" y1="198" x2="568" y2="198">
+			<stop offset="0" stop-color="#EC88B6"/>
+			<stop offset="0.5" stop-color="#F283A4"/>
+			<stop offset="1" stop-color="#F87E92"/>
+		</linearGradient>
+	</defs>
+	<path fill="none" stroke="url(#gradient_11)" stroke-width="37" stroke-linecap="round" stroke-linejoin="round" transform="matrix(0.951057 -0.309017 0.309017 0.951057 -133.158 183.276)" d="M456 198L512 306L568 198"/>
+</svg>

@@ -1,0 +1,499 @@
+//
+//  PhotosView.swift
+//  WagLock
+//
+//  相片视图
+//  网格展示所有图片，支持预览、缩放、搜索和批量选择
+//
+
+import SwiftData
+import SwiftUI
+
+struct PhotosView: View {
+
+    // MARK: - Environment
+
+    @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject var authViewModel: AuthenticationViewModel
+
+    // 只查询图片类型的媒体
+    @Query(
+        filter: #Predicate<MediaItem> { item in
+            item.typeRawValue == "photo"
+        },
+        sort: \MediaItem.createdAt,
+        order: .reverse
+    )
+    private var photos: [MediaItem]
+
+    // MARK: - State
+
+    @StateObject private var settings = AppSettings.shared
+    @StateObject private var viewModel = PhotosViewModel()
+    @EnvironmentObject private var guestModeManager: GuestModeManager
+    @State private var showImportView = false
+    @State private var showExportView = false
+    private struct PhotoSelection: Identifiable {
+        let id = UUID()
+        let view: PhotoDetailView
+    }
+    @State private var selectedPhoto: PhotoSelection?
+    @State private var photoToDelete: MediaItem?
+    @State private var deleteErrorMessage: String?
+    @State private var searchText = ""
+    @State private var isSelectionMode = false
+    @State private var selectedPhotoIDs: Set<UUID> = []
+    @State private var batchPhotosToDelete: [MediaItem] = []
+    @State private var showBatchDeleteConfirmation = false
+
+    // MARK: - Constants
+
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 6), count: settings.gridColumns)
+    }
+
+    // MARK: - Body
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("\(guestModeManager.isGuestMode ? 0 : photos.count) photos · On this device")
+                        .font(.footnote).foregroundStyle(ColorTheme.secondaryText)
+                    WagLockSearchField(title: "Search photos", text: $searchText)
+                    if guestModeManager.isOwnerMode {
+                        NavigationLink { AlbumBrowserView() } label: {
+                            HStack(spacing: 0) {
+                                WagLockNavigationRow(symbol: "rectangle.stack", title: "Albums", detail: "Organize with separate protection")
+                                Image(systemName: "chevron.right").font(.footnote)
+                                    .foregroundStyle(ColorTheme.secondaryText).padding(.trailing, 14)
+                            }.background(ColorTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 14))
+                        }.accessibilityIdentifier("photos.albums")
+                    }
+                }.padding(.horizontal, 24)
+                ZStack {
+                // 访客模式下始终显示空状态
+                if guestModeManager.isGuestMode || photos.isEmpty {
+                    emptyStateView
+                } else if filteredPhotos.isEmpty {
+                    searchEmptyView
+                } else {
+                    photoGridView
+                }
+            }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .background(ColorTheme.primaryBackground)
+            .navigationTitle(String(localized: "photos.title"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if isSelectionMode && !filteredPhotos.isEmpty {
+                        selectAllButton
+                    } else if !photos.isEmpty {
+                        Button {
+                            showExportView = true
+                        } label: {
+                            Label(
+                                String(localized: "photos.export"),
+                                systemImage: "square.and.arrow.up")
+                        }
+                    }
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if isSelectionMode {
+                        cancelButton
+                    } else if guestModeManager.isOwnerMode {
+                        HStack(spacing: 16) {
+                            if !photos.isEmpty {
+                                selectButton
+                            }
+                            Button {
+                                showImportView = true
+                            } label: {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.title3)
+                                    .symbolRenderingMode(.hierarchical)
+                            }
+                            .accessibilityLabel("Import photos and files")
+                            .accessibilityIdentifier("photos.import")
+                        }
+                    }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if isSelectionMode && !selectedPhotoIDs.isEmpty {
+                    batchActionsToolbar
+                }
+            }
+            .sheet(isPresented: $showImportView) {
+                ImportButtonsView(onImportComplete: { items in
+                })
+                .environment(\.modelContext, modelContext)
+                .environmentObject(authViewModel)
+            }
+            .sheet(isPresented: $showExportView) {
+                BatchExportView(initialSelection: isSelectionMode ? selectedPhotoIDs : [])
+                    .environment(\.modelContext, modelContext)
+                    .environmentObject(authViewModel)
+            }
+            .fullScreenCover(item: $selectedPhoto) { photo in
+                photo.view
+                    .environmentObject(authViewModel)
+            }
+            .alert(
+                String(localized: "photo.delete.confirmTitle"),
+                isPresented: Binding(
+                    get: { photoToDelete != nil },
+                    set: { if !$0 { photoToDelete = nil } }
+                ),
+                presenting: photoToDelete
+            ) { photo in
+                Button(String(localized: "common.delete"), role: .destructive) {
+                    deletePhoto(photo)
+                }
+                Button(String(localized: "common.cancel"), role: .cancel) {}
+            } message: { _ in
+                Text(String(localized: "photo.delete.confirmMessage"))
+            }
+            .alert(
+                String(localized: "photo.delete.confirmTitle"),
+                isPresented: $showBatchDeleteConfirmation
+            ) {
+                Button(String(localized: "common.delete"), role: .destructive) {
+                    deletePhotos(batchPhotosToDelete)
+                }
+                Button(String(localized: "common.cancel"), role: .cancel) {}
+            } message: {
+                Text(
+                    String(
+                        format: String(localized: "photos.delete.multipleMessage"),
+                        batchPhotosToDelete.count))
+            }
+            .alert(
+                String(localized: "common.error"),
+                isPresented: Binding(
+                    get: { deleteErrorMessage != nil },
+                    set: { if !$0 { deleteErrorMessage = nil } }
+                )
+            ) {
+                Button(String(localized: "common.ok"), role: .cancel) {}
+            } message: {
+                Text(deleteErrorMessage ?? "")
+            }
+            .onChange(of: searchText) { _, _ in
+                // 搜索条件变化后清除选择，避免"已选择 N 项"与实际可见结果不一致
+                selectedPhotoIDs.removeAll()
+            }
+            .task {
+                cleanupInvalidPhotos()
+            }
+        }
+    }
+
+    // MARK: - Cleanup
+
+    /// 清理失效的图片记录
+    private func cleanupInvalidPhotos() {
+        let storage = FileStorageService.shared
+        var removedCount = 0
+
+        for photo in photos {
+            if !storage.fileExists(path: photo.encryptedPath) {
+                modelContext.delete(photo)
+                removedCount += 1
+            }
+        }
+
+        if removedCount > 0 {
+            do {
+                try modelContext.save()
+            } catch {
+            }
+        }
+    }
+
+    // MARK: - Empty State
+
+    private var emptyStateView: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                WagLockEmptyState(symbol: "photo", title: "Make room for your memories.", detail: "Add a few photos to get started. Your originals stay in your photo library.")
+                if guestModeManager.isOwnerMode {
+                    Button("Add photos") { showImportView = true }
+                        .buttonStyle(WagLockPrimaryButtonStyle()).padding(.horizontal, 24)
+                }
+            }.padding(.vertical, 48)
+        }
+    }
+
+    // MARK: - Search Empty State
+
+    private var searchEmptyView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 50))
+                .foregroundColor(.secondary)
+
+            Text(String(localized: "photos.search.noResults"))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    // MARK: - Photo Grid
+
+    private struct PhotoDay: Identifiable {
+        let date: Date?
+        let items: [MediaItem]
+        var id: Date { date ?? .distantPast }
+        var title: String {
+            guard let date else { return "ALL PHOTOS" }
+            let formatted = date.formatted(.dateTime.month(.wide).day().year()).uppercased()
+            return Calendar.current.isDateInToday(date) ? "TODAY · " + formatted : formatted
+        }
+    }
+
+    private var photoDays: [PhotoDay] {
+        let items = filteredPhotos
+        guard settings.sortOrder == .dateNewest || settings.sortOrder == .dateOldest else {
+            return [PhotoDay(date: nil, items: items)]
+        }
+        let groups = Dictionary(grouping: items) { Calendar.current.startOfDay(for: $0.createdAt) }
+        let dates = groups.keys.sorted { settings.sortOrder == .dateNewest ? $0 > $1 : $0 < $1 }
+        return dates.map { PhotoDay(date: $0, items: groups[$0] ?? []) }
+    }
+
+    private var photoGridView: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 18) {
+                ForEach(photoDays) { day in
+                    Text(day.title).font(.footnote).foregroundStyle(ColorTheme.secondaryText)
+                    LazyVGrid(columns: columns, spacing: 6) {
+                        ForEach(day.items) { photo in
+                            photoTile(photo)
+                        }
+                    }
+                }
+            }.padding(.horizontal, 24).padding(.vertical, 8)
+        }
+    }
+
+    @ViewBuilder
+    private func photoTile(_ photo: MediaItem) -> some View {
+                    if isSelectionMode {
+                        // 选择模式：点击切换选择状态
+                        Button {
+                            toggleSelection(for: photo)
+                        } label: {
+                            GridItemView(
+                                mediaItem: photo,
+                                isSelectionMode: true,
+                                isSelected: selectedPhotoIDs.contains(photo.id),
+                                showsMetadata: false
+                            )
+                            .aspectRatio(1, contentMode: .fill)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        // 正常模式：点击预览
+                        GridItemView(mediaItem: photo, showsMetadata: false)
+                            .aspectRatio(1, contentMode: .fill)
+                            .onTapGesture {
+                                selectedPhoto = PhotoSelection(view: PhotoDetailView(photo: photo, allPhotos: filteredPhotos, sessionID: authViewModel.librarySessionID))
+                            }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityAddTraits(.isButton)
+                            .accessibilityIdentifier("photos.preview")
+                            .accessibilityLabel(photo.fileName)
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    photoToDelete = photo
+                                } label: {
+                                    Label(
+                                        String(localized: "common.delete"),
+                                        systemImage: "trash")
+                                }
+                            }
+                    }
+    }
+
+    // MARK: - Toolbar Items
+
+    private var selectButton: some View {
+        Button {
+            isSelectionMode = true
+        } label: {
+            Text(String(localized: "common.select"))
+        }
+    }
+
+    private var selectAllButton: some View {
+        Button {
+            if selectedPhotoIDs.count == filteredPhotos.count {
+                selectedPhotoIDs.removeAll()
+            } else {
+                selectedPhotoIDs = Set(filteredPhotos.map { $0.id })
+            }
+        } label: {
+            Text(
+                selectedPhotoIDs.count == filteredPhotos.count
+                    ? String(localized: "export.deselectAll")
+                    : String(localized: "common.selectAll"))
+        }
+    }
+
+    private var cancelButton: some View {
+        Button {
+            isSelectionMode = false
+            selectedPhotoIDs.removeAll()
+        } label: {
+            Text(String(localized: "common.cancel"))
+        }
+    }
+
+    // MARK: - Batch Actions Toolbar
+
+    private var batchActionsToolbar: some View {
+        VStack(spacing: 0) {
+            Divider()
+
+            HStack(spacing: 20) {
+                Text(
+                    String(
+                        format: String(localized: "gallery.selectedCount"),
+                        selectedPhotoIDs.count)
+                )
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+                Spacer()
+
+                Button { showExportView = true } label: {
+                    Label("Export", systemImage: "square.and.arrow.up")
+                }.accessibilityIdentifier("photos.exportSelection")
+
+                Button(role: .destructive) {
+                    batchPhotosToDelete = filteredPhotos.filter {
+                        selectedPhotoIDs.contains($0.id)
+                    }
+                    showBatchDeleteConfirmation = true
+                } label: {
+                    Label(String(localized: "common.delete"), systemImage: "trash")
+                        .font(.subheadline)
+                }
+            }
+            .padding()
+            .background(.ultraThinMaterial)
+        }
+    }
+
+    // MARK: - Computed Properties
+
+    /// 按搜索关键词过滤后的相片列表
+    private var filteredPhotos: [MediaItem] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sorted = photos.sorted(using: settings.sortOrder.sortDescriptor)
+        guard !query.isEmpty else { return sorted }
+
+        return sorted.filter { item in
+            item.fileName.localizedCaseInsensitiveContains(query)
+                || item.fileExtension.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    // MARK: - Methods
+
+    private func toggleSelection(for photo: MediaItem) {
+        if selectedPhotoIDs.contains(photo.id) {
+            selectedPhotoIDs.remove(photo.id)
+        } else {
+            selectedPhotoIDs.insert(photo.id)
+        }
+    }
+
+    private func deletePhoto(_ photo: MediaItem) {
+        let encryptedPath = photo.encryptedPath
+
+        // 先提交数据库删除，成功后再删文件，
+        // 避免 save 失败时留下指向已删除文件的记录
+        modelContext.delete(photo)
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            deleteErrorMessage = String(
+                format: String(localized: "gallery.error.deleteFailed"),
+                error.localizedDescription)
+            return
+        }
+
+        do {
+            try FileStorageService.shared.deleteFile(path: encryptedPath)
+        } catch {
+            // 记录已删除，文件删除失败只会残留无引用的加密文件
+        }
+    }
+
+    /// 批量删除选中的相片
+    private func deletePhotos(_ items: [MediaItem]) {
+        guard !items.isEmpty else { return }
+
+        let encryptedPaths = items.map { $0.encryptedPath }
+
+        // 先提交数据库删除，成功后再删文件，
+        // 避免 save 失败时留下指向已删除文件的记录
+        for item in items {
+            modelContext.delete(item)
+        }
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            deleteErrorMessage = String(
+                format: String(localized: "gallery.error.deleteFailed"),
+                error.localizedDescription)
+            return
+        }
+
+        for path in encryptedPaths {
+            do {
+                try FileStorageService.shared.deleteFile(path: path)
+            } catch {
+                // 记录已删除，文件删除失败只会残留无引用的加密文件
+            }
+        }
+
+        // 退出选择模式并清空选择
+        isSelectionMode = false
+        selectedPhotoIDs.removeAll()
+        batchPhotosToDelete = []
+        showBatchDeleteConfirmation = false
+    }
+}
+
+// MARK: - Photo Thumbnail View
+
+struct PhotoThumbnailView: View {
+    let photo: MediaItem
+
+    var body: some View {
+        Rectangle()
+            .fill(Color.gray.opacity(0.2))
+            .overlay {
+                // TODO: 加载真实的缩略图
+                Image(systemName: "photo")
+                    .foregroundColor(.gray)
+            }
+            .clipped()
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    PhotosView()
+        .modelContainer(for: MediaItem.self, inMemory: true)
+        .environmentObject(AuthenticationViewModel())
+}

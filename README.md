@@ -1,784 +1,163 @@
-# 零网络空间 / ZeroNet Space
+<p align="center">
+  <img src="WagLock/Assets.xcassets/AppIcon.appiconset/Icon.png" width="112" alt="WagLock app icon">
+</p>
 
-> **Official website / 官方网站:** [English](https://zeronet-space.materialofair.chatgpt.site/) · [中文](https://zeronet-space.materialofair.chatgpt.site/zh/) · [App Store](https://apps.apple.com/app/id6755504480)
->
-> Keep photos, videos, documents, notes and recordings in a local encrypted vault on iPhone and iPad. No account or automatic cloud upload. Free allowance: 75 media/file items; optional one-time VIP purchase. Apple purchases and restoration require network access.
->
-> 本地加密保存照片、视频、文档、笔记与录音。免费媒体和文件额度为 75 项，可选一次性 VIP。不会自动同步云端；购买与恢复购买需要 Apple 网络服务。重要内容请另存副本。
->
-> [Product facts](https://zeronet-space.materialofair.chatgpt.site/product/) · [照片保存指南](https://zeronet-space.materialofair.chatgpt.site/zh/guides/offline-photo-vault-iphone/) · [文件与笔记](https://zeronet-space.materialofair.chatgpt.site/zh/guides/private-files-notes-iphone/) · [录音指南](https://zeronet-space.materialofair.chatgpt.site/zh/guides/encrypted-voice-memos-iphone/)
+<h1 align="center">WagLock</h1>
+<p align="center"><strong>We Always Guard.</strong></p>
+<p align="center">An open-source, local-first photo, video and file vault for iPhone and iPad.</p>
 
-<div align="center">
+WagLock combines encrypted media storage with nested albums, separate album passwords and optional Face ID. Core local use works offline without an account. Existing features are free, with no VIP walls, subscriptions or item-count caps beyond available storage.
 
-**本地加密隐私空间 | 开源 | 无需账号 | 不自动上传云端**
+WagLock is an independent fork of [SealedPocket / ZeroNet Space](https://github.com/materialofair/zeroNet_Space), not the official upstream app. Original attribution and license notices are preserved.
 
-[![Platform](https://img.shields.io/badge/Platform-iOS%2017.6+-lightgrey.svg)](https://www.apple.com/ios/)
-[![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)](https://swift.org)
-[![SwiftUI](https://img.shields.io/badge/SwiftUI-3.0-blue.svg)](https://developer.apple.com/xcode/swiftui/)
-[![Security](https://img.shields.io/badge/Security-AES--256--GCM-green.svg)](https://en.wikipedia.org/wiki/Galois/Counter_Mode)
-[![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
+> **Development preview:** test with disposable media and keep independent originals. Metadata encryption, portable recovery and independent alternative vaults are unfinished. WagLock has not completed an independent security audit.
 
-[English](#english) | [中文](#中文)
+[Build it](#build-and-run) · [Security and recovery](#security-and-recovery) · [Roadmap](#roadmap) · [Development docs](docs/portable-vault/README.md)
 
-</div>
+## What works today
 
----
-## English
+- **Local media library:** browse photos, videos, audio and files; import through Photos and Files; preview and share supported formats.
+- **Nested albums:** create albums and subalbums under **Photos → Albums**. Choose inherited protection, a separate album password, password-or-Face-ID access, or Face ID-only access. Ancestor protection still applies.
+- **Vault unlock:** use a vault password with optional Face ID convenience. Switch between Number pad and Full keyboard without changing the password text. Password quality feedback appears when setting or changing a password, not during login.
+- **Session locking:** backgrounding locks albums and revokes managed export/document-preview access. Automatic vault locking follows the selected timeout, subject to the documented recording exception.
+- **Free local features:** no purchase prompts or paid feature gates. Storage capacity is the practical limit on imports.
+- **Adaptive interface:** redesigned libraries, players and settings; System, Light and Dark appearance.
+- **English beta interface:** app-controlled UI and diagnostics are English. User filenames, passwords and other Unicode content are preserved.
 
-### 📖 About
+The app also includes inherited notes and recording features. **Notes are not yet fully encrypted private Markdown notes**; see the limitations below.
 
-ZeroNet Space is a **fully open-source** iOS privacy protection app.
+## Current development status
 
-**Our Promises**:
-- ✅ **Local content**: Personal content stays on-device without automatic cloud sync; Apple purchases and restoration use the network
-- ✅ **Zero Tracking**: No SDK, ads, analytics, or cloud backup
-- ✅ **Zero Account**: No registration, login, or data collection
-- ✅ **Local Encryption**: AES-256-GCM with PBKDF2 key derivation
-- ✅ **100% Open Source**: All code is public and auditable
+As of **October 22, 2026**, the latest owner-accepted phone build is **WagLock Dev 1.3.8 (35)**. Build 35 fixed a photo-viewer teardown crash and passed the owner's checks, with one Notes background defect corrected in installed build 36. Build 37 completes the remaining Figma UI implementation; its current validation is recorded in the [UI implementation record](docs/portable-vault/figma-ui-implementation.md). The build 35 validation included **172 unit/security tests and repeated simulator UI workflows**. These results cover specific behavior, not the entire security model.
 
-**Core Philosophy**: Your data belongs to you alone, not to be uploaded, analyzed, or tracked.
+| Capability | Status |
+| --- | --- |
+| Encrypted media, nested album passwords and optional biometrics | Available in the development app; further hardening remains |
+| Complete encrypted export with independent desktop recovery | Working isolated prototype; not available in the app |
+| Separate populated vault selected by an alternative passcode | In development; current Guest Mode is presentation-only |
+| Encrypted Trash with configurable retention | Planned; enabled with seven-day retention by default when implemented |
+| Encrypted Markdown notes and encrypted file search | Backlog |
+| Consent-controlled shared albums | Discovery/prototype planning; not available in the app |
 
----
+See [device-testing records](docs/portable-vault/device-testing.md), [build evidence](BUILD_ERRORS_SUMMARY.md) and the [prioritized backlog](docs/portable-vault/backlog-priorities.md) for scope and outstanding work. An internal TestFlight beta is planned; this README does not announce a public beta or App Store release.
 
-### 💡 Why Open Source?
+## Security and recovery
 
-**Simple and honest answer**:
+WagLock currently uses its inherited custom encryption format, extended with authenticated ZNSC v2 stream framing for new streamed writes. Legacy readers remain supported. **It is not currently a Cryptomator-native vault.**
 
-> **To build trust.**
+Important boundaries in the current build:
 
-Many apps claim "zero network" and "zero tracking", but users can't verify.  
-I chose open source so anyone can inspect the code and confirm we actually deliver on our promises.
+- Main-library metadata, thumbnails, note fields and album names/hierarchy still have open encryption findings. Encrypting media originals does not mean every piece of library data is encrypted at the application level.
+- Copying encrypted media alone is not a supported recovery procedure. Device-bound Keychain material can be required, especially after password changes. Do not rely on WagLock as the only copy of a library.
+- Face ID-only albums have no album-password fallback. Losing their device-bound biometric factor can permanently prevent access. Password-or-Face-ID albums retain a password path.
+- Guest Mode currently presents an empty in-memory library. It does not provide the requested independent alternative vault or establish forensic deniability.
+- Local cleanup cannot retract a copy already handed to another app. PDFKit, QuickLook, decoder caches and other preview paths remain part of the ongoing audit; no secure-deletion guarantee is made.
 
-**Open source is not about being free, it's about being transparent.**
+Read the [architecture/security audit](docs/portable-vault/audits/D2S-105.md), [album key boundaries](docs/portable-vault/albums-and-biometrics.md) and [recovery requirements](docs/portable-vault/requirements.md) before testing with meaningful data.
 
-You can:
-- 📖 Review content storage and the separate Apple purchase integration
-- 🔍 Inspect encryption implementation to ensure data security
-- 🛡️ Audit privacy protection mechanisms
-- 🧪 Compile and run yourself, have complete control
+### Portable export research
 
-If you find any suspicious code, please open an issue on GitHub.
+The export experiment creates a Cryptomator-format candidate with encrypted manifests and a separately password-protected inner vault. Both macOS and iOS-simulator outputs have been opened by the official, unmodified Cryptomator CLI, with matching recovered file hashes. The outer password cannot unlock the inner vault.
 
----
+Completeness requires additional verification: the standard reader can accept a valid prefix after a complete final chunk is removed. The experimental manifest verifier detects that loss. Successful desktop opening alone is not a completeness check.
 
-### 🔓 Fork Policy
+This work has **not** changed the phone's storage, added a Cryptomator app dependency or implemented full-library export/restore. Licensing/distribution, integrity, complete metadata capture, biometric-only recovery and migration gates remain open.
 
-We **welcome and allow** anyone to fork this project for modification, learning, and research.
+- [Design, evidence and readiness gates](docs/portable-vault/portable-export-design.md)
+- [Reproduce recovery of generated samples](spikes/cryptomator/RECOVERY.md)
+- [Machine-readable experiment results](docs/portable-vault/portable-export-experiment-results.json)
 
-#### ✅ What You Can Do
+## Build and run
 
-- Fork and compile the code for personal use
-- Modify code to meet your needs
-- Learn iOS development and privacy protection techniques
-- Submit Pull Requests to improve the project
-- Create derivative projects (must comply with GPL-3.0)
+### Requirements
 
-#### ⚠️ Only One Requirement
+- A Mac with Xcode and an installed iOS SDK/simulator runtime.
+- **iOS 17.6 or later** for the app target, on iPhone or iPad.
+- An Apple signing team for installation on a physical device.
 
-**Please do not use the "ZeroNet Space" brand name and logo in fork versions.**
+Recent app validation used **Xcode 27.1**. The app uses Swift language mode 5; the optional isolated Cryptomator experiment requires Swift 6.2 or later.
 
-**Why?**
-- Prevent user confusion between official and fork versions
-- Ensure users know which version they're using
-- Protect brand from misuse
+### Open in Xcode
 
-**How to comply?**
-- ✅ "XXX based on ZeroNet Space"
-- ✅ "Inspired by ZeroNet Space"
-- ❌ "ZeroNet Space Enhanced"
-- ❌ "ZeroNet Space Pro"
-
-For detailed trademark usage guidelines, see [TRADEMARK.md](TRADEMARK.md).
-
----
-
-### 🏪 App Store Official Version
-
-#### Why App Store version if open source?
-
-**Two reasons**:
-
-**1. Convenience**
-- Self-compilation requires:
-  - Download Xcode (8GB+)
-  - Learn iOS development
-  - Apple Developer account ($99/year)
-  - Re-sign every 7 days (free certificate)
-
-- App Store version:
-  - One-tap download
-  - Auto updates
-  - Official technical support
-
-**2. Sustainable Development**
-- Open source projects need ongoing maintenance
-- Paid version supports long-term development
-- Avoid adding ads or collecting data
-
-#### Pricing Model
-
-**Free Version**:
-- ✅ Full encryption features (AES-256-GCM)
-- ✅ Hidden space
-- ✅ Disguise interface
-- ✅ Dark mode
-- ✅ All core security features
-- ⚠️ **Free media/file allowance: 75 items**
-
-**VIP (one-time purchase; regional price shown in the App Store)**:
-- 🔓 **No import cap; available device storage still applies**
-- 🔓 **Guest Mode** (dual password system)
-- 💰 **Lifetime access, no subscription**
-
-> 💡 **Choice is yours**: Pay to support development, or compile for free yourself.
-
----
-
-### 🌟 Core Features
-
-#### Basic Features
-- 🔐 **Password Protection** - 6-8 digit strong password with biometric support
-- 📸 **Encrypted Media Storage** - Photos, videos, documents with AES-256-GCM
-- 📁 **Folder Management** - Custom folders and tag system
-- 🎬 **Media Preview** - Fullscreen photo viewer, video player, document preview
-
-#### Advanced Privacy (V1.2)
-- 👥 **Guest Mode** - Dual password system for temporary access
-- 🔒 **Hidden Space** - Secret notes and sensitive files area
-- 🧮 **Disguise Interface** - Calculator disguise mode
-- 🌓 **Dark Mode** - Complete light/dark theme support
-- 🌍 **Internationalization** - Full English and Simplified Chinese support
-
-#### Security Features
-- 🛡️ **App Restart Authentication** - Prevent unauthorized access
-- 🔐 **PBKDF2 Key Derivation** - 100,000 iterations against brute force
-- 🔒 **Thread Safety Protection** - @MainActor ensures safe state management
-- 🧵 **Concurrent Access Control** - NSLock protects critical operations
-- 🗑️ **Secure Deletion** - Thoroughly wipes encrypted data
-
----
-
-### 🔐 Security Design
-
-#### Password Management
-```
-Storage: iOS Keychain
-Hash Algorithm: SHA-256
-Salt: 32-byte random (CryptoKit)
-Verification Delay: 0.5s (prevent brute force)
-Key Derivation: PBKDF2 (100,000 iterations)
+```sh
+git clone https://github.com/donnellymjd/waglock.git
+cd waglock
+open WagLock.xcodeproj
 ```
 
-#### File Encryption
-```
-Algorithm: AES-256-GCM
-Key Derivation: PBKDF2 (100,000 iterations)
-Salt: 16-byte random (unique per encryption)
-IV: 12-byte random (unique per encryption)
-Authentication Tag: 16-byte (prevent tampering)
-Format: Salt(16) + IV(12) + Tag(16) + Ciphertext
-Memory Safety: Immediate key erasure after use
-```
+1. Select the **WagLock** scheme and an available simulator or connected device.
+2. For a new personal device installation, configure your own signing team and unique bundle identifiers for the app and test targets.
+3. Build and run. Set a vault password and import disposable samples first.
 
-#### Network Isolation Verification
-```
-Content storage: Local; no automatic cloud upload
-Purchases/restoration: Apple StoreKit network services
-Third-party SDK: ❌ Zero dependencies
-Cloud Service: ❌ Completely local
-Analytics Tracking: ❌ Zero collection
-Privacy Manifest: ✅ Provided (PrivacyInfo.xcprivacy)
+**Updating an existing installation:** keep its bundle identity, Keychain namespaces and signing setup stable. The project's development app uses `com.d2sci.vaultito.dev`; the historical identifier is intentional. Changing it for branding creates a different credential/data identity. Do not uninstall or reset an existing vault to resolve a build issue.
+
+See [phone setup and testing](docs/portable-vault/device-testing.md) for the installation boundaries and manual checks.
+
+### Run tests
+
+Find an installed simulator:
+
+```sh
+xcrun simctl list devices available
 ```
 
-**Verification Methods**:
-- 🔍 View source code - Search for `URLSession`, `Alamofire`, `network requests`
-- 📄 Check `PrivacyInfo.xcprivacy` - Privacy manifest file
-- 🛠️ Runtime monitoring - Distinguish local content processing from Apple purchase traffic
+Replace `YOUR_SIMULATOR_ID` below with its identifier. Unit tests involving Keychain need simulator signing; the local ad-hoc settings are intentional.
 
----
-
-### 🛠️ Tech Stack
-
-#### Core Technologies
-- **Language**: Swift 5.9
-- **UI Framework**: SwiftUI 3.0+
-- **Data Storage**: SwiftData + FileManager
-- **Encryption**: CryptoKit (AES-256-GCM)
-- **Password Management**: iOS Keychain + PBKDF2
-- **Minimum Support**: iOS 17.6+
-
-#### Compatible Devices
-- ✅ iPhone XS and newer (iPhone XS, XS Max, XR, 11, 12, 13, 14, 15, 16)
-- ✅ iPad (6th generation) and newer
-- ✅ iPad Air 2 and newer
-- ✅ iPad mini 4 and newer
-
-#### Architecture Features
-- ✅ MVVM architecture pattern
-- ✅ @MainActor thread safety
-- ✅ Environment object dependency injection
-- ✅ Modern Swift concurrency (async/await)
-- ✅ Atomic operations ensure consistency
-
----
-
-### 🤝 Contributing
-
-We welcome community contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-
-#### Welcome Contribution Types
-
-✅ **Immediately Welcome**:
-- Bug fixes
-- Performance optimization
-- Security hardening
-- Internationalization/translation
-- Documentation improvements
-
-⚠️ **Need Discussion**:
-- New feature development
-- Major UI/UX changes
-- Architecture adjustments
-
-❌ **Clearly Rejected**:
-- Any network-related features
-- Removing payment limits (can modify in your fork)
-- Features violating "zero network" philosophy
-
-#### How to Contribute
-
-1. Fork this repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-### 🏆 Acknowledgments
-
-Thanks to everyone who contributes to this project!
-
-**Contributors**:
-<!-- Contributors will be automatically added here -->
-- Waiting for the first contributor...
-
-**Special Thanks**:
-- Apple CryptoKit team - Secure encryption framework
-- SwiftUI community - Modern UI development
-- All users who provided feedback and suggestions
-
----
-
-### 🔒 Security Feedback
-
-If you find security vulnerabilities:
-
-1. **Please do not disclose publicly** - Report privately first
-2. **Contact via**:
-   - GitHub Issues (use "Security" label)
-   - Project maintainer (see GitHub Profile)
-3. **Responsible Disclosure Rewards**:
-   - Public acknowledgment in README
-   - Display in app acknowledgments page
-
----
-
-### 📄 License
-
-This project is licensed under **GPL-3.0** - see [LICENSE](LICENSE) file.
-
-#### GPL-3.0 Simple Explanation
-
-- ✅ Free to use, modify, and distribute
-- ✅ Can be used commercially
-- ⚠️ **Modified code must be open source**
-- ⚠️ **Derivative works must use GPL-3.0**
-
-For detailed license terms, see LICENSE file.
-
----
-
-### ⚠️ Important Disclaimer
-
-#### Data Security Notice
-
-- **Password Cannot Be Recovered** - Cannot reset password, forgetting requires app uninstallation
-- **No Cloud Backup** - All data stored locally only, uninstalling loses data
-- **Offline Use** - Complete offline means no remote data recovery
-- **Please Remember Password** - Recommend using password manager
-
-#### Privacy Promise
-
-- ✅ We keep personal content local; Apple purchases are a separate network service
-- ✅ We will **NEVER** collect user data
-- ✅ We will **NEVER** add tracking or analytics
-- ✅ We will **NEVER** add ads
-- ✅ **Code will always be open source, monitored by community**
-
----
-
-### 🚀 Quick Start
-
-#### Use App Store Official Version (Recommended)
-
-[![Download on App Store](https://developer.apple.com/app-store/marketing/guidelines/images/badge-download-on-the-app-store.svg)](https://apps.apple.com/us/app/zeronet-space/id6755504480)
-
-#### Compile Yourself (Advanced Users)
-
-```bash
-# 1. Clone repository
-git clone https://github.com/materialofair/zeroNet_Space.git
-cd zeroNet_Space
-
-# 2. Open with Xcode
-open ZeroNet-Space.xcodeproj
-
-# 3. Select your development team (requires Apple ID)
-# 4. Select device or simulator
-# 5. Click run (⌘R)
+```sh
+xcodebuild test \
+  -project WagLock.xcodeproj \
+  -scheme WagLock \
+  -destination 'platform=iOS Simulator,id=YOUR_SIMULATOR_ID' \
+  -only-testing:WagLockTests \
+  -parallel-testing-enabled NO \
+  CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES
 ```
 
-**Note**:
-- Requires Xcode 15.0+
-- Requires macOS 13.0+ (Ventura)
-- Real device requires Apple Developer account (free or paid)
+Some UI tests require explicitly seeded, disposable QA simulators and skip elsewhere. Read their fixture guards before selecting them; do not run import workflows against a personal photo library.
 
----
+The optional desktop-tool tests use Python's standard library:
 
-### 📊 Project Status
-
-- **Current App Store version**: See the [live listing](https://apps.apple.com/app/id6755504480)
-- **Development Status**: ✅ Stable maintenance
-- **Last Update**: 2025-01-17
-- **Open Source Date**: 2025-01-18
-- **Next Version**: V2.0 (planned)
-
----
-
-### 🗺️ Roadmap
-
-#### V1.2 ✅ Completed (2025-01-17)
-- ✅ Guest Mode (dual password system)
-- ✅ Hidden Space
-- ✅ Disguise Interface
-- ✅ PBKDF2 key derivation
-- ✅ Major security enhancements
-
-#### V2.0 🚧 Planned
-- [ ] Folder secondary password
-- [ ] Self-destruct lock (multiple wrong passwords)
-- [ ] Private notes (Markdown support)
-- [ ] Encrypted file search
-- [ ] Performance optimization
-
-#### V3.0 💡 Long-term
-- [ ] iPad support
-- [ ] macOS version
-- [ ] More language support
-- [ ] Offline password manager
-- [ ] Offline document wallet
-
----
-
-### 💬 Community & Support
-
-- **GitHub Issues**: Report bugs or feature requests
-- **GitHub Discussions**: Discuss and communicate
-- **App Store Rating**: Support project development
-
----
-
-### 📈 Project Stats
-
-- **Lines of Code**: ~5,000 lines Swift
-- **Files**: ~40 Swift files
-- **Dependencies**: Zero third-party
-- **Test Coverage**: Planned
-
----
-
-<div align="center">
-
-**Made with ❤️ for Privacy**
-
-**Open Source · Transparent · Trustworthy**
-
-</div>
-
----
-
-## 中文
-
-### 📖 关于项目
-
-零网络空间是一款**完全开源**的iOS隐私保护应用。
-
-**我们承诺**：
-- ✅ **本地内容**：个人内容在设备上保存，不自动同步云端；Apple 购买与恢复购买使用网络
-- ✅ **零追踪**：不含任何SDK、广告、统计、云备份
-- ✅ **零账号**：不注册、不登录、不收集隐私数据
-- ✅ **本地加密**：AES-256-GCM 加密，密钥仅存本地Keychain
-- ✅ **100%开源**：所有代码公开透明，接受社区审查
-
-**核心理念**：你的数据应该只属于你自己，不应该被上传、分析或追踪。
-
----
-
-### 💡 为什么开源？
-
-**简单真诚的答案**：
-
-> **建立信任。**
-
-很多应用都声称"零网络"、"零追踪"，但用户无法验证。  
-我选择开源，是为了让任何人都可以检查代码，确认我们真的做到了承诺。
-
-**开源不是为了免费，而是为了透明。**
-
-你可以：
-- 📖 查看内容存储代码与独立的 Apple 购买集成
-- 🔍 检查加密实现，确认数据安全
-- 🛡️ 审查隐私保护机制
-- 🧪 自己编译运行，完全掌控
-
-如果你发现任何可疑代码，欢迎在GitHub提Issue。
-
----
-
-### 🔓 Fork 政策
-
-我们**欢迎并允许**任何人Fork这个项目进行修改、学习、研究。
-
-#### ✅ 你可以做什么
-
-- Fork代码并自己编译使用
-- 修改代码满足个人需求
-- 学习iOS开发和隐私保护技术
-- 提交Pull Request改进项目
-- 基于此代码创建衍生项目（需遵守GPL-3.0）
-
-#### ⚠️ 唯一的要求
-
-**请不要在Fork版本中使用"零网络空间"品牌名称和Logo。**
-
-**为什么？**
-- 防止用户混淆官方版本和Fork版本
-- 确保用户知道他们使用的是哪个版本
-- 保护品牌不被滥用
-
-**如何做？**
-- ✅ "基于零网络空间开发的XXX"
-- ✅ "灵感来自零网络空间"
-- ❌ "零网络空间增强版"
-- ❌ "零网络空间Pro"
-
-详细的商标使用指南请查看 [TRADEMARK.md](TRADEMARK.md)。
-
----
-
-### 🏪 App Store 官方版本
-
-#### 为什么开源还有App Store版本？
-
-**两个原因**：
-
-**1. 便利性**
-- 自己编译需要：
-  - 下载Xcode（8GB+）
-  - 学习iOS开发
-  - Apple开发者账号（$99/年）
-  - 每7天重新签名（免费证书）
-
-- App Store版本：
-  - 一键下载
-  - 自动更新
-  - 官方技术支持
-
-**2. 可持续开发**
-- 开源项目需要持续维护
-- 付费版本支持项目长期发展
-- 避免添加广告或收集数据
-
-#### 定价模式
-
-**免费版**：
-- ✅ 完整的加密功能（AES-256-GCM）
-- ✅ 隐藏空间
-- ✅ 伪装界面
-- ✅ 深色模式
-- ✅ 所有核心安全功能
-- ⚠️ **免费媒体与文件额度：75 项**
-
-**VIP（一次性购买，地区价格以 App Store 为准）**：
-- 🔓 **解除导入数量上限，仍受设备可用空间限制**
-- 🔓 **访客模式**（双密码体系）
-- 💰 **永久使用，无订阅**
-
-> 💡 **选择权在你手里**：可以付费支持开发，也可以自己编译免费使用。
-
----
-
-### 🌟 核心功能
-
-#### 基础功能
-- 🔐 **密码保护** - 6-8位强密码
-- 📸 **媒体加密存储** - 照片、视频、文档全部AES-256-GCM加密
-- 📁 **文件夹管理** - 自定义文件夹和标签系统
-- 🎬 **媒体预览** - 全屏查看照片、播放视频、预览文档
-
-#### 高级隐私功能（V1.2）
-- 👥 **访客模式** - 双密码体系，临时访问不暴露核心隐私
-- 🔒 **隐藏空间** - 私密笔记和敏感文件的隐藏区域
-- 🧮 **伪装界面** - 计算器伪装模式，保护隐私
-- 🌓 **深色模式** - 完整的深浅色主题支持
-- 🌍 **国际化** - 完整支持简体中文和英文
-
-#### 安全特性
-- 🛡️ **应用重启强制认证** - 防止未授权访问
-- 🔐 **PBKDF2密钥派生** - 100,000次迭代，防止暴力破解
-- 🔒 **线程安全保护** - @MainActor确保状态管理安全
-- 🧵 **并发访问控制** - NSLock保护关键操作
-- 🗑️ **安全删除** - 文件删除后彻底清除加密数据
-
----
-
-### 🔐 安全设计
-
-#### 密码管理
-```
-存储方式: iOS Keychain
-哈希算法: SHA-256
-盐值: 32字节随机生成（CryptoKit）
-验证延迟: 0.5秒（防暴力破解）
-密钥派生: PBKDF2 (100,000次迭代)
+```sh
+python3 -m unittest discover -s tools -p 'test_*.py' -v
 ```
 
-#### 文件加密
-```
-加密算法: AES-256-GCM
-密钥派生: PBKDF2 (100,000次迭代)
-盐值: 16字节随机（每次加密唯一）
-IV: 12字节随机（每次加密唯一）
-认证标签: 16字节（防数据篡改）
-加密格式: 盐值(16) + IV(12) + 标签(16) + 密文
-内存安全: 密钥使用后立即擦除
-```
+The [export experiment instructions](spikes/cryptomator/RECOVERY.md) separately cover its Swift build and independent CLI recovery. Those are research checks, not app installation or production backup instructions.
 
-#### 网络隔离验证
-```
-内容存储: 本地，不自动上传云端
-购买与恢复购买: Apple StoreKit 网络服务
-第三方SDK: ❌ 零依赖
-云服务: ❌ 完全本地
-统计追踪: ❌ 零收集
-隐私清单: ✅ 已提供（PrivacyInfo.xcprivacy）
-```
+## Roadmap
 
-**验证方式**：
-- 🔍 查看源代码 - 搜索 `URLSession`、`Alamofire`、`网络请求`
-- 📄 检查 `PrivacyInfo.xcprivacy` - 隐私清单文件
-- 🛠️ 运行时监控 - 区分本地内容处理和 Apple 购买服务流量
+The current order is:
 
----
+1. Fix security and reliability findings; complete recovery/key-lifecycle foundations.
+2. Deliver complete encrypted vault export with tested open-source decryption instructions, preserving nested-password boundaries.
+3. Finish independent protection and recovery for nested albums, then independent top-level alternative vaults.
+4. Add encrypted Trash with restore, configurable retention and a seven-day default.
+5. Prepare the internal beta, corresponding source and distribution documentation.
+6. Develop encrypted Markdown notes, encrypted local file search and optional consent-controlled shared albums.
 
-### 🛠️ 技术栈
+Unlock-camera capture and an optional repeated-wrong-password self-destruct lock are also tracked. Destructive behavior needs a concrete reviewed design and explicit opt-in; it is not enabled today. These are development priorities, not committed release dates.
 
-#### 核心技术
-- **语言**: Swift 5.9
-- **UI框架**: SwiftUI 3.0+
-- **数据存储**: SwiftData + FileManager
-- **加密算法**: CryptoKit (AES-256-GCM)
-- **密码管理**: iOS Keychain + PBKDF2
-- **最低支持**: iOS 17.6+
+[Linear project](https://linear.app/d2sci/project/waglock-10d5618162e3) · [Detailed priorities](docs/portable-vault/backlog-priorities.md) · [Requirements](docs/portable-vault/requirements.md) · [Architectural decisions](docs/portable-vault/decisions.md)
 
-#### 兼容设备
-- ✅ iPhone XS 及以上（iPhone XS, XS Max, XR, 11, 12, 13, 14, 15, 16）
-- ✅ iPad（第6代）及以上
-- ✅ iPad Air 2 及以上
-- ✅ iPad mini 4 及以上
+## Contributing
 
-#### 架构特点
-- ✅ MVVM架构模式
-- ✅ @MainActor线程安全
-- ✅ 环境对象依赖注入
-- ✅ 现代Swift并发（async/await）
-- ✅ 原子操作保证数据一致性
+Start with [AGENTS.md](AGENTS.md) and the [development documentation](docs/portable-vault/README.md). Keep existing readers, credentials and user data intact. Storage or recovery changes need disposable fixtures, failure-path tests and a source-preserving transition plan.
 
----
+| Location | Purpose |
+| --- | --- |
+| `WagLock/` | SwiftUI app, models, services and view models |
+| `WagLockTests/` | Unit/security tests and isolated storage experiments |
+| `WagLockUITests/` | Simulator UI workflows |
+| `docs/portable-vault/` | Requirements, decisions, audit findings and test evidence |
+| `spikes/cryptomator/` | Isolated portability research; outside app dependencies |
+| `tools/` | Migration-fidelity and export-recovery tooling |
+| `design/` | Branding provenance and design work |
 
-### 🤝 贡献指南
+For bug reports, include the build number, device/iOS version and steps using disposable samples. Do not include passwords, recovery material or private media. Security-sensitive reports should omit exploit details from public issues until a private reporting route is agreed.
 
-我们欢迎社区贡献！详细的贡献指南请查看 [CONTRIBUTING.md](CONTRIBUTING.md)。
+Older upstream guides, store copy and changelogs may describe historical behavior. Use the WagLock development docs and current implementation evidence as the source of truth.
 
-#### 欢迎的贡献类型
+## License and attribution
 
-✅ **立即欢迎**：
-- Bug修复
-- 性能优化
-- 安全加固
-- 国际化翻译
-- 文档改进
+The repository preserves the upstream [GNU GPL version 3 license text](LICENSE), [copyright/modification notices](NOTICE.md) and [trademark guidance](TRADEMARK.md). WagLock is a modified fork of [SealedPocket / ZeroNet Space](https://github.com/materialofair/zeroNet_Space) and does not imply endorsement by its original authors.
 
-⚠️ **需要讨论**：
-- 新功能开发
-- UI/UX重大改动
-- 架构调整
-
-❌ **明确拒绝**：
-- 任何涉及网络的功能
-- 移除付费限制（Fork后可自行修改）
-- 违背"零网络"理念的功能
-
-#### 如何贡献
-
-1. Fork 这个仓库
-2. 创建你的功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交你的修改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启一个 Pull Request
-
----
-
-### 🏆 致谢
-
-感谢所有为这个项目做出贡献的人！
-
-**贡献者列表**：
-<!-- 贡献者将自动添加到这里 -->
-- 等待第一位贡献者...
-
-**特别感谢**：
-- Apple CryptoKit 团队 - 提供安全的加密框架
-- SwiftUI 社区 - 现代化的UI开发
-- 所有提供反馈和建议的用户
-
----
-
-### 🔒 安全反馈
-
-如果你发现安全漏洞：
-
-1. **请不要公开披露** - 先私密报告
-2. **通过以下方式联系**：
-   - GitHub Issues（使用"Security"标签）
-   - 项目维护者（详见GitHub Profile）
-3. **负责任披露奖励**：
-   - 在README中公开致谢
-   - App内致谢页展示
-
----
-
-### 📄 许可证
-
-本项目采用 **GPL-3.0** 许可证 - 详见 [LICENSE](LICENSE) 文件。
-
-#### GPL-3.0 简单解释
-
-- ✅ 可以自由使用、修改、分发
-- ✅ 可以用于商业目的
-- ⚠️ **修改后的代码必须开源**
-- ⚠️ **衍生作品必须使用GPL-3.0**
-
-详细许可证条款请查看 LICENSE 文件。
-
----
-
-### ⚠️ 重要声明
-
-#### 数据安全提示
-
-- **忘记密码无法恢复** - 无法重置密码，忘记密码需要卸载应用
-- **无云备份** - 所有数据仅存储本地，卸载应用会丢失数据
-- **离线使用** - 完全不联网意味着无法远程恢复数据
-- **请务必记住密码** - 建议使用密码管理器记录
-
-#### 隐私承诺
-
-- ✅ 我们保持个人内容本地处理；Apple 购买是独立的网络服务
-- ✅ 我们**永远不会**收集用户数据
-- ✅ 我们**永远不会**添加追踪或统计
-- ✅ 我们**永远不会**添加广告
-- ✅ **代码永远开源，接受社区监督**
-
----
-
-### 🚀 快速开始
-
-#### 使用 App Store 官方版本（推荐）
-
-[![Download on App Store](https://developer.apple.com/app-store/marketing/guidelines/images/badge-download-on-the-app-store.svg)](https://apps.apple.com/us/app/zeronet-space/id6755504480)
-
-#### 自己编译（高级用户）
-
-```bash
-# 1. 克隆仓库
-git clone https://github.com/materialofair/zeroNet_Space.git
-cd zeroNet_Space
-
-# 2. 使用Xcode打开
-open ZeroNet-Space.xcodeproj
-
-# 3. 选择你的开发团队（需要Apple ID）
-# 4. 选择真机或模拟器
-# 5. 点击运行（⌘R）
-```
-
-**注意**：
-- 需要 Xcode 15.0+
-- 需要 macOS 13.0+ (Ventura)
-- 真机运行需要 Apple 开发者账号（免费或付费均可）
-
----
-
-### 📊 项目状态
-
-- **当前 App Store 版本**: 以[商店页面](https://apps.apple.com/app/id6755504480)为准
-- **开发状态**: ✅ 稳定维护中
-- **最后更新**: 2025-01-17
-- **开源日期**: 2025-01-18
-- **下个版本**: V2.0（计划中）
-
----
-
-### 🗺️ 路线图
-
-#### V1.2 ✅ 已完成（2025-01-17）
-- ✅ 访客模式（双密码体系）
-- ✅ 隐藏空间
-- ✅ 伪装界面
-- ✅ PBKDF2密钥派生
-- ✅ 重大安全增强
-
-#### V2.0 🚧 计划中
-- [ ] 文件夹二级密码
-- [ ] 自毁锁定（多次密码错误）
-- [ ] 私密笔记（Markdown支持）
-- [ ] 文件加密搜索
-- [ ] 性能优化
-
-#### V3.0 💡 长期规划
-- [ ] iPad 适配
-- [ ] macOS 版本
-- [ ] 更多语言支持
-- [ ] 离线密码本
-- [ ] 离线证件钱包
-
----
-
-### 💬 社区与支持
-
-- **GitHub Issues**: 报告Bug或功能请求
-- **GitHub Discussions**: 讨论和交流
-- **App Store评分**: 支持项目发展
-
----
-
-### 📈 项目数据
-
-- **代码行数**: ~5,000行 Swift
-- **文件数**: ~40个Swift文件
-- **依赖**: 零第三方依赖
-- **测试覆盖**: 计划中
-
----
+Research dependencies have their own licenses. App Store/TestFlight distribution and dependency compliance remain review gates; an open-source repository is not, by itself, a declaration that every distribution route is cleared. The [historical upstream README](docs/portable-vault/provenance/README-before-waglock.md) is retained for provenance.

@@ -128,7 +128,7 @@ def replace_hardcoded_strings(file_path):
 
 def main():
     """主函数"""
-    base_path = Path("/Users/WangQiao/Desktop/github/ios-dev/ZeroNet-Space/ZeroNet_Space/ZeroNet-Space/Views")
+    base_path = Path("/Users/WangQiao/Desktop/github/ios-dev/WagLock/WagLock/WagLock/Views")
 
     if not base_path.exists():
         print(f"❌ 路径不存在: {base_path}")

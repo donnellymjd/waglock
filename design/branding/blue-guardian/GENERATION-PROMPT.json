@@ -1,0 +1,5 @@
+{
+  "tool": "built-in image_gen",
+  "reference": "selected-logo-reference.png",
+  "prompt": "Use case: precise-object-edit. Edit target: supplied selected WagLock logo, dog profile inside blue padlock. Create its polished iOS app icon adaptation. Preserve the distinctive right-facing floppy-ear dog silhouette cut out of the lock body and the rounded arch shackle above it, retaining the reference proportions and its cyan-to-royal-blue palette. Remove the entire WagLock wordmark. Clean all speckled edges and compression-looking debris. Simplify overlapping waves into two restrained smooth blue tonal regions. Place only the symbol centrally on a solid very pale icy-blue #F0F6FF full-bleed square background, with the dog negative space also revealing this background. Symbol occupies about 76 percent of the square height. Strong crisp edges, friendly calm eye, no collar or tag. No lettering, no typography, no watermark, no surrounding mockup, no baked outer rounded corners or border. One finished square app icon."
+}

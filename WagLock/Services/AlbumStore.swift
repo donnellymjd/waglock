@@ -1,0 +1,364 @@
+import Foundation
+import CryptoKit
+import ImageIO
+import Security
+import SwiftData
+import UIKit
+internal import Combine
+
+private struct AlbumKeyMaterial: Codable {
+    let albumID: UUID
+    let secret: String
+}
+
+@MainActor
+final class AlbumStore: ObservableObject {
+    static let shared = AlbumStore()
+    @Published private(set) var revision = 0
+    private var vaultKey: SecureBytes?
+    private var albumKeys: [UUID: SecureBytes] = [:]
+    private var generation = UUID()
+    private let biometrics: any BiometricSecretStoring
+    private let crypto = EncryptionService.shared
+
+    init(biometrics: any BiometricSecretStoring = BiometricSecretStore.shared) {
+        self.biometrics = biometrics
+    }
+
+    /// Called once at process startup, before any live album import or preview exists.
+    static func removeAbandonedTemporaryFiles() {
+        let root = FileManager.default.temporaryDirectory
+        let entries = (try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)) ?? []
+        for url in entries where url.lastPathComponent.hasPrefix("WagLockAlbumImport-")
+            || url.lastPathComponent.hasPrefix("WagLockAlbumImport-")
+            || url.lastPathComponent.hasPrefix("WagLockAlbumPreview-")
+            || url.lastPathComponent.hasPrefix("WagLockAlbumPreview-") {
+            try? FileManager.default.removeItem(at: url)
+        }
+    }
+
+    func beginSession(vaultSecret: String) {
+        endSession()
+        vaultKey = SecureBytes(vaultSecret)
+    }
+
+    func endSession() {
+        generation = UUID()
+        vaultKey?.wipe()
+        vaultKey = nil
+        for key in albumKeys.values { key.wipe() }
+        albumKeys.removeAll()
+        revision += 1
+    }
+
+    func isUnlocked(_ album: VaultAlbum, albums: [VaultAlbum]) -> Bool {
+        guard vaultKey != nil, albumKeys[album.id] != nil else { return false }
+        return (try? parentKey(for: album, albums: albums)) != nil
+    }
+
+    private func parentKey(for album: VaultAlbum, albums: [VaultAlbum]) throws -> String {
+        guard let vaultSecret = vaultKey?.string else { throw VaultAccessError.locked }
+        var visited: Set<UUID> = [album.id]
+        var parentID = album.parentID
+        var immediateKey: String?
+        while let id = parentID {
+            guard visited.insert(id).inserted,
+                  let parent = albums.first(where: { $0.id == id }) else {
+                throw VaultAccessError.invalidAlbum
+            }
+            guard let key = albumKeys[id]?.string else { throw VaultAccessError.locked }
+            if immediateKey == nil { immediateKey = key }
+            parentID = parent.parentID
+        }
+        return immediateKey ?? vaultSecret
+    }
+
+    private func key(for album: VaultAlbum, albums: [VaultAlbum]) throws -> String {
+        _ = try parentKey(for: album, albums: albums)
+        guard let key = albumKeys[album.id]?.string else { throw VaultAccessError.locked }
+        return key
+    }
+
+    static func randomSecret() throws -> String {
+        var data = Data(count: 32)
+        let status = data.withUnsafeMutableBytes {
+            SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!)
+        }
+        guard status == errSecSuccess else { throw VaultAccessError.invalidData }
+        return data.base64EncodedString()
+    }
+
+    func create(name: String, parent: VaultAlbum?, protection: AlbumProtection,
+                password: String, albums: [VaultAlbum], context: ModelContext) async throws -> VaultAlbum {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, name.count <= 100 else { throw VaultAccessError.invalidAlbum }
+        guard !protection.requiresPassword || KeychainService.validatePasswordStrength(password).isValid else {
+            throw VaultAccessError.invalidPassword
+        }
+        let parentSecret: String
+        if let parent {
+            parentSecret = try key(for: parent, albums: albums)
+        } else {
+            guard let value = vaultKey?.string else { throw VaultAccessError.locked }
+            parentSecret = value
+        }
+        let id = UUID()
+        let biometricAccount = UUID().uuidString
+        let token = generation
+        let secret = try Self.randomSecret()
+        let factor = protection == .faceIDOnly ? try Self.randomSecret() : password
+        var envelope = try JSONEncoder().encode(AlbumKeyMaterial(albumID: id, secret: secret))
+        if protection != .inherited {
+            envelope = try crypto.encrypt(data: envelope, password: factor)
+        }
+        let wrappedKey = try crypto.encrypt(data: envelope, password: parentSecret)
+        let catalog = try crypto.encrypt(data: JSONEncoder().encode([AlbumAsset]()), password: secret)
+        if protection.usesBiometrics {
+            try await biometrics.store(factor, account: biometricAccount)
+        }
+        do {
+            guard generation == token else { throw CancellationError() }
+            if let parent { _ = try key(for: parent, albums: albums) }
+            let album = VaultAlbum(id: id, parentID: parent?.id, name: name,
+                                   protection: protection, wrappedKey: wrappedKey, encryptedCatalog: catalog,
+                                   biometricAccount: protection.usesBiometrics ? biometricAccount : nil)
+            context.insert(album)
+            do { try context.save() } catch { context.delete(album); throw error }
+            albumKeys[id] = SecureBytes(secret)
+            revision += 1
+            return album
+        } catch {
+            if protection.usesBiometrics { biometrics.remove(account: biometricAccount) }
+            throw error
+        }
+    }
+
+    func unlock(_ album: VaultAlbum, password: String? = nil, useBiometrics: Bool = false,
+                albums: [VaultAlbum]) async throws {
+        guard let protection = AlbumProtection(rawValue: album.protectionRawValue) else {
+            throw VaultAccessError.invalidAlbum
+        }
+        let parentSecret = try parentKey(for: album, albums: albums)
+        let token = generation
+        var factor = password
+        if useBiometrics {
+            guard protection.usesBiometrics else { throw VaultAccessError.invalidAlbum }
+            guard let account = album.biometricAccount else { throw VaultAccessError.invalidData }
+            factor = try await biometrics.read(account: account, reason: "Unlock this album")
+        }
+        guard token == generation else { throw CancellationError() }
+        _ = try parentKey(for: album, albums: albums)
+        var envelope = try crypto.decrypt(encryptedData: album.wrappedKey, password: parentSecret)
+        if protection != .inherited {
+            guard let factor, protection != .faceIDOnly || useBiometrics else { throw VaultAccessError.locked }
+            do { envelope = try crypto.decrypt(encryptedData: envelope, password: factor) }
+            catch { throw VaultAccessError.invalidPassword }
+        }
+        let material = try JSONDecoder().decode(AlbumKeyMaterial.self, from: envelope)
+        guard material.albumID == album.id else { throw VaultAccessError.invalidData }
+        let secret = material.secret
+        // Validate catalog before granting access; an invalid wrapper never creates an unlocked session.
+        _ = try JSONDecoder().decode([AlbumAsset].self, from: crypto.decrypt(
+            encryptedData: album.encryptedCatalog, password: secret))
+        albumKeys[album.id]?.wipe()
+        albumKeys[album.id] = SecureBytes(secret)
+        revision += 1
+    }
+
+    func lock(_ album: VaultAlbum, albums: [VaultAlbum]) {
+        // Invalidate all pending requests, including reads of descendants.
+        generation = UUID()
+        var ids: Set<UUID> = [album.id]
+        var changed = true
+        while changed {
+            changed = false
+            for candidate in albums where candidate.parentID.map(ids.contains) == true {
+                if ids.insert(candidate.id).inserted { changed = true }
+            }
+        }
+        for id in ids { albumKeys.removeValue(forKey: id)?.wipe() }
+        revision += 1
+    }
+
+    func changeProtection(of album: VaultAlbum, to protection: AlbumProtection,
+                          password: String, albums: [VaultAlbum], context: ModelContext) async throws {
+        let secret = try key(for: album, albums: albums)
+        let parentSecret = try parentKey(for: album, albums: albums)
+        guard !protection.requiresPassword || KeychainService.validatePasswordStrength(password).isValid else {
+            throw VaultAccessError.invalidPassword
+        }
+        let token = generation
+        let factor = protection == .faceIDOnly ? try Self.randomSecret() : password
+        var envelope = try JSONEncoder().encode(AlbumKeyMaterial(albumID: album.id, secret: secret))
+        if protection != .inherited { envelope = try crypto.encrypt(data: envelope, password: factor) }
+        let wrapped = try crypto.encrypt(data: envelope, password: parentSecret)
+        let account = UUID().uuidString
+        if protection.usesBiometrics { try await biometrics.store(factor, account: account) }
+        let previous = (album.wrappedKey, album.protectionRawValue, album.biometricAccount)
+        do {
+            guard token == generation else { throw CancellationError() }
+            _ = try key(for: album, albums: albums)
+            album.wrappedKey = wrapped
+            album.protectionRawValue = protection.rawValue
+            album.biometricAccount = protection.usesBiometrics ? account : nil
+            do { try context.save() } catch {
+                album.wrappedKey = previous.0
+                album.protectionRawValue = previous.1
+                album.biometricAccount = previous.2
+                throw error
+            }
+            if let old = previous.2 { biometrics.remove(account: old) }
+            lock(album, albums: albums)
+        } catch {
+            if protection.usesBiometrics { biometrics.remove(account: account) }
+            throw error
+        }
+    }
+
+    func assets(in album: VaultAlbum, albums: [VaultAlbum]) throws -> [AlbumAsset] {
+        let secret = try key(for: album, albums: albums)
+        return try JSONDecoder().decode([AlbumAsset].self, from: crypto.decrypt(
+            encryptedData: album.encryptedCatalog, password: secret))
+    }
+
+    @discardableResult
+    func importFile(_ url: URL, into album: VaultAlbum, albums: [VaultAlbum], context: ModelContext,
+                    originalName: String? = nil) async throws -> AlbumAsset {
+        let secret = try key(for: album, albums: albums)
+        let token = generation
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        let name = originalName ?? url.lastPathComponent
+        let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+        let type = MediaType.from(fileExtension: url.pathExtension)
+        // Existing streaming reader/writer retained; omit original names from ciphertext paths.
+        let path = try await Task.detached(priority: .userInitiated) {
+            try FileStorageService.shared.saveEncryptedFile(from: url, password: secret)
+        }.value
+        do {
+            try Task.checkCancellation()
+            guard token == generation else { throw CancellationError() }
+            _ = try key(for: album, albums: albums)
+            var thumbnail: Data?
+            if type == .photo, let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+               let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: 300,
+               ] as CFDictionary) {
+                thumbnail = UIImage(cgImage: image).jpegData(compressionQuality: 0.7)
+            }
+            var catalog = try assets(in: album, albums: albums)
+            let asset = AlbumAsset(id: UUID(), fileName: name, encryptedPath: path,
+                                   fileSize: Int64(size), type: type, thumbnail: thumbnail, createdAt: Date())
+            catalog.append(asset)
+            let encrypted = try crypto.encrypt(data: JSONEncoder().encode(catalog), password: secret)
+            let previous = album.encryptedCatalog
+            album.encryptedCatalog = encrypted
+            do { try context.save() } catch { album.encryptedCatalog = previous; throw error }
+            revision += 1
+            return asset
+        } catch {
+            try? FileStorageService.shared.deleteFile(path: path)
+            throw error
+        }
+    }
+
+    func preview(_ asset: AlbumAsset, in album: VaultAlbum, albums: [VaultAlbum]) async throws -> URL {
+        let secret = try key(for: album, albums: albums)
+        let catalog = try assets(in: album, albums: albums)
+        guard catalog.contains(where: { $0.id == asset.id && $0.encryptedPath == asset.encryptedPath }) else {
+            throw VaultAccessError.invalidData
+        }
+        let token = generation
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WagLockAlbumPreview-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
+                                               attributes: [.protectionKey: FileProtectionType.complete])
+        let suffix = asset.fileExtension.filter { $0.isLetter || $0.isNumber }
+        let url = directory.appendingPathComponent("preview").appendingPathExtension(suffix)
+        let source = FileStorageService.shared.getFileURL(for: asset.encryptedPath)
+        do {
+            try await Task.detached(priority: .userInitiated) {
+                try EncryptionService.shared.decryptFile(inputURL: source, to: url, password: secret)
+            }.value
+        } catch {
+            try? FileManager.default.removeItem(at: directory)
+            throw error
+        }
+        guard token == generation, isUnlocked(album, albums: albums), !Task.isCancelled else {
+            try? FileManager.default.removeItem(at: directory)
+            throw CancellationError()
+        }
+        return url
+    }
+
+    func moveFromLibrary(_ media: MediaItem, into album: VaultAlbum,
+                         albums: [VaultAlbum], context: ModelContext) async throws {
+        guard let root = vaultKey?.string else { throw VaultAccessError.locked }
+        _ = try key(for: album, albums: albums)
+        let token = generation
+        let sourcePath = media.encryptedPath
+        let source = try await FileStorageService.shared.createDecryptedTempFileAsync(
+            path: sourcePath, password: root, preferredExtension: media.fileExtension)
+        defer { try? FileManager.default.removeItem(at: source) }
+        guard token == generation else { throw CancellationError() }
+        let imported = try await importFile(source, into: album, albums: albums,
+                                            context: context, originalName: media.fullFileName)
+        let verification = try await preview(imported, in: album, albums: albums)
+        defer { try? FileManager.default.removeItem(at: verification.deletingLastPathComponent()) }
+        let matches = try await Task.detached {
+            try Self.fileDigest(source) == Self.fileDigest(verification)
+        }.value
+        guard matches, token == generation else { throw VaultAccessError.invalidData }
+        _ = try key(for: album, albums: albums)
+        // Destination is committed and verified before the original record or ciphertext is removed.
+        context.delete(media)
+        do { try context.save() } catch { context.rollback(); throw error }
+        try? FileStorageService.shared.deleteFile(path: sourcePath)
+        MediaLoaderService.shared.clearCache(forPath: sourcePath)
+        ThumbnailImageLoader.shared.clearAll()
+        revision += 1
+    }
+
+    nonisolated private static func fileDigest(_ url: URL) throws -> Data {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        var hash = SHA256()
+        while let chunk = try handle.read(upToCount: 1_048_576), !chunk.isEmpty { hash.update(data: chunk) }
+        return Data(hash.finalize())
+    }
+
+    func delete(_ asset: AlbumAsset, from album: VaultAlbum, albums: [VaultAlbum], context: ModelContext) throws {
+        let secret = try key(for: album, albums: albums)
+        var catalog = try assets(in: album, albums: albums)
+        guard let index = catalog.firstIndex(where: { $0.id == asset.id }) else { throw VaultAccessError.invalidData }
+        let removed = catalog.remove(at: index)
+        let previous = album.encryptedCatalog
+        album.encryptedCatalog = try crypto.encrypt(data: JSONEncoder().encode(catalog), password: secret)
+        do { try context.save() } catch { album.encryptedCatalog = previous; throw error }
+        try? FileStorageService.shared.deleteFile(path: removed.encryptedPath)
+        revision += 1
+    }
+
+    func rename(_ album: VaultAlbum, name: String, albums: [VaultAlbum], context: ModelContext) throws {
+        _ = try key(for: album, albums: albums)
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, name.count <= 100 else { throw VaultAccessError.invalidAlbum }
+        let previous = album.name
+        album.name = name
+        do { try context.save() } catch { album.name = previous; throw error }
+        revision += 1
+    }
+
+    func deleteEmpty(_ album: VaultAlbum, albums: [VaultAlbum], context: ModelContext) throws {
+        _ = try key(for: album, albums: albums)
+        guard !albums.contains(where: { $0.parentID == album.id }),
+              try assets(in: album, albums: albums).isEmpty else { throw VaultAccessError.albumNotEmpty }
+        let account = album.biometricAccount
+        lock(album, albums: albums)
+        context.delete(album)
+        do { try context.save() } catch { context.rollback(); throw error }
+        if let account { biometrics.remove(account: account) }
+    }
+}

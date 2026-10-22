@@ -34,7 +34,7 @@ def find_chinese_strings(file_path):
 
 
 def main():
-    base_path = "ZeroNet-Space/Views"
+    base_path = "WagLock/Views"
     all_results = []
 
     for root, dirs, files in os.walk(base_path):

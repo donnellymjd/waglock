@@ -1,0 +1,18 @@
+# WagLock backlog order — 2026-10-22
+
+Owner requested backlog prioritization and implementation, then elevated portable open-source vault export and independently password-protected nesting. Linear priority indicates importance; this sequence expresses dependencies. Build 34 passed owner PDF background/resume acceptance. No beta upload or live storage conversion is implied.
+
+| Order | Work | Priority / next outcome |
+| --- | --- | --- |
+| 1 | D2S-116 security fixes, D2S-105 audit inventory | Urgent security review; High audit. Fix active regressions first, then remaining plaintext/metadata/key boundaries. Build 34 corrects the accepted PDF regression. |
+| 2 | D2S-114 portable encrypted export; D2S-110 cold recovery; D2S-111 keys; D2S-106/107/109 licensing/format validation | High. Complete encrypted exports with independently usable open-source opening/decryption instructions. Prefer matching native/export formats if validated. Prove recovery without the original device/Keychain and preserve child-password boundaries. Cryptomator remains a candidate; preserve the existing store/readers until a reviewed transition. |
+| 3 | D2S-141 nested protected vaults/albums | High. Build on existing Photos → Albums distinct-password nesting; finish metadata, lifecycle, UX and recovery gaps. Parent credentials alone must not bypass separately protected children, including in exports or Trash. |
+| 4 | D2S-115 independent alternative vault | High. Separate top-level contexts, keys and indexes; preserve existing media. Inherited Guest Mode remains presentation only. |
+| 5 | D2S-140 encrypted Trash | High. Restore with seven-day default retention on the protected metadata/lifecycle foundation. Preference changes must not silently purge retained data. |
+| 6 | D2S-117 beta reliability; D2S-118 source/release preparation | High, with read-only preparation alongside the above. Internal TestFlight is selected; candidate and distribution gates remain. Existing beta features stay free. |
+| 7 | D2S-112 gallery scale; D2S-120 self-build; D2S-121 accurate security messaging | Medium. Validate behavior and limitations; preserve completed unlimited imports/albums/UI work. |
+| 8 | D2S-108/113 source export fidelity/migration | Medium. Export-fidelity evidence precedes a migration wizard. No automatic source cleanup. |
+| 9 | D2S-139 shared albums | Medium discovery. Preserve the selected 24-hour maximum offline policy; test-only consent experiment follows local security/recovery work. No cloud/library selection or beta promise. |
+| 10 | D2S-125 unlock camera; D2S-119 monetization/referrals | Low. Camera needs consent/privacy design; no paywall work now. |
+
+D2S-126 thumbnails and D2S-127 password keyboards remain Done. Separate-password nested albums, independent top-level alternative vaults, and shared albums are distinct requirements. Format/native alignment is a preference, not permission to silently replace storage or weaken nested protection. No new delivery dates are promised.

@@ -3,7 +3,7 @@
 
 
 def fix_tagmanagement():
-    file_path = "/Users/WangQiao/Desktop/github/ios-dev/ZeroNet-Space/ZeroNet_Space/ZeroNet-Space/Views/Tags/TagManagementView.swift"
+    file_path = "/Users/WangQiao/Desktop/github/ios-dev/WagLock/WagLock/WagLock/Views/Tags/TagManagementView.swift"
 
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()

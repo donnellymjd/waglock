@@ -1,0 +1,14 @@
+{
+  "candidateVaultFormat" : 8,
+  "cipherCombo" : "SIV_GCM",
+  "cleartextPath" : "Trips\/2026\/sample.bin",
+  "expectedSHA256" : "f0da11e9bdac0f5804d9d10698fa4a9d16f1030180a4154cd82083e576b0b5ac",
+  "fixturePassword" : "Vaultito disposable fixture only",
+  "libraryRevision" : "b339c9ba84f7737377ef187a78900f9cc384cb12",
+  "payloadTamperingRejected" : true,
+  "restoredWithoutKeychain" : true,
+  "sourceBytes" : 65573,
+  "unmodifiedDesktopClientValidated" : false,
+  "wholeFinalChunkRemovalDetected" : false,
+  "wrongPasswordRejected" : true
+}

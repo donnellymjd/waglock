@@ -1,0 +1,11 @@
+{
+  "created": "2026-10-20",
+  "module": "ZeroNet_Space",
+  "models": [
+    "MediaItem",
+    "SecretNote",
+    "VaultAlbum"
+  ],
+  "source": "Synthetic RenameCompatibilityTests only; no user data or actual encrypted media.",
+  "sha256": "68dd4e0aba730f216058676ae2e893a845861df4118720c3ec78a1dde198c4e6"
+}

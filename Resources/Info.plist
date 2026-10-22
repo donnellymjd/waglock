@@ -2,10 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Use Face ID to unlock WagLock and albums you choose to protect with biometrics.</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>21</string>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

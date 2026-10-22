@@ -185,8 +185,8 @@ IV: 12字节随机（每次加密唯一）
 ```
 
 **验证方式**：
-- 🔍 查看 [FileStorageService.swift](ZeroNet-Space/Services/FileStorageService.swift)、[EncryptionService.swift](ZeroNet-Space/Services/EncryptionService.swift) 和 [PurchaseManager.swift](ZeroNet-Space/Views/Settings/PurchaseManager.swift)，检查存储、加密与购买实现；仅搜索不到 `URLSession` 不能证明没有网络活动
-- 📄 检查 [PrivacyInfo.xcprivacy](ZeroNet-Space/PrivacyInfo.xcprivacy)，并将声明与实际实现对照
+- 🔍 查看 [FileStorageService.swift](WagLock/Services/FileStorageService.swift)、[EncryptionService.swift](WagLock/Services/EncryptionService.swift) 和 [PurchaseManager.swift](WagLock/Views/Settings/PurchaseManager.swift)，检查存储、加密与购买实现；仅搜索不到 `URLSession` 不能证明没有网络活动
+- 📄 检查 [PrivacyInfo.xcprivacy](WagLock/PrivacyInfo.xcprivacy)，并将声明与实际实现对照
 - 🛠️ 运行时监控 - 分别测试离线内容操作、商品信息加载、购买和恢复购买，记录版本与测试范围；本页不声称已验证零网络流量
 
 ---
@@ -558,8 +558,8 @@ Verification scope: Check local-content and Apple transaction flows separately
 ```
 
 **Verification Methods**:
-- 🔍 Inspect storage, encryption, and purchase logic in [FileStorageService.swift](ZeroNet-Space/Services/FileStorageService.swift), [EncryptionService.swift](ZeroNet-Space/Services/EncryptionService.swift), and [PurchaseManager.swift](ZeroNet-Space/Views/Settings/PurchaseManager.swift); absence of `URLSession` alone does not prove absence of network activity
-- 📄 Compare [PrivacyInfo.xcprivacy](ZeroNet-Space/PrivacyInfo.xcprivacy) declarations with the implementation
+- 🔍 Inspect storage, encryption, and purchase logic in [FileStorageService.swift](WagLock/Services/FileStorageService.swift), [EncryptionService.swift](WagLock/Services/EncryptionService.swift), and [PurchaseManager.swift](WagLock/Views/Settings/PurchaseManager.swift); absence of `URLSession` alone does not prove absence of network activity
+- 📄 Compare [PrivacyInfo.xcprivacy](WagLock/PrivacyInfo.xcprivacy) declarations with the implementation
 - 🛠️ Runtime monitoring - Test offline content operations, product loading, purchases, and restoration separately, documenting the version and test scope; this page does not claim verified zero network traffic
 
 ---

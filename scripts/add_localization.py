@@ -5,7 +5,7 @@ import re
 
 
 def add_zh_hans_to_project():
-    project_file = "/Users/WangQiao/Desktop/github/ios-dev/ZeroNet-Space/ZeroNet_Space/ZeroNet-Space.xcodeproj/project.pbxproj"
+    project_file = "/Users/WangQiao/Desktop/github/ios-dev/WagLock/WagLock/WagLock.xcodeproj/project.pbxproj"
 
     with open(project_file, "r", encoding="utf-8") as f:
         content = f.read()

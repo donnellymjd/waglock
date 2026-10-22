@@ -3,7 +3,7 @@
 
 
 def fix_disguise_settings():
-    path = "/Users/WangQiao/Desktop/github/ios-dev/ZeroNet-Space/ZeroNet_Space/ZeroNet-Space/Views/Disguise/DisguiseSettingsView.swift"
+    path = "/Users/WangQiao/Desktop/github/ios-dev/WagLock/WagLock/WagLock/Views/Disguise/DisguiseSettingsView.swift"
     with open(path, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
@@ -24,7 +24,7 @@ def fix_disguise_settings():
 
 
 def fix_file_preview():
-    path = "/Users/WangQiao/Desktop/github/ios-dev/ZeroNet-Space/ZeroNet_Space/ZeroNet-Space/Views/Files/FilePreviewView.swift"
+    path = "/Users/WangQiao/Desktop/github/ios-dev/WagLock/WagLock/WagLock/Views/Files/FilePreviewView.swift"
     with open(path, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
@@ -42,7 +42,7 @@ def fix_file_preview():
 
 
 def fix_folder_list():
-    path = "/Users/WangQiao/Desktop/github/ios-dev/ZeroNet-Space/ZeroNet_Space/ZeroNet-Space/Views/Folders/FolderListView.swift"
+    path = "/Users/WangQiao/Desktop/github/ios-dev/WagLock/WagLock/WagLock/Views/Folders/FolderListView.swift"
     with open(path, "r", encoding="utf-8") as f:
         lines = f.readlines()
 

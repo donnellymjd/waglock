@@ -275,20 +275,20 @@ def main():
     dry_run = "--dry-run" in sys.argv or "-n" in sys.argv
 
     view_files = [
-        "ZeroNet-Space/Views/Export/BatchExportView.swift",
-        "ZeroNet-Space/Views/Folders/BatchFolderSelectionView.swift",
-        "ZeroNet-Space/Views/Tags/BatchTagSelectionView.swift",
-        "ZeroNet-Space/Views/Disguise/DisguiseSettingsView.swift",
-        "ZeroNet-Space/Views/Files/FilePreviewView.swift",
-        "ZeroNet-Space/Views/Files/FilesView.swift",
-        "ZeroNet-Space/Views/Folders/FolderListView.swift",
-        "ZeroNet-Space/Views/Folders/FolderSelectionView.swift",
-        "ZeroNet-Space/Views/Gallery/GalleryView.swift",
-        "ZeroNet-Space/Views/Import/ImportButtonsView.swift",
-        "ZeroNet-Space/Views/Components/LoadingOverlay.swift",
-        "ZeroNet-Space/Views/Gallery/MediaDetailView.swift",
-        "ZeroNet-Space/Views/Security/NetworkVerificationView.swift",
-        "ZeroNet-Space/Views/Tags/TagManagementView.swift",
+        "WagLock/Views/Export/BatchExportView.swift",
+        "WagLock/Views/Folders/BatchFolderSelectionView.swift",
+        "WagLock/Views/Tags/BatchTagSelectionView.swift",
+        "WagLock/Views/Disguise/DisguiseSettingsView.swift",
+        "WagLock/Views/Files/FilePreviewView.swift",
+        "WagLock/Views/Files/FilesView.swift",
+        "WagLock/Views/Folders/FolderListView.swift",
+        "WagLock/Views/Folders/FolderSelectionView.swift",
+        "WagLock/Views/Gallery/GalleryView.swift",
+        "WagLock/Views/Import/ImportButtonsView.swift",
+        "WagLock/Views/Components/LoadingOverlay.swift",
+        "WagLock/Views/Gallery/MediaDetailView.swift",
+        "WagLock/Views/Security/NetworkVerificationView.swift",
+        "WagLock/Views/Tags/TagManagementView.swift",
     ]
 
     total_replacements = 0
