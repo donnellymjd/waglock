@@ -53,7 +53,7 @@ Replace the identity path with your actual file. Keep that private identity sepa
 
 Owner testing on 2026-10-22 confirmed that a fresh export opened successfully after one earlier copy rejected its password. The earlier failure’s cause remains unknown; it is not evidence that the earlier copy is recoverable.
 
-If no protected-album UUID appeared beforehand, the outer archive has not opened. Use the exact password chosen when **that copy** was exported; it may differ from your app unlock password. Passwords are case-sensitive and spaces count. Do not put the password on the command line or send it in a bug report.
+If no protected-album UUID appeared beforehand, the outer archive has not opened. Use the exact password chosen when **that copy** was exported; it may differ from your app unlock password. Passwords are case-sensitive and spaces count. Punctuation such as `*`, `.` and `_` is supported. At age's hidden prompt, type or paste the password literally: do not add shell quotes or backslashes, since those would become password characters. Do not strip punctuation from an existing backup password. Do not put the password on the command line or send it in a bug report.
 
 If you are already using the correct backup password, treat this as an unresolved recovery failure. Keep the original backup and the phone library. Create a fresh export with a new password of your own, save it under a **different filename** (for example `WagLock-Backup-Test.tar.age`), and try that file with a new output folder such as `WagLock-Recovered-Test`. This separates a fresh export from an older or incomplete provider copy. Verify the new file has finished copying before retrying. Do not replace the only backup or delete source media.
 

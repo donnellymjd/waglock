@@ -168,5 +168,37 @@
       "readableMarkdownNotesVerified": 9,
       "phoneOrPrivateMediaAccessed": false
     }
+  },
+  "punctuationPasswordRegression": {
+    "fixtureOnly": true,
+    "usesDifferentPublicPasswordNotUserPassword": true,
+    "punctuationTested": [
+      "*",
+      ".",
+      "_"
+    ],
+    "nativeUIPasswordEntryIndependentRecovery": true,
+    "officialAgeCLI": "v1.3.2",
+    "readableNotesVerified": 10,
+    "privatePhoneBackupAccessed": false,
+    "uiWorkflowPassed": true,
+    "uiResult": "/private/tmp/waglock-punctuation-ui.xcresult",
+    "productionCodeChanged": false,
+    "earlierPhoneCopyFailureCause": "unresolved",
+    "targetedNativeFixtureTestPassed": true,
+    "nativeResult": "/private/tmp/waglock-punctuation-native.xcresult",
+    "checkedInPublicNativeFixtureRegenerated": true,
+    "checkedInFixtureIndependentRecovery": {
+      "fixtureOnly": true,
+      "officialAgeCLI": "v1.3.2",
+      "independentColdRecovery": true,
+      "payloadCount": 7,
+      "payloadHashesMatch": true,
+      "metadataNotesDraftsUnicodeMatch": true,
+      "parentOnlyCredentialsRejected": 2,
+      "tamperAndTruncationRejected": 2,
+      "phoneKeychainRequired": false
+    },
+    "pythonTestsPassed": 57
   }
 }

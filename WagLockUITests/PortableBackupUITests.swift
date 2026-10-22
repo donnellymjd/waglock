@@ -34,7 +34,7 @@ final class PortableBackupUITests: XCTestCase {
         }
         let link = app.buttons["settings.backup"]; reveal(link); link.tap()
         XCTAssertTrue(app.secureTextFields["backup.password"].waitForExistence(timeout: 5))
-        let phrase = "public backup UI passphrase"
+        let phrase = "WagLock*public._backup-test2026"
         app.secureTextFields["backup.password"].tap(); app.secureTextFields["backup.password"].typeText(phrase)
         app.secureTextFields["backup.confirm"].tap(); app.secureTextFields["backup.confirm"].typeText(phrase + "\n")
         let create = app.buttons["backup.create"]; reveal(create); XCTAssertTrue(create.isEnabled); create.tap()

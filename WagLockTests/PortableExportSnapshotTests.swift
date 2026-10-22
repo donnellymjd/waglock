@@ -324,7 +324,7 @@ final class PortableExportSnapshotTests: XCTestCase {
         let draft = PortableExportSnapshot.Draft(origin: .keychain, title: "Public draft", content: "Saved, not omitted", updatedAt: Date(timeIntervalSince1970: 99))
         let collector = f.collector(drafts: { [draft] })
         let snapshot = try collector.capture(f.request)
-        let rootPassword = "WagLock public root recovery password"
+        let rootPassword = "WagLock*public._backup-test2026"
         let credentials: [PortableExportSnapshot.DomainID: AgeFileWriter.Credential] = [
             .root: .password(rootPassword), .album(parent.id): .password(try XCTUnwrap(f.factors[parent.id])),
             .album(child.id): .password(try XCTUnwrap(f.factors[child.id]))]
