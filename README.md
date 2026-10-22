@@ -28,12 +28,12 @@ The app also includes inherited notes and recording features. **Notes are not ye
 
 ## Current development status
 
-As of **October 22, 2026**, the latest owner-accepted phone build is **WagLock Dev 1.3.8 (35)**. Build 35 fixed a photo-viewer teardown crash and passed the owner's checks, with one Notes background defect corrected in installed build 36. Installed build 37 completes the remaining Figma UI implementation; its validation is recorded in the [UI implementation record](docs/portable-vault/figma-ui-implementation.md). Build 38 adds [session-bound note saves](docs/portable-vault/note-write-boundary.md), with 181 unit/security tests and the editor integration check passing; phone acceptance remains separate. The build 35 validation included **172 unit/security tests and repeated simulator UI workflows**. These results cover specific behavior, not the entire security model.
+As of **October 22, 2026**, the latest owner-accepted phone build is **WagLock Dev 1.3.8 (35)**. Build 35 fixed a photo-viewer teardown crash and passed the owner's checks, with one Notes background defect corrected in installed build 36. Installed build 37 completes the remaining Figma UI implementation; its validation is recorded in the [UI implementation record](docs/portable-vault/figma-ui-implementation.md). Build 38 adds [session-bound note saves](docs/portable-vault/note-write-boundary.md), with 181 unit/security tests and the editor integration check passing; phone acceptance remains separate. Build 39 adds the encrypted-backup feature below, is installed on the same phone, and awaits owner/provider acceptance. The build 35 validation included **172 unit/security tests and repeated simulator UI workflows**. These results cover specific behavior, not the entire security model.
 
 | Capability | Status |
 | --- | --- |
 | Encrypted media, nested album passwords and optional biometrics | Available in the development app; further hardening remains |
-| Complete encrypted export with independent desktop recovery | Working isolated prototype; not available in the app |
+| Encrypted export with independent desktop extraction | Build 39 development candidate; password/recovery-key choices, nested protection and Files/cloud destinations; see limits below |
 | Separate populated vault selected by an alternative passcode | In development; current Guest Mode is presentation-only |
 | Encrypted Trash with configurable retention | Planned; enabled with seven-day retention by default when implemented |
 | Encrypted Markdown notes and encrypted file search | Backlog |
@@ -61,9 +61,12 @@ The export experiment creates a Cryptomator-format candidate with encrypted mani
 
 Completeness requires additional verification: the standard reader can accept a valid prefix after a complete final chunk is removed. The experimental manifest verifier detects that loss. Successful desktop opening alone is not a completeness check.
 
-Read-only [snapshot groundwork](docs/portable-vault/portable-export-snapshot.md) now accounts for current persisted content and plans separate album-password domains; it is not connected to an export UI or writer. Its final regression suite passes 196 unit/security tests.
+Build 39 adds an additional **age-encrypted backup** under Settings → Encrypted backup. Choose a password or an existing age X25519 recovery recipient, retain separate protected album passwords, and save finished ciphertext through the native iOS Files picker to local storage, iCloud Drive or an installed provider. Optional Face ID-only album copies require explicit consent, real biometric authorization and a new separate export password. Native storage and credentials remain unchanged.
 
-This work has **not** changed the phone's storage, added a Cryptomator app dependency or implemented full-library export/restore. Licensing/distribution, integrity, complete metadata capture, biometric-only recovery and migration gates remain open.
+The open-source recovery helper invokes the official age tool and verifies content/hierarchy before publishing a new desktop extraction directory. Synthetic iOS exports recover seven payloads plus notes/drafts and two nested password domains without the phone/Keychain; a 64 MiB + 3-byte stream also recovers byte-exactly. Full automated regression passes 206 unit/security tests plus 41 Python tool tests. **Older buffered native files above 64 MiB currently block complete export**; device settings/biometric registrations are excluded explicitly. This is not an in-app restore wizard. Native metadata encryption, broad platform/device/provider validation and inherited distribution review remain open.
+
+- [Create, save and independently recover a backup](docs/portable-vault/backup-recovery.md)
+- [Age format, cryptographic options and dependency decisions](docs/portable-vault/age-backup-design.md)
 
 - [Design, evidence and readiness gates](docs/portable-vault/portable-export-design.md)
 - [Reproduce recovery of generated samples](spikes/cryptomator/RECOVERY.md)

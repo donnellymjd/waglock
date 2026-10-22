@@ -13,6 +13,7 @@ import SwiftUI
 struct WagLockApp: App {
     init() {
         ExportService.shared.cleanupAbandonedExports()
+        PortableBackupSession.cleanupAbandonedJobs()
         AlbumStore.removeAbandonedTemporaryFiles()
         EncryptionService.shared.removeAbandonedStagingFiles(in: FileManager.default.temporaryDirectory)
         EncryptionService.shared.removeAbandonedStagingFiles(in: FileStorageService.shared.getStorageDirectory())
@@ -113,6 +114,7 @@ struct WagLockApp: App {
                     lastBackgroundedAt = Date()
                 case .active:
                     ExportService.shared.retryCleanup()
+                    PortableBackupSession.retryCleanup()
                     let returnedFromBackground = lastBackgroundedAt != nil
                     autoLockIfNeeded()
                     if returnedFromBackground { authViewModel.resumeAlbumAccess() }

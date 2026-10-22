@@ -1,0 +1,7 @@
+{
+  "fixtureOnly": true,
+  "generator": "PortableExportSnapshotTests.testCompleteNativeBackupFixtureForIndependentRecovery",
+  "writer": "signed iOS 18.4 simulator native app/test target; build 39 candidate",
+  "sha256": "687c7d36f0924084c4b4e3c09fdaae571b512ce5046356cb467f5ab9c6eeab96",
+  "contents": "Only generated disposable test payloads, names, notes and draft. All passphrases in expected.public.json are intentionally public; never use them for a real vault."
+}

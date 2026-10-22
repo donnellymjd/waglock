@@ -81,3 +81,7 @@ The export design must preserve these child-password boundaries; it must not fla
 - [D2S-144 — Encrypted file search](https://linear.app/d2sci/issue/D2S-144): offline search over authorized names/folders/metadata with an encrypted persistent index and session-scoped decrypted results. Locked albums and other vaults must not leak matches/counts/snippets. Full-text format coverage remains to be specified; no cryptographic search-over-ciphertext claim.
 
 All three are Backlog items; the existing top-priority export, recovery, nested-vault and security work is unchanged.
+
+## 2026-10-22 — Backup choices and system cloud destinations
+
+The owner authorized the complete export work, cryptographic options and optional on-device cloud backup through the iOS interface. Build 39 uses an additional standard age format (password/scrypt or X25519 recovery recipient), preserving the current native store and Cryptomator proposal. The native Files export picker receives completed ciphertext and lets the user choose local, iCloud Drive or installed providers. This is manual copy, not automatic backup/sync. Device settings/biometric registrations are excluded explicitly; each independently protected child keeps its own password. Face ID-only export requires explicit copy consent, real biometrics and a new confirmed export password without changing native policy. [Implementation/limits](age-backup-design.md), [recovery procedure](backup-recovery.md). Existing recovery/security/distribution gates are narrowed by the recorded evidence, not waived.

@@ -91,6 +91,7 @@ struct PortableExportSnapshot: Equatable {
     fileprivate let mountID: UUID
     fileprivate let authorityRevision: UUID
     fileprivate let albumRevision: Int
+    fileprivate let approvedBiometricAlbums: Set<UUID>
     let content: Content
 }
 
@@ -126,14 +127,14 @@ final class PortableExportSnapshotService {
 
     /// Synchronous MainActor capture: no live SwiftData records escape to a worker.
     /// Does not save the context, unlock albums, read media plaintext or write an export.
-    func capture(_ request: LibraryMountCoordinator.Request) throws -> PortableExportSnapshot {
-        do { return try captureContent(request) }
+    func capture(_ request: LibraryMountCoordinator.Request, approvedBiometricAlbums: Set<UUID> = []) throws -> PortableExportSnapshot {
+        do { return try captureContent(request, approvedBiometricAlbums: approvedBiometricAlbums) }
         catch let failure as Failure { throw failure }
         catch is CancellationError { throw CancellationError() }
         catch { throw Failure.invalidInventory }
     }
 
-    private func captureContent(_ request: LibraryMountCoordinator.Request) throws -> PortableExportSnapshot {
+    private func captureContent(_ request: LibraryMountCoordinator.Request, approvedBiometricAlbums: Set<UUID>) throws -> PortableExportSnapshot {
         try Task.checkCancellation()
         let revision = authority.revision
         let mount = try authorizedMount(request, revision: revision)
@@ -169,8 +170,10 @@ final class PortableExportSnapshotService {
         }
         // Validate the complete hierarchy even when a node starts a new password domain.
         for album in records { _ = try domain(for: album.id) }
+        let biometricIDs = Set(records.filter { protection[$0.id] == .faceIDOnly }.map(\.id))
+        guard approvedBiometricAlbums.isSubset(of: biometricIDs) else { throw Failure.invalidInventory }
         for album in records.sorted(by: { $0.id.uuidString < $1.id.uuidString }) {
-            if protection[album.id] == .faceIDOnly { throw Failure.biometricRecoveryRequired(album.id) }
+            if protection[album.id] == .faceIDOnly, !approvedBiometricAlbums.contains(album.id) { throw Failure.biometricRecoveryRequired(album.id) }
             guard albums.isUnlocked(album, albums: records) else { throw Failure.albumLocked(album.id) }
         }
         var budget = 0
@@ -246,7 +249,7 @@ final class PortableExportSnapshotService {
                 drafts: domainID == .root ? drafts.sorted { $0.origin.rawValue < $1.origin.rawValue } : [])
         }
         return .init(collectorID: id, session: request, mountID: mount.id, authorityRevision: revision,
-                     albumRevision: albumRevision, content: .init(domains: domains))
+                     albumRevision: albumRevision, approvedBiometricAlbums: approvedBiometricAlbums, content: .init(domains: domains))
     }
 
     /// Call across each await in a future writer; it never refreshes an old capability.
@@ -261,7 +264,7 @@ final class PortableExportSnapshotService {
     /// Source hashes and immutable read handles are still required by the future streaming writer.
     func validateUnchanged(_ snapshot: PortableExportSnapshot) throws {
         try validateAuthorization(snapshot)
-        guard try capture(snapshot.session).content == snapshot.content else { throw Failure.changed }
+        guard try capture(snapshot.session, approvedBiometricAlbums: snapshot.approvedBiometricAlbums).content == snapshot.content else { throw Failure.changed }
     }
 
     private func authorizedMount(_ request: LibraryMountCoordinator.Request, revision: UUID,

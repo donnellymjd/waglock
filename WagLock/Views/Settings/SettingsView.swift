@@ -65,6 +65,11 @@ struct SettingsView: View {
                         } label: {
                             settingsCard("internaldrive", "Storage", storageInfo.map { "\($0.formattedTotalUsed) used on this device" } ?? "Calculating storage…")
                         }
+                        if guestModeManager.isOwnerMode {
+                            NavigationLink { PortableBackupView() } label: {
+                                settingsCard("externaldrive.badge.icloud", "Encrypted backup", "Export to Files, iCloud Drive or another provider")
+                            }.accessibilityIdentifier("settings.backup")
+                        }
                         Button { showAboutSheet = true } label: {
                             settingsCard("info.circle", "About WagLock", "Open source · Early test build")
                         }.accessibilityIdentifier("settings.about")

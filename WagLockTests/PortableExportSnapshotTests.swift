@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import Security
 import SwiftData
 import XCTest
@@ -31,6 +32,7 @@ final class PortableExportSnapshotTests: XCTestCase {
         let request = LibraryMountCoordinator.Request(sessionID: UUID(), scope: .legacyOwner)
         var owner = true
         var keys: [UUID: String] = [:]
+        var factors: [UUID: String] = [:]
         var records: [VaultAlbum] = []
         init(unsupported: Bool = false) throws {
             root = FileManager.default.temporaryDirectory.appendingPathComponent("SnapshotFixture-" + UUID().uuidString)
@@ -52,8 +54,8 @@ final class PortableExportSnapshotTests: XCTestCase {
             PortableExportSnapshotService(mounts: mounts, authority: authority, albums: albums,
                 storage: storage, metadataLimit: limit, isOwner: { [unowned self] in owner }, readDrafts: drafts)
         }
-        func source(_ bytes: Data = Data("generated original".utf8)) throws -> String {
-            let encrypted = try EncryptionService.shared.encrypt(data: bytes, password: "synthetic-vault-key")
+        func source(_ bytes: Data = Data("generated original".utf8), key: String = "synthetic-vault-key") throws -> String {
+            let encrypted = try EncryptionService.shared.encrypt(data: bytes, password: key)
             return try storage.saveEncrypted(data: encrypted)
         }
         func media(type: MediaType = .photo, id: UUID = UUID()) throws -> MediaItem {
@@ -78,7 +80,7 @@ final class PortableExportSnapshotTests: XCTestCase {
                 encryptedCatalog: try crypto.encrypt(data: JSONEncoder().encode(assets), password: secret),
                 biometricAccount: policy.usesBiometrics ? account : nil)
             db.mainContext.insert(album); try db.mainContext.save()
-            records.append(album); keys[id] = secret
+            records.append(album); keys[id] = secret; factors[id] = factor
             if policy.usesBiometrics { biometric.values[account] = factor }
             try await albums.unlock(album, password: factor, useBiometrics: policy == .faceIDOnly, albums: records)
             return album
@@ -298,6 +300,153 @@ final class PortableExportSnapshotTests: XCTestCase {
         do { _ = try await job.value; XCTFail("Cancelled capture returned metadata") }
         catch is CancellationError { }
         XCTAssertFalse(read)
+    }
+
+    func testCompleteNativeBackupFixtureForIndependentRecovery() async throws {
+        let f = try Fixture(); defer { f.cleanup() }; await f.begin()
+        let items = try MediaType.allCases.map { try f.media(type: $0) }
+        let note = SecretNote(title: "Public café 家族", content: "# Disposable **recovery** note", isFavorite: true, tags: ["cafe\u{301}"])
+        f.db.mainContext.insert(note); try f.db.mainContext.save()
+        let parent = try await f.album(name: "Private parent", policy: .passwordAndFaceID)
+        let child = try await f.album(name: "Private child", parent: parent, policy: .password)
+        let leaf = try await f.album(name: "Inherited leaf", parent: child, policy: .inherited)
+        var expected: [String: String] = [:]
+        for album in [parent, child, leaf] {
+            let key = try XCTUnwrap(f.keys[album.id])
+            let content = Data((0..<73113).map { UInt8(($0 * 7) % 251) })
+            let asset = AlbumAsset(id: UUID(), fileName: "original café.bin", encryptedPath: try f.source(content, key: key),
+                fileSize: Int64(content.count), type: .document, thumbnail: Data([7, 8, 9]), createdAt: Date(timeIntervalSince1970: 42))
+            album.encryptedCatalog = try EncryptionService.shared.encrypt(data: JSONEncoder().encode([asset]), password: key)
+            expected[asset.id.uuidString] = SHA256.hash(data: content).map { String(format: "%02x", $0) }.joined()
+        }
+        try f.db.mainContext.save()
+        for item in items { expected[item.id.uuidString] = SHA256.hash(data: Data("generated original".utf8)).map { String(format: "%02x", $0) }.joined() }
+        let draft = PortableExportSnapshot.Draft(origin: .keychain, title: "Public draft", content: "Saved, not omitted", updatedAt: Date(timeIntervalSince1970: 99))
+        let collector = f.collector(drafts: { [draft] })
+        let snapshot = try collector.capture(f.request)
+        let rootPassword = "WagLock public root recovery password"
+        let credentials: [PortableExportSnapshot.DomainID: AgeFileWriter.Credential] = [
+            .root: .password(rootPassword), .album(parent.id): .password(try XCTUnwrap(f.factors[parent.id])),
+            .album(child.id): .password(try XCTUnwrap(f.factors[child.id]))]
+        let plan = try BackupPlanFactory.make(snapshot: snapshot, rootKey: "synthetic-vault-key", albumStore: f.albums, albums: f.records, credentials: credentials)
+        let folder = f.root.appendingPathComponent("backup-job")
+        let output = try await Task.detached { try BackupArchiveBuilder.build(plan, directory: folder, lease: BackupLease()) }.value
+        try collector.validateUnchanged(snapshot)
+        let encrypted = try Data(contentsOf: output)
+        XCTAssertNil(encrypted.range(of: Data(note.content.utf8)))
+        XCTAssertNil(encrypted.range(of: Data("Private child".utf8)))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: folder.appendingPathComponent("working-media").path))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path).count, 1)
+        let fixture: [String: Any] = ["fixtureOnly": true, "rootPassword": rootPassword,
+            "childPasswords": [parent.id.uuidString: f.factors[parent.id]!, child.id.uuidString: f.factors[child.id]!],
+            "expectedPayloadHashes": expected, "expectedNotes": [note.content], "expectedDrafts": [draft.content],
+            "expectedAlbums": [parent.name, child.name, leaf.name], "originalPhoneKeychainRequired": false]
+        let archive = XCTAttachment(contentsOfFile: output); archive.name = "public-native-backup.tar.age"; archive.lifetime = .keepAlways; add(archive)
+        let details = XCTAttachment(data: try JSONSerialization.data(withJSONObject: fixture, options: [.sortedKeys]), uniformTypeIdentifier: "public.json")
+        details.name = "public-native-backup-expected.json"; details.lifetime = .keepAlways; add(details)
+    }
+
+    func testFaceIDOnlyPortableCopyNeedsExplicitConsentAndKeepsItsOwnDomain() async throws {
+        let f = try Fixture(); defer { f.cleanup() }; await f.begin()
+        let album = try await f.album(name: "Face ID fixture", policy: .faceIDOnly)
+        let collector = f.collector()
+        XCTAssertThrowsError(try collector.capture(f.request))
+        let snapshot = try collector.capture(f.request, approvedBiometricAlbums: [album.id])
+        XCTAssertEqual(snapshot.content.domains.count, 2)
+        XCTAssertTrue(snapshot.content.domains.first { $0.id == .root }!.albums.isEmpty)
+        let key = Data(album.wrappedKey)
+        let plan = try BackupPlanFactory.make(snapshot: snapshot, rootKey: "synthetic-vault-key", albumStore: f.albums,
+            albums: f.records, credentials: [.root: .password("new outer password"), .album(album.id): .password("separate export password")])
+        XCTAssertEqual(plan.domains.count, 2)
+        XCTAssertEqual(album.wrappedKey, key)
+        XCTAssertEqual(album.protectionRawValue, AlbumProtection.faceIDOnly.rawValue)
+        try collector.validateUnchanged(snapshot)
+        XCTAssertThrowsError(try collector.capture(f.request, approvedBiometricAlbums: [UUID()]))
+    }
+
+    func testBackupSessionHandoffKeepsOnlyFinishedCiphertextAcrossRevocation() async throws {
+        let f = try Fixture(); defer { f.cleanup() }
+        let keychain = KeychainService(service: "backup-session-" + UUID().uuidString)
+        defer { keychain.clearAllKeychainData() }
+        _ = try keychain.savePassword("public-owner-password")
+        let auth = AuthenticationViewModel(keychainService: keychain, manageInstallationState: false, documentPreviewService: f.authority)
+        defer { auth.logout() }
+        auth.password = "public-owner-password"; await (try XCTUnwrap(auth.login())).value
+        let request = LibraryMountCoordinator.Request(sessionID: auth.librarySessionID, scope: .legacyOwner)
+        await f.mounts.mount(request) { true }
+        let note = SecretNote(title: "Public handoff", content: "Only ciphertext may leave")
+        f.db.mainContext.insert(note); try f.db.mainContext.save()
+        let session = PortableBackupSession(authority: f.authority)
+        session.start(mounts: f.mounts, auth: auth, rootCredential: .password("public backup password"), passwords: [:], consent: [])
+        let deadline = Date().addingTimeInterval(30)
+        while session.isWorking, Date() < deadline { try await Task.sleep(for: .milliseconds(10)) }
+        let file = try XCTUnwrap(session.beginHandoff(), session.error ?? "No finished backup")
+        XCTAssertTrue(try Data(contentsOf: file).starts(with: Data("age-encryption.org/v1".utf8)))
+        let folder = file.deletingLastPathComponent()
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path), [file.lastPathComponent])
+        f.authority.endSession(matching: auth.librarySessionID)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
+        session.finishHandoff()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: folder.path))
+        XCTAssertEqual(note.content, "Only ciphertext may leave")
+    }
+
+    func testBackupSessionRevokesOldWorkerAcrossSameSessionResume() async throws {
+        let f = try Fixture(); defer { f.cleanup() }
+        let keychain = KeychainService(service: "backup-revoke-" + UUID().uuidString)
+        defer { keychain.clearAllKeychainData() }
+        _ = try keychain.savePassword("public-owner-password")
+        let auth = AuthenticationViewModel(keychainService: keychain, manageInstallationState: false, documentPreviewService: f.authority)
+        defer { auth.logout() }
+        auth.password = "public-owner-password"; await (try XCTUnwrap(auth.login())).value
+        let request = LibraryMountCoordinator.Request(sessionID: auth.librarySessionID, scope: .legacyOwner)
+        await f.mounts.mount(request) { true }
+        let before = Set((try? FileManager.default.contentsOfDirectory(atPath: PortableBackupSession.jobRoot.path)) ?? [])
+        let session = PortableBackupSession(authority: f.authority)
+        session.start(mounts: f.mounts, auth: auth, rootCredential: .password("public backup password"), passwords: [:], consent: [])
+        var owned = Set<String>()
+        let deadline = Date().addingTimeInterval(30)
+        while owned.isEmpty, Date() < deadline {
+            owned = Set((try? FileManager.default.contentsOfDirectory(atPath: PortableBackupSession.jobRoot.path)) ?? []).subtracting(before)
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertFalse(owned.isEmpty)
+        f.authority.endSession(matching: auth.librarySessionID)
+        f.authority.beginSession(auth.librarySessionID)
+        while owned.contains(where: { FileManager.default.fileExists(atPath: PortableBackupSession.jobRoot.appendingPathComponent($0).path) }), Date() < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertNil(session.readyURL)
+        XCTAssertFalse(owned.contains { FileManager.default.fileExists(atPath: PortableBackupSession.jobRoot.appendingPathComponent($0).path) })
+    }
+
+    func testLargeStreamedBackupFixtureForIndependentRecovery() async throws {
+        let f = try Fixture(); defer { f.cleanup() }; await f.begin()
+        let plain = f.root.appendingPathComponent("public-stream-source")
+        XCTAssertTrue(FileManager.default.createFile(atPath: plain.path, contents: nil))
+        let handle = try FileHandle(forWritingTo: plain)
+        let chunk = Data((0..<65536).map { UInt8($0 % 251) })
+        var hash = SHA256(), size: Int64 = 0
+        for _ in 0..<1024 { try handle.write(contentsOf: chunk); hash.update(data: chunk); size += Int64(chunk.count) }
+        let tail = Data([9, 8, 7]); try handle.write(contentsOf: tail); hash.update(data: tail); size += 3; try handle.close()
+        let encrypted = f.root.appendingPathComponent("public-stream-cipher")
+        try EncryptionService.shared.encryptFile(inputURL: plain, to: encrypted, password: "synthetic-vault-key")
+        try FileManager.default.removeItem(at: plain)
+        let item = MediaItem(fileName: "large fixture", fileExtension: ".bin", fileSize: size, type: .video, encryptedPath: encrypted.path)
+        f.db.mainContext.insert(item); try f.db.mainContext.save()
+        let collector = f.collector(), snapshot = try collector.capture(f.request)
+        let recipient = "age1zvkyg2lqzraa2lnjvqej32nkuu0ues2s82hzrye869xeexvn73equnujwj"
+        let plan = try BackupPlanFactory.make(snapshot: snapshot, rootKey: "synthetic-vault-key", albumStore: f.albums, albums: [], credentials: [.root: .recipient(recipient)])
+        let directory = f.root.appendingPathComponent("stream-job")
+        let output = try await Task.detached { try BackupArchiveBuilder.build(plan, directory: directory, lease: BackupLease()) }.value
+        try collector.validateUnchanged(snapshot)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("working-media").path))
+        let expected: [String: Any] = ["fixtureOnly": true, "bytes": size, "id": item.id.uuidString,
+            "sha256": hash.finalize().map { String(format: "%02x", $0) }.joined(),
+            "identity": "AGE-SECRET-KEY-1GFPYYSJZGFPYYSJZGFPYYSJZGFPYYSJZGFPYYSJZGFPYYSJZGFPQ4EGAEX"]
+        let archive = XCTAttachment(contentsOfFile: output); archive.name = "public-large-backup.tar.age"; archive.lifetime = .keepAlways; add(archive)
+        let details = XCTAttachment(data: try JSONSerialization.data(withJSONObject: expected), uniformTypeIdentifier: "public.json")
+        details.name = "public-large-backup-expected.json"; details.lifetime = .keepAlways; add(details)
     }
 
     func testCheckedDraftReadPreservesBothStoresAndRejectsInaccessibleOrCorruptData() throws {

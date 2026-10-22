@@ -1,0 +1,14 @@
+{
+  "license": "BSD-2-Clause",
+  "originalFiles": {
+    "COPYRIGHT.txt": "35cae11c2152ded714d8833663746a6b3a5472b24d64bc9dea83af1bcfc33dee",
+    "crypto_scrypt-ref.c": "6ae283580ec9b1d574929bbc74805ba580667b4b01bf0fa52617b449a0f99722",
+    "crypto_scrypt.h": "b1179b31600c277a3bf600ed801d41ba3437d55d7076053e09bbacc44200a3f2",
+    "insecure_memzero.c": "881027e26ef782484205ddaef70486c4a398079ab5c50a41d997466965cc12bf",
+    "insecure_memzero.h": "9915dd7eb18dd8a59c066d1890447908d86a2898e08f54ed0bc2cabb1ba83925",
+    "sha256.h": "c378602c64813af4964d405e62737da3cc950fb821cecda69ad7f628a275f967",
+    "sysendian.h": "c4842afadff3e5bae1c8e8e0af8cc1c0e54d70ccf197da44b9c5652576b814b8"
+  },
+  "revision": "cbdef576b8d4640e86b208fa3f063d4ec449110a",
+  "upstream": "https://github.com/Tarsnap/scrypt"
+}

@@ -17,6 +17,7 @@ struct AuthenticatedLibraryView: View {
         Group {
             if let mounted = library.active, mounted.request == expected {
                 ContentView()
+                    .environmentObject(library)
                     .modelContainer(mounted.container)
                     .id(mounted.id)
             } else if library.failed {

@@ -1,0 +1,95 @@
+{
+  "ageEnvelope": {
+    "fixtureOnly": true,
+    "cliVersion": "v1.3.2",
+    "scryptRFC7914": true,
+    "passwordIndependentRecovery": true,
+    "recipientIndependentRecovery": true,
+    "emptyIndependentRecovery": true,
+    "exact-chunkIndependentRecovery": true,
+    "truncatedRejectedByOfficialCLI": true,
+    "tamperedRejectedByOfficialCLI": true
+  },
+  "nativeColdRecovery": {
+    "fixtureOnly": true,
+    "officialAgeCLI": "v1.3.2",
+    "independentColdRecovery": true,
+    "payloadCount": 7,
+    "payloadHashesMatch": true,
+    "metadataNotesDraftsUnicodeMatch": true,
+    "parentOnlyCredentialsRejected": 2,
+    "tamperAndTruncationRejected": 2,
+    "phoneKeychainRequired": false
+  },
+  "largeStream": {
+    "fixtureOnly": true,
+    "officialAgeCLI": "1.3.2",
+    "nativeIOSWriter": true,
+    "independentRecovery": true,
+    "bytes": 67108867,
+    "sha256Matches": true,
+    "streamedAboveLegacyBufferGuard": true
+  },
+  "nestedIsolation": {
+    "fixtureOnly": true,
+    "officialAgeCLI": "1.3.2",
+    "checks": [
+      {
+        "parentDomain": "root",
+        "childDomain": "1EE0D76E-9696-4465-8BEB-298977C8F125",
+        "parentCredentialRejected": true
+      },
+      {
+        "parentDomain": "1EE0D76E-9696-4465-8BEB-298977C8F125",
+        "childDomain": "430473F3-AF55-491F-AE3F-93372BEDD26F",
+        "parentCredentialRejected": true
+      }
+    ]
+  },
+  "schema": "waglock-backup-validation-1",
+  "date": "2026-10-22",
+  "build": 39,
+  "syntheticFixturesOnly": true,
+  "officialCLIRelease": {
+    "version": "v1.3.2",
+    "releaseURL": "https://github.com/FiloSottile/age/releases/tag/v1.3.2",
+    "downloadSHA256": "e2020b073c44f692685a24d6abc378817eb81ffaaf49fd0531ef8565f767f2f5",
+    "releaseAssetDigest": "sha256:e2020b073c44f692685a24d6abc378817eb81ffaaf49fd0531ef8565f767f2f5",
+    "signatureOrSigsumProofVerified": false
+  },
+  "unitSecurityTests": {
+    "passed": 206,
+    "xctest": 95,
+    "swiftTesting": 111,
+    "resultBundle": "/private/tmp/waglock-backup-full-regression.xcresult"
+  },
+  "pythonToolTests": {
+    "passed": 41,
+    "log": "/private/tmp/waglock-backup-python-final.log"
+  },
+  "uiCancellation": {
+    "passed": true,
+    "resultBundle": "/private/tmp/waglock-backup-ui-dismiss.xcresult"
+  },
+  "physicalPhone": {
+    "signedBuild": true,
+    "installed": true,
+    "ownerAcceptance": "pending",
+    "cloudProviderUpload": "pending",
+    "installedVersion": "1.3.8 (39)",
+    "automatedLaunch": "blocked by locked device, CoreDeviceError 10002"
+  },
+  "limits": [
+    "macOS cold recovery tested; Linux/Windows pending",
+    "native buffered ciphertext above 64 MiB blocks complete export",
+    "aggregate metadata 64 MiB",
+    "no in-app restore wizard",
+    "native metadata and inherited distribution audit remain open"
+  ],
+  "uiNativeFilesSave": {
+    "passed": true,
+    "resultBundle": "/private/tmp/waglock-backup-ui-save.xcresult",
+    "actualProviderCopiedCiphertextRecoveredIndependently": true,
+    "expectedDisposableNotePresent": true
+  }
+}

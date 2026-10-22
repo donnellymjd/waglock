@@ -221,6 +221,14 @@ final class AlbumStore: ObservableObject {
             encryptedData: album.encryptedCatalog, password: secret))
     }
 
+    /// Read capability for the checked backup job. The key is never serialized into an archive.
+    func sourceKeyForBackup(albumID: UUID, albums: [VaultAlbum], expectedRevision: Int) throws -> String {
+        guard revision == expectedRevision, let album = albums.first(where: { $0.id == albumID }) else {
+            throw VaultAccessError.locked
+        }
+        return try key(for: album, albums: albums)
+    }
+
     /// Snapshot capture must not silently drop catalog fields it cannot preserve.
     /// Normal gallery readers retain their existing compatibility behavior.
     func assetsForPortableSnapshot(in album: VaultAlbum, albums: [VaultAlbum]) throws -> [AlbumAsset] {

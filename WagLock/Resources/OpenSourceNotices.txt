@@ -3,7 +3,7 @@ WagLock — We Always Guard
 WagLock is an independent modified fork of SealedPocket, formerly ZeroNet Space.
 It is not the official upstream app and does not imply endorsement.
 Upstream: https://github.com/materialofair/zeroNet_Space
-Matching fork source: https://github.com/donnellymjd/zeroNet_Space
+Matching fork source: https://github.com/donnellymjd/waglock
 
 Original source attribution includes WangQiao (2025).
 Original upstream UI copyright notice, preserved: © 2025 ZeroNet Space.
@@ -688,3 +688,37 @@ may consider it more useful to permit linking proprietary applications with
 the library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
+
+
+Tarsnap scrypt reference implementation
+Source: https://github.com/Tarsnap/scrypt
+Pinned revision: cbdef576b8d4640e86b208fa3f063d4ec449110a
+Used for password-protected portable age backups; Apple CommonCrypto supplies PBKDF2-SHA256.
+
+The included code and documentation ("scrypt") is distributed under the
+following terms:
+
+Copyright 2005-2025 Colin Percival.  All rights reserved.
+Copyright 2011-2025 Tarsnap Backup Inc.  All rights reserved.
+Copyright 2014 Sean Kelly.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.

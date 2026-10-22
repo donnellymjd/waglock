@@ -144,3 +144,17 @@ Final combined result: 181 unit/security tests and one real editor workflow pass
 Physical check uses disposable notes: Save a new note, reopen New and confirm its fields are empty; type another draft, use Back, reopen New and confirm the latest text; save, background/lock, unlock and reopen the saved note. Verify normal password/Face ID. Do not send passwords or private note text. Persisted notes remain plaintext SwiftData; this is not D2S-143 encrypted notes.
 
 **Build 38 installed (2026-10-22):** installation succeeded on the owner phone with the same bundle identity and without uninstalling/resetting the library (`/private/tmp/waglock-build38-install.log`). Physical acceptance is pending.
+
+## Build 39 — encrypted backup, 2026-10-22
+
+Signed build **WagLock Dev 1.3.8 (39)** installed without uninstall/reset, preserving `com.d2sci.vaultito.dev` and existing credentials/data. Filtered device inventory confirms version39. Automatic launch failed only because the iPhone was locked (CoreDeviceError10002 / FBSOpenApplicationErrorDomain7). Owner can unlock and launch normally; acceptance is pending. No development tool read/exported owner media or passwords.
+
+Automated evidence:
+
+- 206 unit/security tests (95 XCTest +111 Swift Testing), `/private/tmp/waglock-backup-full-regression.xcresult`.
+- 41 Python tool tests, `/private/tmp/waglock-backup-python-final.log`.
+- Isolated iPhone16 / iOS18.4 UI: password backup creation, native Files dismissal, recipient backup creation, local Files Save callback and original note preservation, `/private/tmp/waglock-backup-ui-save.xcresult`. The actual provider-copied encrypted file independently decrypted with official age and contained the expected disposable note. Fresh Files needed initialization; Xcode27/iOS18 remote AX reported stale toolbar frames, so the fixture uses a supported dismiss gesture and visible system Save coordinates. This is not a cloud upload test.
+- Reproducible official age1.3.2 cold recovery and two parent-only credential rejections, plus tamper/truncation rejection: `python3 tools/check_backup_interop.py --age /path/to/age`. See [public evidence](backup-validation-results.json) and [fixture provenance](../../tools/fixtures/age-backup/README.md).
+- Signed device build `/private/tmp/waglock-build39-device.log`; install `/private/tmp/waglock-build39-install.log`; inventory `/private/tmp/waglock-build39-inventory.log`.
+
+Owner check requested: with disposable content, Settings → Encrypted backup → Password → create → Save to Files → chosen cloud provider; confirm availability on another device and normal password/Face ID unlock. Separate real biometric-only copy acceptance, large-library/phone memory-pressure and broad provider/platform checks remain outstanding. Do not send passwords/identities/private media. [Recovery procedure and limits](backup-recovery.md) include the explicit 64MiB buffered-legacy-file export blocker. This does not change native storage, approve Cryptomator adoption or clear distribution/security-audit gates.
