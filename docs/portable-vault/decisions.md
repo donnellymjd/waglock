@@ -144,3 +144,8 @@ Accepted: the owner selected **WagLock — All wag. No tell.** Rename active sou
 ## ADR-024 — Rehearse a mutable encrypted metadata index before live migration
 
 **Status: implemented unused candidate; production activation remains proposed (2026-10-22).** Use SQLite as a ciphertext transaction engine with CryptoKit AEAD, domain-bound opaque tokens and authenticated bucket inventories. No third-party dependency, automatic conversion, original rewrite or credential change. Require full inventory verification and typed source-fidelity/rollback evidence before activation; whole-copy rollback protection and safe source retirement remain unresolved. A01 stays open while the phone uses plaintext SwiftData. See [candidate contract, evidence and transition gates](encrypted-metadata-candidate.md).
+
+
+### ADR-024 implementation follow-up — typed models and encrypted resume progress
+
+Versioned adapters now preserve all three current SwiftData models into an unused memory-only projection. Staging binds a declared model-only scope and immutable source fingerprint to encrypted progress committed atomically with each batch; resume verifies the saved prefix and completed stages are idempotent. No live activation, default-root capture, source cleanup, credential/identifier change or approved native-format replacement. Draft/settings/every-writer/WAL coordination and reviewed recovery/rollback remain gates. [Contract and integration boundaries](encrypted-metadata-candidate.md#typed-model-adapter-and-resumable-staging).

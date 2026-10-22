@@ -272,7 +272,7 @@ final class EncryptedMetadataStore {
     }
     private func token(kind: String, id: UUID) throws -> Data {
         guard let key = tokenKey else { throw Failure.locked }
-        guard ["media", "note", "album", "draft", "settings", "retained-key"].contains(kind) else { throw Failure.corrupt }
+        guard ["media", "note", "album", "draft", "settings", "retained-key", "transition"].contains(kind) else { throw Failure.corrupt }
         return Data(HMAC<SHA256>.authenticationCode(for: Data((kind + ":" + id.uuidString).utf8), using: key))
     }
     private func aad(_ purpose: String, _ token: Data) -> Data {
