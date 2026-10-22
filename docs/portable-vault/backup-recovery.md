@@ -18,23 +18,44 @@ Store the root backup password/private identity **and every separate album expor
 
 Use a trusted computer with enough private disk space and Python 3.9 or newer. Obtain WagLock's matching source, keeping `tools/backup_recovery.py` and its sibling `tools/age_bootstrap.py` together. No WagLock app, Apple account, phone or Keychain is needed.
 
+### Mac example: Desktop backup → Downloads
+
+If the WagLock repository is in `~/repos/WagLock` and you saved `WagLock-Backup.tar.age` on your Desktop, open **Terminal**, paste this whole command and press Return. It works from any current folder:
+
+```sh
+python3 "$HOME/repos/WagLock/tools/backup_recovery.py" \
+  "$HOME/Desktop/WagLock-Backup.tar.age" \
+  "$HOME/Downloads/WagLock-Recovered"
+```
+
+- **First path:** the recovery helper in your downloaded/cloned WagLock repository. Change it if you keep the repository elsewhere.
+- **Second path:** your encrypted backup. Change it if you saved the backup somewhere else or renamed it.
+- **Third path:** the new folder for decrypted files. **Do not create it first.** If `WagLock-Recovered` already exists, choose another name, such as `WagLock-Recovered-2`; existing files will not be overwritten. Keep decrypted output in a private location.
+
+`$HOME` means your Mac user folder. Keep the quotes, especially for paths containing spaces. The backslash at each line end continues the same command onto the next line.
+
+If age is missing, the helper downloads and verifies it automatically. At **Enter passphrase:**, type the **backup password you chose during export**, then press Return. No characters appear while you type; that is normal. Separately protected albums prompt for their own passwords. A successful run creates `~/Downloads/WagLock-Recovered/`; the outer library is inside its `root/` folder. See the output layout below for media and notes.
+
+### Recovery-key example
+
+If you chose **Age recovery key** during export, supply the matching private identity file instead of an outer backup password. For example, if you keep that file on an external drive named `Recovery`:
+
+```sh
+python3 "$HOME/repos/WagLock/tools/backup_recovery.py" \
+  "$HOME/Desktop/WagLock-Backup.tar.age" \
+  "$HOME/Downloads/WagLock-Recovered" \
+  --identity "/Volumes/Recovery/waglock-identity.txt"
+```
+
+Replace the identity path with your actual file. Keep that private identity separately from your backup; the public `age1…` recipient entered in WagLock cannot decrypt it.
+
+### Automatic age setup and optional controls
+
 **age sets itself up automatically.** If the official [age tool](https://github.com/FiloSottile/age#installation) is already available in your terminal, the helper uses it. Otherwise, on supported macOS/Linux/Windows Intel/ARM64 computers, it downloads the official **age 1.3.2** release over HTTPS, checks a SHA-256 checksum pinned in WagLock's source, and uses a private local copy. No Homebrew, administrator password or system-wide install is required. The first download is about 20 MB and needs internet access; your backup, passwords and keys are never uploaded. Later runs can reuse the verified cached release offline.
 
 On macOS the release cache is `~/Library/Caches/WagLock/age/1.3.2/`. Linux uses `$XDG_CACHE_HOME/WagLock/age/1.3.2/` or `~/.cache/WagLock/age/1.3.2/`; Windows uses `%LOCALAPPDATA%/WagLock/age/1.3.2/`. Each run rechecks the archive and extracts only the expected executable into its own temporary directory, removed when finished. A download/checksum/version failure stops recovery before decrypting. This verifies pinned release bytes; it is not independent Sigsum/signature verification.
 
 Use `--no-install-age` to prevent downloads and require an installed or verified cached copy. For another age installation, use `--age /path/to/age`; an invalid explicit path produces an error rather than downloading a replacement. Unsupported platforms and offline first runs show manual installation instructions.
-
-Run from the checked-out repository, using a **new destination directory** under a trusted private parent:
-
-```sh
-python3 tools/backup_recovery.py /path/WagLock-Backup.tar.age /private/path/recovered
-```
-
-For recovery-key mode, also supply your separately stored identity file:
-
-```sh
-python3 tools/backup_recovery.py /path/WagLock-Backup.tar.age /private/path/recovered --identity /offline/recovery-key.txt
-```
 
 Enter passwords into age's terminal prompts. Do not put passwords in commands, scripts, environment variables or issue reports. The helper announces each protected album's opaque domain UUID before requesting its password. Encrypted private identity files may also cause an age prompt. Child domains always require their separate passwords, even when the outer archive uses a recovery key.
 

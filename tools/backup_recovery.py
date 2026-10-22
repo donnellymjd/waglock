@@ -403,7 +403,18 @@ def recover(encrypted, destination, age, *, identity=None, outer_only=False, max
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Mac example (repository in ~/repos/WagLock; backup on Desktop):
+  python3 "$HOME/repos/WagLock/tools/backup_recovery.py" \\
+    "$HOME/Desktop/WagLock-Backup.tar.age" \\
+    "$HOME/Downloads/WagLock-Recovered"
+
+The destination must be a new folder: do not create it first.
+age downloads automatically if missing. Enter your backup password at the
+prompt; typed passwords are hidden. Protected albums need their own passwords.
+Recovery-key exports also need: --identity /path/to/private-identity.txt
+""")
     parser.add_argument("encrypted", type=Path)
     parser.add_argument("destination", type=Path)
     parser.add_argument("--age", help="Use this age executable instead of automatic discovery/setup")
