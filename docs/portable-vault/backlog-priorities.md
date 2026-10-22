@@ -16,3 +16,9 @@ Owner requested backlog prioritization and implementation, then elevated portabl
 | 10 | D2S-125 unlock camera; D2S-119 monetization/referrals | Low. Camera needs consent/privacy design; no paywall work now. |
 
 D2S-126 thumbnails and D2S-127 password keyboards remain Done. Separate-password nested albums, independent top-level alternative vaults, and shared albums are distinct requirements. Format/native alignment is a preference, not permission to silently replace storage or weaken nested protection. No new delivery dates are promised.
+
+## Pending WagLock identifier migration
+
+Owner reminder (2026-10-22): replace the remaining Vaultito identifiers with WagLock identifiers. Current installed app: `com.d2sci.vaultito.dev`; proposed development identity: `com.d2sci.waglock.dev`, with matching test identifiers. Confirm the distribution identity before registering the beta app. Track under beta/release preparation (D2S-117/118).
+
+Inventory signing/provisioning, entitlements, test targets, bundle-derived Keychain services, biometric registrations and documentation before changing project settings. A new bundle ID has a separate app container and credential namespace; preserve the installed app until independently verified recovery and a concrete transfer/re-enrollment plan exist. Historical Keychain strings and stored compatibility identifiers must remain readable where required. This reminder authorizes planning, not uninstalling/resetting the existing vault.
