@@ -259,3 +259,7 @@ Xcode / iOS 26.5 SDK，iPhone 17 模拟器。当前机器没有 iPhone 15 模拟
 `AudioUITests.testAudioNavigationRecordingPlaybackAndDelete` 在当前 iOS 26.5 模拟器的 `AVAudioRecorder.prepareToRecord()` 卡住。进程采样落在 AudioToolbox 的 `AudioQueueObject::ConnectToIONodeEffects` / `AQMixEngine_Base::DevLock` 等待；未执行到暂停、保存、重命名、删除等后续断言。切换模拟器输出设备及重启未解决，输出设备已恢复为原系统默认值。不将此用例计为通过，完整录音链路仍需要真机验收。
 
 本次改为只录音的 AVAudioSession.record 类别，播放时单独切换 playback；不启用后台持续录音。已有可解码音频的加密和解密测试通过，但不等同于麦克风硬件验收。
+
+## 2026-10-22 — portable snapshot groundwork
+
+Read-only current-model capture and nested password-domain planning are implemented without a UI/writer, app dependency, schema migration or phone installation. Full units: 196 passed (85 XCTest +111 Swift Testing), including 15 new snapshot cases; final result `/private/tmp/waglock-export-snapshot-final-verification.xcresult`. Signed device compile: `/private/tmp/waglock-export-snapshot-device-final-verification.log`, passed. A targeted Unicode test first reproduced five false unchanged checks; exact UTF-8 comparison corrected all cases. Initial fixture actor annotations were corrected before runtime validation. No UI behavior changed, so UI/hardware workflows were not repeated or claimed. See [capture contract and remaining export gates](docs/portable-vault/portable-export-snapshot.md).

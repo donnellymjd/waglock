@@ -221,6 +221,23 @@ final class AlbumStore: ObservableObject {
             encryptedData: album.encryptedCatalog, password: secret))
     }
 
+    /// Snapshot capture must not silently drop catalog fields it cannot preserve.
+    /// Normal gallery readers retain their existing compatibility behavior.
+    func assetsForPortableSnapshot(in album: VaultAlbum, albums: [VaultAlbum]) throws -> [AlbumAsset] {
+        let secret = try key(for: album, albums: albums)
+        let data = try crypto.decrypt(encryptedData: album.encryptedCatalog, password: secret)
+        guard let records = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            throw VaultAccessError.invalidData
+        }
+        let required: Set<String> = ["id", "fileName", "encryptedPath", "fileSize", "type", "createdAt"]
+        let supported = required.union(["thumbnail"])
+        for record in records {
+            let keys = Set(record.keys)
+            guard required.isSubset(of: keys), keys.isSubset(of: supported) else { throw VaultAccessError.invalidData }
+        }
+        return try JSONDecoder().decode([AlbumAsset].self, from: data)
+    }
+
     @discardableResult
     func importFile(_ url: URL, into album: VaultAlbum, albums: [VaultAlbum], context: ModelContext,
                     originalName: String? = nil) async throws -> AlbumAsset {

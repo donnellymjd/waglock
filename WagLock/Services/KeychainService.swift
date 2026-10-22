@@ -507,6 +507,11 @@ extension KeychainService {
         try? readFromKeychain(account: secretNoteDraftAccount)
     }
 
+    /// Recovery must distinguish an absent draft from an inaccessible Keychain entry.
+    func loadSecretNoteDraftChecked() throws -> Data? {
+        try optionalItem(account: secretNoteDraftAccount)
+    }
+
     /// 删除私密笔记草稿
     func deleteSecretNoteDraft() {
         try? deleteFromKeychain(account: secretNoteDraftAccount)

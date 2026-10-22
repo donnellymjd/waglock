@@ -61,6 +61,8 @@ The export experiment creates a Cryptomator-format candidate with encrypted mani
 
 Completeness requires additional verification: the standard reader can accept a valid prefix after a complete final chunk is removed. The experimental manifest verifier detects that loss. Successful desktop opening alone is not a completeness check.
 
+Read-only [snapshot groundwork](docs/portable-vault/portable-export-snapshot.md) now accounts for current persisted content and plans separate album-password domains; it is not connected to an export UI or writer. Its final regression suite passes 196 unit/security tests.
+
 This work has **not** changed the phone's storage, added a Cryptomator app dependency or implemented full-library export/restore. Licensing/distribution, integrity, complete metadata capture, biometric-only recovery and migration gates remain open.
 
 - [Design, evidence and readiness gates](docs/portable-vault/portable-export-design.md)

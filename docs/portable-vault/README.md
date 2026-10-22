@@ -4,6 +4,7 @@
 
 WagLock is an independent fork of [SealedPocket / ZeroNet Space](https://github.com/materialofair/zeroNet_Space). This project is based on ZeroNet Space but is not the official version.
 
+- [Complete-library snapshot groundwork](portable-export-snapshot.md): read-only owner capture, complete current-model inventory and nested domain planning; not a backup/export UI.
 - [Portable export implementation experiment](portable-export-design.md): iOS-simulator/macOS writer, independent CLI recovery, nested passwords and integrity gates; not linked to the app.
 - [Prioritized backlog](backlog-priorities.md): security/recovery, alternative vault, encrypted Trash, beta preparation and later sharing work.
 - [Note write boundary](note-write-boundary.md): build 38 cancellation, draft clearing and owner-session checks; persisted note encryption remains open.
