@@ -1,6 +1,6 @@
 # Portable export and nested vault design — 2026-10-22
 
-D2S-114/107/109/110/141. Owner authorized implementation when ready. **An isolated working export/recovery experiment is implemented; the phone export feature and native storage transition are not ready or enabled.** Build 34 remains the accepted installed app. No live library, Keychain or personal media was read, converted or exported by this work.
+D2S-114/107/109/110/141. Owner authorized implementation when ready. **An isolated working export/recovery experiment is implemented; the phone export feature and native storage transition are not ready or enabled.** Build 35 is the latest owner-accepted app build; build 38 is installed with phone acceptance pending. No live library, Keychain or personal media was read, converted or exported by this work.
 
 ## Implemented evidence
 
@@ -10,7 +10,7 @@ The official, unmodified **Cryptomator CLI 0.6.1 mac-arm64** recovered it using 
 
 The same writer also compiled for `arm64-apple-ios17.6-simulator`, ran under the disposable iOS 18.4 simulator, and produced a candidate recovered by the same independent desktop CLI. Both runs verified outer and inner byte hashes. The outer password failed to unlock the recovered inner vault. The inner password succeeded without the original writer's in-memory keys, original inner source directory or any Keychain input.
 
-[The recovery harness](../../tools/verify_portable_export.py) verifies inventory, byte counts and SHA-256 values before publishing a recovered destination. Missing manifest, payload tampering and removal of a complete final data chunk all failed verified recovery and left no published/partial recovery folder. Eleven adversarial parser/recovery tests passed; the complete tools suite passed 18 tests. [Results](portable-export-experiment-results.json) distinguish macOS and iOS-simulator writers. No GUI app, Windows/Linux, physical iOS execution or current-library recovery was validated.
+[The recovery harness](../../tools/verify_portable_export.py) verifies inventory, byte counts and SHA-256 values before publishing a recovered destination. Missing manifest, payload tampering and removal of a complete final data chunk all failed verified recovery and left no published/partial recovery folder. The initial eleven adversarial parser/recovery tests passed. The hardened helper now passes 24 recovery tests and seven migration tests (31 total); see the follow-up below. [Results](portable-export-experiment-results.json) distinguish macOS and iOS-simulator writers. No GUI app, Windows/Linux, physical iOS execution or current-library recovery was validated.
 
 ## Proposed production direction
 
@@ -38,3 +38,13 @@ An encrypted manifest lists each file's relative path, expected plaintext byte c
 These are implementation gates, not evidence that the whole feature is ready. No destructive migration or beta distribution follows from this experiment.
 
 Primary references: [Cryptomator vault format](https://docs.cryptomator.org/security/vault/), [official CLI source and usage](https://github.com/cryptomator/cli), [pinned Swift library](https://github.com/cryptomator/cryptolib-swift/tree/b339c9ba84f7737377ef187a78900f9cc384cb12). CLI source documents the loopback WebDAV fallback; all executable compatibility results above are local observations.
+
+## Recovery verifier hardening — 2026-10-22
+
+D2S-114/110/116 follow-up. The former final `Path.rename` could replace an empty destination created by another process during recovery. A deterministic regression reproduces that failure against commit `a1a3270`. Publication now uses macOS `renamex_np` with `RENAME_EXCL`, verified against the installed SDK definition, and fails rather than replacing any existing entry. The regression checks empty directories, files and dangling symlinks by inode and content. Failure removes only this operation's staging folder.
+
+Manifests now reject unsupported fields, missing/conflicting parents, case/Unicode-normalization aliases, invalid encodings and excess resources. The parser preserves valid Unicode names; it rejects collisions instead of silently renaming them. The 1,000-entry bound includes the manifest. WebDAV parsing rejects foreign authorities, duplicate/escaping paths, ambiguous encodings, unsupported XML declarations and failed/ambiguous property statuses. The official CLI omits file `resourcetype`; its successful bounded `getcontentlength` response is explicitly supported and tested. Both inventory and manifest are rechecked after payload verification before publication.
+
+All 31 Python tests passed. The final helper independently recovered the existing macOS and iOS-simulator public fixtures with official CLI 0.6.1, preserving hash checks, outer/inner password separation and rejection of tampering, missing manifest and complete-final-chunk removal. See [machine-readable evidence](portable-export-recovery-hardening.json). An initial stricter property check rejected the CLI's legitimate response and was corrected from the public response before final validation.
+
+This strengthens the experiment's recovery side; it is not a hardened Cryptomator configuration/KDF importer, production app export or acceptance of the format. Publication is validated only on macOS and deliberately fails on other platforms. Keep the destination parent trusted and private; no protection against an attacker running as the same OS user, concurrent replacement of staging/parent directories or crash-durable fsync transaction is established. Final rechecks detect tested changes; they do not replace an immutable source snapshot or prevent replay of a complete older authentic export. No new app dependency, phone build or live storage mutation was made.

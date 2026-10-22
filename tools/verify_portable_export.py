@@ -6,6 +6,7 @@ Passwords are the public fixture strings, never taken from real users.
 """
 import argparse
 import contextlib
+import ctypes
 import hashlib
 import json
 import os
@@ -15,7 +16,9 @@ import shutil
 import signal
 import socket
 import subprocess
+import sys
 import time
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -34,7 +37,13 @@ class InvalidExport(ValueError):
 
 
 def relative_path(value):
-    if not isinstance(value, str) or not value or len(value.encode()) > 4096:
+    if not isinstance(value, str) or not value:
+        raise InvalidExport("Invalid relative path")
+    try:
+        size = len(value.encode("utf-8"))
+    except UnicodeError as error:
+        raise InvalidExport("Invalid path encoding") from error
+    if size > 4096:
         raise InvalidExport("Invalid relative path")
     parts = value.split("/")
     if len(parts) > 16 or any(not p or p in (".", "..") or "\\" in p or ":" in p
@@ -52,19 +61,46 @@ def unique_object(pairs):
     return result
 
 
+def portable_key(path):
+    # Reject aliases; never rename or normalize the recovered user's actual spelling.
+    return unicodedata.normalize("NFC", path).casefold()
+
+
+def publish_without_replacement(stage, destination):
+    """macOS fixture harness: atomic publication that cannot replace an existing entry.
+
+    RENAME_EXCL is defined as 0x4 in the macOS SDK's sys/stdio.h. Do not
+    substitute exists()+rename(): that reintroduces the destination race.
+    """
+    if sys.platform != "darwin":
+        raise InvalidExport("Exclusive recovery publication is only validated on macOS")
+    libc = ctypes.CDLL(None, use_errno=True)
+    rename = libc.renamex_np
+    rename.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint]
+    rename.restype = ctypes.c_int
+    if rename(os.fsencode(stage), os.fsencode(destination), 0x4) != 0:
+        code = ctypes.get_errno()
+        raise OSError(code, os.strerror(code), str(destination))
+
+
 def parse_manifest(data):
     if len(data) > MAX_FILE:
         raise InvalidExport("Manifest too large")
-    value = json.loads(data, object_pairs_hook=unique_object)
+    try:
+        value = json.loads(data, object_pairs_hook=unique_object)
+    except (ValueError, UnicodeError, RecursionError) as error:
+        raise InvalidExport("Malformed manifest JSON") from error
     if not isinstance(value, dict) or value.get("schema") != "waglock-portable-export-experiment-1" or value.get("fixtureOnly") is not True:
         raise InvalidExport("Unsupported experimental manifest")
+    if set(value) != {"schema", "fixtureOnly", "files", "directories", "nestedVaults"}:
+        raise InvalidExport("Unsupported manifest fields")
     files, directories, nested = value.get("files"), value.get("directories"), value.get("nestedVaults")
-    if not isinstance(files, list) or not isinstance(directories, list) or not isinstance(nested, list) or len(files) + len(directories) > MAX_ENTRIES:
+    if not isinstance(files, list) or not isinstance(directories, list) or not isinstance(nested, list) or len(files) + len(directories) + 1 > MAX_ENTRIES or len(nested) > MAX_ENTRIES:
         raise InvalidExport("Invalid manifest inventory")
     expected = {}
     total = 0
     for item in files:
-        if not isinstance(item, dict):
+        if not isinstance(item, dict) or set(item) != {"path", "bytes", "sha256"}:
             raise InvalidExport("Invalid file entry")
         path = relative_path(item.get("path"))
         size, digest = item.get("bytes"), item.get("sha256")
@@ -75,6 +111,15 @@ def parse_manifest(data):
     dirs = [relative_path(p) for p in directories]
     if total > MAX_TOTAL or len(set(dirs)) != len(dirs) or set(dirs) & set(expected):
         raise InvalidExport("Invalid directory inventory")
+    all_paths = list(expected) + dirs + [MANIFEST]
+    if len({portable_key(path) for path in all_paths}) != len(all_paths):
+        raise InvalidExport("Filesystem path aliases in inventory")
+    for path in all_paths:
+        parent = PurePosixPath(path).parent
+        while str(parent) != ".":
+            if str(parent) not in dirs:
+                raise InvalidExport("Missing or conflicting parent directory")
+            parent = parent.parent
     for path in nested:
         if relative_path(path) not in dirs:
             raise InvalidExport("Nested vault not in directory inventory")
@@ -91,7 +136,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 class Reader:
     def __init__(self, base):
         parsed = urllib.parse.urlsplit(base)
-        if parsed.scheme != "http" or parsed.hostname not in ("localhost", "127.0.0.1", "::1") or parsed.query or parsed.fragment:
+        if parsed.scheme != "http" or parsed.hostname not in ("localhost", "127.0.0.1", "::1") or parsed.username is not None or parsed.password is not None or parsed.query or parsed.fragment:
             raise InvalidExport("Reader must use the CLI's loopback URL")
         self.base = base.rstrip("/") + "/"
         self.root = urllib.parse.unquote(urllib.parse.urlsplit(self.base).path)
@@ -110,23 +155,61 @@ class Reader:
         files, dirs, todo = set(), set(), [""]
         while todo:
             current = todo.pop()
-            root = ET.fromstring(self.read(current, "PROPFIND"))
+            body = self.read(current, "PROPFIND")
+            # The CLI emits simple UTF-8 DAV XML; DTD/entity declarations are unnecessary.
+            if b"<!DOCTYPE" in body.upper() or b"<!ENTITY" in body.upper() or b"\x00" in body:
+                raise InvalidExport("Unsupported WebDAV XML declarations")
+            try:
+                root = ET.fromstring(body)
+            except ET.ParseError as error:
+                raise InvalidExport("Malformed WebDAV XML") from error
+            if root.tag != "{DAV:}multistatus":
+                raise InvalidExport("Unexpected WebDAV response")
+            seen = set()
             for entry in root.findall("{DAV:}response"):
                 href = entry.findtext("{DAV:}href")
                 if not href:
                     raise InvalidExport("Missing WebDAV path")
-                href = urllib.parse.urlsplit(href).path
-                decoded = urllib.parse.unquote(href)
+                parsed_href = urllib.parse.urlsplit(href)
+                base = urllib.parse.urlsplit(self.base)
+                if (parsed_href.scheme or parsed_href.netloc) and (parsed_href.scheme, parsed_href.netloc) != (base.scheme, base.netloc):
+                    raise InvalidExport("Foreign WebDAV authority")
+                if parsed_href.query or parsed_href.fragment or not parsed_href.path.startswith("/"):
+                    raise InvalidExport("Unexpected WebDAV href")
+                href = parsed_href.path
+                if re.search(r"%(?![0-9a-fA-F]{2})|%2f|%5c", href, re.IGNORECASE):
+                    raise InvalidExport("Ambiguous WebDAV path encoding")
+                try:
+                    decoded = urllib.parse.unquote(href, errors="strict")
+                except UnicodeError as error:
+                    raise InvalidExport("Invalid WebDAV path encoding") from error
                 if not decoded.startswith(self.root):
                     raise InvalidExport("WebDAV path outside vault")
-                path = decoded[len(self.root):].rstrip("/")
+                path = decoded[len(self.root):].removesuffix("/")
+                if path in seen:
+                    raise InvalidExport("Duplicate WebDAV entry")
+                seen.add(path)
+                properties = []
+                for propstat in entry.findall("{DAV:}propstat"):
+                    if re.fullmatch(r"HTTP/1\.[01] 200(?: .*)?", propstat.findtext("{DAV:}status") or ""):
+                        prop = propstat.find("{DAV:}prop")
+                        if prop is not None:
+                            properties.append(prop)
+                if len(properties) != 1:
+                    raise InvalidExport("Missing or ambiguous successful WebDAV properties")
                 if not path or path == current.rstrip("/"):
                     continue
                 path = relative_path(path)
                 parent = str(PurePosixPath(path).parent)
                 if ("" if parent == "." else parent) != current.rstrip("/"):
                     raise InvalidExport("WebDAV response escaped requested directory")
-                collection = entry.find(".//{DAV:}resourcetype/{DAV:}collection") is not None
+                resource = properties[0].find("{DAV:}resourcetype")
+                # CLI 0.6.1 omits resourcetype on files and supplies content length.
+                if resource is None:
+                    length = properties[0].findtext("{DAV:}getcontentlength") or ""
+                    if not re.fullmatch(r"[0-9]{1,10}", length) or int(length) > MAX_FILE:
+                        raise InvalidExport("Missing or unsupported WebDAV file properties")
+                collection = resource is not None and resource.find("{DAV:}collection") is not None
                 if collection:
                     if path not in dirs:
                         dirs.add(path)
@@ -157,10 +240,12 @@ class Reader:
                 with (stage / path).open("xb") as stream:
                     os.chmod(stage / path, 0o600)
                     stream.write(data)
-            # Source is read-only to this client; recheck the authenticated manifest before publication.
+            # Source is read-only to this client, but another writer may change it.
+            if self.inventory() != (actual_files, actual_dirs):
+                raise InvalidExport("Inventory changed during recovery")
             if parse_manifest(self.read(MANIFEST)) != (expected, directories, nested):
                 raise InvalidExport("Manifest changed during recovery")
-            stage.rename(destination)
+            publish_without_replacement(stage, destination)
         except BaseException:
             shutil.rmtree(stage)
             raise

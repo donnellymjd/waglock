@@ -1,0 +1,72 @@
+{
+  "date": "2026-10-22",
+  "destinationRaceRegression": "Old helper replaced a concurrently created empty directory; exclusive publication now rejects and preserves it.",
+  "fixtureOnly": true,
+  "helperSHA256": "4dbe2ffde241a87a9ee352611e3975a8bd8c3f245fb6b0edcd0b02442ed88cc2",
+  "iosSimulatorWriterRecovery": {
+    "cliVersion": "0.6.1",
+    "fixtureOnly": true,
+    "independentCLIContentHashesMatch": true,
+    "innerRecovery": {
+      "directories": 1,
+      "files": 1,
+      "nestedVaults": []
+    },
+    "missing-manifestRejectedByVerifiedRecovery": true,
+    "nativeReaderAcceptsTruncatedPrefix": true,
+    "outerPasswordCannotUnlockInner": true,
+    "outerRecovery": {
+      "directories": 9,
+      "files": 8,
+      "nestedVaults": [
+        "Protected"
+      ]
+    },
+    "tamperedRejectedByVerifiedRecovery": true,
+    "truncatedRejectedByVerifiedRecovery": true,
+    "wholeVaultAppExportShipped": false
+  },
+  "macOSWriterRecovery": {
+    "cliVersion": "0.6.1",
+    "fixtureOnly": true,
+    "independentCLIContentHashesMatch": true,
+    "innerRecovery": {
+      "directories": 1,
+      "files": 1,
+      "nestedVaults": []
+    },
+    "missing-manifestRejectedByVerifiedRecovery": true,
+    "nativeReaderAcceptsTruncatedPrefix": true,
+    "outerPasswordCannotUnlockInner": true,
+    "outerRecovery": {
+      "directories": 9,
+      "files": 8,
+      "nestedVaults": [
+        "Protected"
+      ]
+    },
+    "tamperedRejectedByVerifiedRecovery": true,
+    "truncatedRejectedByVerifiedRecovery": true,
+    "wholeVaultAppExportShipped": false
+  },
+  "nativeStorageChanged": false,
+  "openGates": [
+    "production config/KDF hostile-input hardening",
+    "complete current-library snapshot and recovery",
+    "streaming large files and long names",
+    "per-album export credential workflow and Face ID-only recovery",
+    "licensing and distribution",
+    "physical iOS and broader desktop platform matrix",
+    "immutable source snapshot and crash durability"
+  ],
+  "phoneBuildChanged": false,
+  "platform": "macOS arm64",
+  "productionAppDependencyAdded": false,
+  "regressionReproducedOnCommit": "a1a3270",
+  "toolTests": {
+    "migration": 7,
+    "passed": 31,
+    "recovery": 24
+  },
+  "wholeVaultAppExportShipped": false
+}

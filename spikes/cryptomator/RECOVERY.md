@@ -19,6 +19,8 @@ python3 tools/verify_portable_export.py \
 python3 -m unittest discover -s tools -p 'test_*.py' -v
 ```
 
+The recovery helper is currently macOS-only: exclusive directory publication uses `renamex_np(RENAME_EXCL)` and fails closed on unsupported platforms. Use a trusted, private parent directory and a new destination. It will preserve a destination that appears during recovery, including an empty directory or dangling symlink; it does not offer crash-durable recovery or isolation from other processes running as the same user. Case/Unicode-normalization path collisions are rejected rather than renamed. See [hardening evidence and remaining limits](../../docs/portable-vault/portable-export-design.md#recovery-verifier-hardening--2026-10-22).
+
 The harness starts the official client on an ephemeral loopback WebDAV port, reads the outer vault, verifies its encrypted manifest/inventory/hashes, and publishes `recovered/` only after verification. It closes its own client process on success or error. It recovers `Protected/` as ciphertext, rejects opening it with the outer password, opens it with its separate inner password, and verifies/publishes `inner-recovered/`. This demonstrates independent opening and password separation; no original app/Keychain is consulted.
 
 It also creates damaged **copies** of the generated vault and checks that missing-manifest, payload-tampering and whole-final-chunk truncation cases cannot publish recovered directories. Logs and `report.json` remain in the newly owned output directory. All plaintext is public synthetic content, but treat future real recovery destinations as sensitive plaintext. The local WebDAV channel is plaintext on loopback and is not a production recovery security recommendation.
