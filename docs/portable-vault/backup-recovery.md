@@ -9,14 +9,14 @@ Build 39 development feature; D2S-114/110/141. Keep independent originals and te
 3. Enter the current password of every separately protected album. Each remains independently encrypted, including nested albums. Protected parent and child passwords must differ. Short existing album PINs remain susceptible to guessing.
 4. A Face ID-only album needs explicit consent, successful Face ID authorization and a new, confirmed export password of at least 12 characters. This creates a password-readable copy of that album. It does not change the phone's album policy or add a native password fallback. Cancel if you do not want that copy.
 5. Keep WagLock open while preparing the backup. Locking, backgrounding, cancellation or a changed library invalidates preparation; start again. All supported persisted content must be available; inaccessible albums or missing files stop the complete export rather than being omitted.
-6. When ready, select **Save to Files or cloud storage**. The iOS destination picker offers **On My iPhone**, **iCloud Drive**, or installed providers enabled in Files. Save `WagLock-Backup.tar.age` to your chosen location. No provider account or SDK is connected to WagLock. This is optional, manual backup, with no automatic upload or two-way sync.
+6. When ready, edit **Filename** if you want a different name, then select **Save to Files or cloud storage**. The `.tar.age` extension is added automatically. The iOS destination picker offers **On My iPhone**, **iCloud Drive**, or installed providers enabled in Files. Save `WagLock-Backup.tar.age` to your chosen location. No provider account or SDK is connected to WagLock. This is optional, manual backup, with no automatic upload or two-way sync.
 7. Verify that the provider finished uploading and that the file is available on another device. A successful Files callback confirms the provider accepted the copy, not that a remote upload completed. Only finished ciphertext is handed to the picker; the system copy can continue after WagLock locks. Copies already handed off cannot be retracted.
 
 Store the root backup password/private identity **and every separate album export password** safely, apart from the ciphertext. Losing one prevents recovery of that domain. The root credential is deliberately insufficient to open protected children. Backups are immutable copies; later phone changes do not update them.
 
 ## Recover with open-source tools
 
-Use a trusted computer with enough private disk space and Python 3.9 or newer. Obtain WagLock's matching source, keeping `tools/backup_recovery.py` and its sibling `tools/age_bootstrap.py` together. No WagLock app, Apple account, phone or Keychain is needed.
+Use a trusted computer with enough private disk space and Python 3.9 or newer. Obtain WagLock's matching source, keeping `tools/backup_recovery.py` and its sibling `tools/age_bootstrap.py` and `tools/backup_layout.py` files together. No WagLock app, Apple account, phone or Keychain is needed.
 
 ### Mac example: Desktop backup → Downloads
 
@@ -34,7 +34,7 @@ python3 "$HOME/repos/WagLock/tools/backup_recovery.py" \
 
 `$HOME` means your Mac user folder. Keep the quotes, especially for paths containing spaces. The backslash at each line end continues the same command onto the next line.
 
-If age is missing, the helper downloads and verifies it automatically. At **Enter passphrase:**, type the **backup password you chose during export**, then press Return. No characters appear while you type; that is normal. Separately protected albums prompt for their own passwords. A successful run creates `~/Downloads/WagLock-Recovered/`; the outer library is inside its `root/` folder. See the output layout below for media and notes.
+If age is missing, the helper downloads and verifies it automatically. At **Enter passphrase:**, type the **backup password you chose during export**, then press Return. No characters appear while you type; that is normal. Separately protected albums prompt for their own passwords. A successful run creates `~/Downloads/WagLock-Recovered/`; open its **Library** folder for recognizable filenames, album folders and notes. The command prints that location when finished.
 
 ### Recovery-key example
 
@@ -50,6 +50,8 @@ python3 "$HOME/repos/WagLock/tools/backup_recovery.py" \
 Replace the identity path with your actual file. Keep that private identity separately from your backup; the public `age1…` recipient entered in WagLock cannot decrypt it.
 
 ### If age reports “incorrect passphrase”
+
+Owner testing on 2026-10-22 confirmed that a fresh export opened successfully after one earlier copy rejected its password. The earlier failure’s cause remains unknown; it is not evidence that the earlier copy is recoverable.
 
 If no protected-album UUID appeared beforehand, the outer archive has not opened. Use the exact password chosen when **that copy** was exported; it may differ from your app unlock password. Passwords are case-sensitive and spaces count. Do not put the password on the command line or send it in a bug report.
 
@@ -69,7 +71,27 @@ Enter passwords into age's terminal prompts. Do not put passwords in commands, s
 
 The helper calls the unmodified age executable, then checks authenticated archive completeness, byte counts, SHA-256 hashes, record references and nested album hierarchy. It rejects missing/extra/duplicate files, unsafe paths/links and incomplete or tampered input. A new private destination is published only after every required domain verifies. Existing destinations are not replaced. On failure, it removes only its own staging directory; interruption/power loss can leave sensitive `.partial` output requiring manual cleanup. Local deletion does not guarantee forensic erasure.
 
-Recovered files have stable UUID names under `media/`; `metadata.json` records original names/extensions, dates, types, album membership and supported media properties. Add the recorded extension to a **copy** to open it in ordinary applications. Notes, tags and saved drafts are JSON text in that file. The outer domain is under `root/`; nested output lives under its parent’s `recovered-<domain UUID>/`; each domain has its own metadata and manifest. Original names and Unicode spelling are retained inside encrypted metadata, rather than used as filesystem paths. This is independent extraction, **not an in-app restore/import wizard** or automatic reconstruction of human-readable directory names.
+### Where to find your recovered files
+
+Open **Library** in the new recovery folder:
+
+```text
+WagLock-Recovered/
+  Library/
+    Media/                  Photos, videos and other files with names/extensions
+    Albums/                 Original album and subalbum folders
+    Notes/                  Notes as .md text files
+    Drafts/                 Saved drafts as .md text files
+  START-HERE.txt
+  recovery-report.json
+  root/                     Original metadata, manifests and nested archive records
+```
+
+Only folders needed by your content are created. Original names/extensions are restored when usable; a known media signature supplies an extension when the recorded one is missing. Unknown formats use `.bin`. Duplicate names get ` (2)`, ` (3)` suffixes, and unsafe or overly long names are adjusted without overwriting another file. Unicode names are retained where the filesystem allows them. Original exact names, dates, tags and other recorded fields remain in `metadata.json`.
+
+All requested domains and hashes are verified **before** readable naming. Files are moved within the private staging directory, avoiding another full-sized plaintext copy. The archive and native phone library are unchanged. `recovery-report.json` version2 maps each original archive path/domain/record ID to its final readable path. The retained manifests describe the authenticated archive before naming; use that mapping to locate the verified payloads afterward. Thumbnails in domain records get recognizable extensions too. Notes/drafts remain in the original metadata as well as their convenient text files.
+
+Use `--raw-layout` to keep the previous UUID-based archive layout for tooling/inspection. Use `--json` for the full report on stdout; the default prints a short completion message and the folder to open. Existing older `.tar.age` exports work with this updated helper: rerun into a **new destination** to get readable names. This remains independent extraction, **not an in-app restore/import wizard**.
 
 `--outer-only` explicitly recovers only the outer domain and retains unopened child ciphertext. Its report states that full nested recovery is false. It is not a complete-library recovery result. For manual inspection, standard `age --decrypt` followed by a tar tool can open a domain, but that bypasses WagLock's additional manifest/hierarchy checks; use the helper for verified recovery.
 

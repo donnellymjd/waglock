@@ -41,7 +41,14 @@ final class PortableBackupUITests: XCTestCase {
         let save = app.buttons["backup.save"]
         XCTAssertTrue(save.waitForExistence(timeout: 45), app.debugDescription)
         func screenshot(_ name: String) { let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = name; shot.lifetime = .keepAlways; add(shot) }
-        screenshot("Encrypted backup ready")
+        let filename = app.textFields["backup.filename"]
+        XCTAssertTrue(filename.waitForExistence(timeout: 5))
+        let uniqueName = "Backup QA " + UUID().uuidString.prefix(8)
+        app.buttons["backup.filename.clear"].tap()
+        XCTAssertFalse(save.isEnabled)
+        filename.tap(); filename.typeText(uniqueName + "\n")
+        XCTAssertEqual(filename.value as? String, uniqueName)
+        screenshot("Encrypted backup ready with custom filename")
         save.tap()
         // iOS 18 remote Files AX can report stale control types/frames under Xcode 27.
         // Dismiss the actual native sheet with its supported drag gesture.

@@ -17,6 +17,7 @@ struct PortableBackupView: View {
     @State private var keyboard = PasswordKeyboard.fullKeyboard
     @State private var handoff: BackupFile?
     @State private var saved = false
+    @State private var backupName = "WagLock-Backup"
     private struct BackupFile: Identifiable { let id = UUID(); let url: URL }
     private var request: LibraryMountCoordinator.Request { .init(sessionID: auth.librarySessionID, scope: .legacyOwner) }
     private var biometricRows: [PortableBackupSession.AlbumRow] { session.rows.filter { $0.policy == .faceIDOnly } }
@@ -90,10 +91,25 @@ struct PortableBackupView: View {
             } else {
                 Section("Encrypted backup ready") {
                     Text("Only the encrypted file will be given to Files. Keep your backup password, recovery identity and any separate album passwords safe.")
+                    LabeledContent("Filename") {
+                        HStack {
+                            TextField("Backup name", text: $backupName)
+                                .textInputAutocapitalization(.never).autocorrectionDisabled().submitLabel(.done)
+                                .onSubmit { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
+                                .accessibilityIdentifier("backup.filename")
+                            if !backupName.isEmpty {
+                                Button { backupName = "" } label: {
+                                    Image(systemName: "xmark.circle.fill").foregroundStyle(ColorTheme.secondaryText)
+                                }.buttonStyle(.borderless).accessibilityLabel("Clear backup filename")
+                                    .accessibilityIdentifier("backup.filename.clear")
+                            }
+                        }
+                    }
+                    Text("The .tar.age extension is added automatically. Choose a different name to keep earlier backups.").font(.footnote)
                     Button("Save to Files or cloud storage") {
-                        guard let url = session.beginHandoff() else { return }
+                        guard let url = session.beginHandoff(filename: backupName) else { return }
                         handoff = .init(url: url)
-                    }.accessibilityIdentifier("backup.save")
+                    }.disabled(PortableBackupSession.exportFilename(backupName) == nil).accessibilityIdentifier("backup.save")
                     Button("Discard this copy", role: .destructive) { session.cancel() }.accessibilityIdentifier("backup.discard")
                 }
             }

@@ -4,6 +4,16 @@ import XCTest
 @testable import WagLock
 
 final class PortableBackupTests: XCTestCase {
+    func testExportFilenamePreservesNamesAndRejectsUnsafePaths() {
+        for (input, expected) in [("Holiday backup", "Holiday backup.tar.age"), ("café 家族", "café 家族.tar.age"),
+            ("Backup.tar.age", "Backup.tar.age"), ("Backup.AGE", "Backup.tar.age"), ("Backup.tar", "Backup.tar.age")] {
+            XCTAssertEqual(PortableBackupSession.exportFilename(input), expected)
+        }
+        for invalid in ["", "   ", ".", "..", "../other", "a/b", "a\\b", "a:b", "a\nother", String(repeating: "x", count: 201)] {
+            XCTAssertNil(PortableBackupSession.exportFilename(invalid))
+        }
+    }
+
     func testScryptRFC7914AndUnsafeParametersFailClosed() throws {
         let derived = try AgeFileWriter.scrypt(password: Data(), salt: Data(), n: 16, r: 1, p: 1, length: 64)
         XCTAssertEqual(derived.map { String(format: "%02x", $0) }.joined(), "77d6576238657b203b19ca42c18a0497f16b4844e3074ae8dfdffa3fede21442fcd0069ded0948f8326a753a0fc81f17e8d3e0fb2e0d3628cf35e20c38d18906")

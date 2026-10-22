@@ -74,9 +74,9 @@
   "physicalPhone": {
     "signedBuild": true,
     "installed": true,
-    "ownerAcceptance": "Blocked: owner reports incorrect passphrase for phone export and confirms using export backup password; root cause unresolved.",
-    "cloudProviderUpload": "End-to-end recovery unverified; outer archive password rejection reported.",
-    "installedVersion": "1.3.8 (39)",
+    "ownerAcceptance": "Owner confirms fresh build39 export independently decrypts; readable layout and build40 filename field acceptance pending. Earlier copy rejection unresolved.",
+    "cloudProviderUpload": "Fresh phone export recovered on Mac; provider-specific upload completion not independently established.",
+    "installedVersion": "1.3.8 (40)",
     "automatedLaunch": "blocked by locked device, CoreDeviceError 10002"
   },
   "limits": [
@@ -118,6 +118,55 @@
     "passwordUIArtifactCapturedBeforeFilesHandoff": true,
     "repeatFilesUITest": "blocked by expected Replace Existing Items confirmation for previously saved public fixture; no production regression inferred",
     "privatePhoneBackupOrPasswordAccessed": false,
-    "pythonTestsPassed": 52
+    "pythonTestsPassed": 52,
+    "freshExportOwnerConfirmed": true,
+    "earlierCopyFailureCauseStillUnknown": true
+  },
+  "readableRecoveryAndFilename": {
+    "date": "2026-10-22",
+    "build": 40,
+    "defaultLayout": "Library with original names/extensions, albums, Markdown notes/drafts",
+    "archiveFormatChanged": false,
+    "existingExportsSupported": true,
+    "reportSchema": "waglock-recovery-report-2",
+    "unitSecurityTestsPassed": 207,
+    "unitResult": "/private/tmp/waglock-readable-unit.xcresult",
+    "pythonTestsPassed": 57,
+    "pythonLog": "/private/tmp/waglock-readable-python-tests.log",
+    "independentOfficialAge": {
+      "fixtureOnly": true,
+      "officialAgeCLI": "v1.3.2",
+      "independentColdRecovery": true,
+      "payloadCount": 7,
+      "payloadHashesMatch": true,
+      "metadataNotesDraftsUnicodeMatch": true,
+      "parentOnlyCredentialsRejected": 2,
+      "tamperAndTruncationRejected": 2,
+      "phoneKeychainRequired": false
+    },
+    "initialCustomNameSystemCopy": {
+      "fixtureOnly": true,
+      "customFilenameFromNativeFilesPicker": "Backup QA B0C02A17Backup.tar.age",
+      "tarAgeSuffixExactlyOnce": true,
+      "independentRecovery": true,
+      "readableMarkdownNotesVerified": 8,
+      "phoneOrPrivateMediaAccessed": false
+    },
+    "signedDeviceBuild": true,
+    "installed": true,
+    "ownerFilenameAndReadableMediaAcceptance": "pending",
+    "nativeUI": {
+      "passed": true,
+      "clearEditExactNameAndSaveCancel": true,
+      "result": "/private/tmp/waglock-readable-ui-final.xcresult"
+    },
+    "finalSystemCopiedArchive": {
+      "fixtureOnly": true,
+      "customFilenameFromNativeFilesPicker": "Backup QA 11E0E32A.tar.age",
+      "matchesChosenNameWithoutOldSuffix": true,
+      "independentRecovery": true,
+      "readableMarkdownNotesVerified": 9,
+      "phoneOrPrivateMediaAccessed": false
+    }
   }
 }

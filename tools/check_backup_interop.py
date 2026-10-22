@@ -73,7 +73,9 @@ def check(age):
             str(source), str(output), "--age", age], credential)
         if code != 0:
             raise RuntimeError("Public fixture recovery failed: " + transcript.decode(errors="replace"))
-        actual = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in output.rglob("media/*") if p.is_file()}
+        report = json.loads((output / "recovery-report.json").read_text())
+        actual = {entry["recordID"]: hashlib.sha256((output / entry["recoveredPath"]).read_bytes()).hexdigest()
+            for entry in report["files"] if entry["kind"] == "media"}
         if actual != expected["expectedPayloadHashes"]:
             raise RuntimeError("Recovered payload hashes differ")
         metadata = [json.loads(p.read_text()) for p in output.rglob("metadata.json")]

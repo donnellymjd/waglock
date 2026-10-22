@@ -18,6 +18,7 @@ import sys
 import uuid
 
 from age_bootstrap import AgeSetupError, age_executable
+from backup_layout import LayoutError, readable_layout
 
 MAX_METADATA = 64 * 1024 * 1024
 DEFAULT_MAX_BYTES = 1024 ** 4
@@ -319,13 +320,14 @@ def validate_metadata(meta, actual, nested, domain, parent):
         origins.add(draft["origin"])
 
 
-def recover(encrypted, destination, age, *, identity=None, outer_only=False, max_bytes=DEFAULT_MAX_BYTES, max_entries=DEFAULT_MAX_ENTRIES):
+def recover(encrypted, destination, age, *, identity=None, outer_only=False, max_bytes=DEFAULT_MAX_BYTES, max_entries=DEFAULT_MAX_ENTRIES, raw_layout=False):
     destination = Path(destination)
     if destination.exists() or destination.is_symlink():
         raise InvalidBackup("Choose a new recovery directory")
     stage = destination.with_name(destination.name + ".partial")
     stage.mkdir(mode=0o700)
     reports = []
+    verified_domains = []
     remaining = {"bytes": max_bytes, "entries": max_entries, "metadata": MAX_METADATA}
     album_graph, assets, domain_parents = {}, set(), {}
     try:
@@ -369,6 +371,7 @@ def recover(encrypted, destination, age, *, identity=None, outer_only=False, max
             if remaining["metadata"] < 0:
                 raise InvalidBackup("Aggregate metadata exceeds recovery limit")
             meta = document(meta_path.read_bytes())
+            verified_domains.append((target, meta))
             domain_parents[label] = meta["parent"]
             for album in meta["albums"]:
                 if album["id"] in album_graph:
@@ -404,7 +407,9 @@ def recover(encrypted, destination, age, *, identity=None, outer_only=False, max
                     raise InvalidBackup("Album assigned to the wrong password domain")
                 if policy != "inherited" and domain_parents[owner] != owning_domain(parent_id):
                     raise InvalidBackup("Protected domain parent mismatch")
-        report = {"schema": "waglock-recovery-report-1", "allProtectedDomainsRecovered": not outer_only, "domains": reports}
+        files = [] if raw_layout else readable_layout(stage, verified_domains, publish)
+        report = {"schema": "waglock-recovery-report-2", "allProtectedDomainsRecovered": not outer_only,
+            "domains": reports, "layout": "raw" if raw_layout else "readable", "files": files}
         (stage / "recovery-report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
         publish(stage, destination)
         return report
@@ -424,6 +429,7 @@ def main():
 The destination must be a new folder: do not create it first.
 age downloads automatically if missing. Enter your backup password at the
 prompt; typed passwords are hidden. Protected albums need their own passwords.
+Recovered files appear under Library with names/extensions and album folders.
 Recovery-key exports also need: --identity /path/to/private-identity.txt
 """)
     parser.add_argument("encrypted", type=Path)
@@ -431,6 +437,8 @@ Recovery-key exports also need: --identity /path/to/private-identity.txt
     parser.add_argument("--age", help="Use this age executable instead of automatic discovery/setup")
     parser.add_argument("--no-install-age", action="store_true", help="Do not download age; use an installed or verified cached copy")
     parser.add_argument("--identity", type=Path)
+    parser.add_argument("--raw-layout", action="store_true", help="Keep internal UUID filenames instead of creating a readable Library")
+    parser.add_argument("--json", action="store_true", help="Print the full machine-readable recovery report")
     parser.add_argument("--outer-only", action="store_true", help="Explicitly retain child ciphertext without decrypting it")
     parser.add_argument("--max-bytes", type=int, default=DEFAULT_MAX_BYTES)
     parser.add_argument("--max-entries", type=int, default=DEFAULT_MAX_ENTRIES)
@@ -445,11 +453,16 @@ Recovery-key exports also need: --identity /path/to/private-identity.txt
             raise InvalidBackup("Choose a new recovery directory; the destination or its .partial staging folder already exists.")
         with age_executable(args.age, allow_install=not args.no_install_age) as age:
             report = recover(args.encrypted, destination, age, identity=args.identity,
-                outer_only=args.outer_only, max_bytes=args.max_bytes, max_entries=args.max_entries)
-    except (InvalidBackup, AgeSetupError, OSError) as error:
+                outer_only=args.outer_only, max_bytes=args.max_bytes, max_entries=args.max_entries, raw_layout=args.raw_layout)
+    except (InvalidBackup, AgeSetupError, LayoutError, OSError) as error:
         print("Recovery stopped without publishing a destination: " + str(error), file=sys.stderr)
         raise SystemExit(1)
-    print(json.dumps(report, indent=2))
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print("Recovery complete." if report["allProtectedDomainsRecovered"] else "Outer backup recovered. Protected child archives remain encrypted.")
+        print("Open your files here:\n  " + str(destination / ("root" if args.raw_layout else "Library")))
+        print("Verification details:\n  " + str(destination / "recovery-report.json"))
 
 
 if __name__ == "__main__":

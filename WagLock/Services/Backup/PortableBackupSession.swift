@@ -144,8 +144,34 @@ final class PortableBackupSession: ObservableObject {
         }
     }
 
-    func beginHandoff() -> URL? {
-        guard !isWorking, let readyURL, let directory else { return nil }
+    nonisolated static func exportFilename(_ text: String) -> String? {
+        var base = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        for suffix in [".tar.age", ".age", ".tar"] where base.lowercased().hasSuffix(suffix) {
+            base = String(base.dropLast(suffix.count)); break
+        }
+        guard !base.isEmpty, !base.hasPrefix("."), base.utf8.count <= 200,
+              !base.contains("/"), !base.contains("\\"), !base.contains(":"),
+              !base.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) else { return nil }
+        return base + ".tar.age"
+    }
+
+    func beginHandoff(filename: String = "WagLock-Backup") -> URL? {
+        guard !isWorking, !handingOff, let current = readyURL, let directory else { return nil }
+        guard let name = Self.exportFilename(filename) else {
+            self.error = "Choose a shorter filename without slashes, colons or line breaks."; return nil
+        }
+        let readyURL = directory.appendingPathComponent(name)
+        if readyURL.path != current.path {
+            guard link(current.path, readyURL.path) == 0 else {
+                self.error = "Unable to name this backup. Choose another filename and try again."; return nil
+            }
+            do { try FileManager.default.removeItem(at: current) }
+            catch {
+                try? FileManager.default.removeItem(at: readyURL)
+                self.error = "Unable to name this backup. Try again."; return nil
+            }
+            self.readyURL = readyURL
+        }
         // Only verified ciphertext remains. Let the system finish its copy after locking;
         // plaintext preparation continues to require complete file protection.
         #if os(iOS)
@@ -154,7 +180,7 @@ final class PortableBackupSession: ObservableObject {
             try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: directory.path)
         } catch { self.error = "Unable to hand this encrypted copy to Files. Try again."; return nil }
         #endif
-        handingOff = true
+        error = nil; handingOff = true
         return readyURL
     }
     func finishHandoff() { handingOff = false; cancel() }
