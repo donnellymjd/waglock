@@ -191,3 +191,12 @@ Signed WagLock Dev 1.3.8 (41) compiles with unchanged `com.d2sci.vaultito.dev`, 
 Installed and launched as an update to the same development identity; installed metadata confirms WagLock Dev 1.3.8 (43). No uninstall, reset or native metadata conversion. Full regression passed 260 tests plus three application UI workflows. See [write-boundary changes and limits](library-write-boundary.md).
 
 Using disposable samples, import/open a photo and video, edit a note and confirm Done/Back/reopen behavior, create a nested password album and relock/reopen it, then background/lock and check password/Face ID and fresh sharing. Check edits persist after app relaunch. Separately finish the outstanding backup check: choose an export filename, recover into a new Mac folder with the correct outer/album credentials and open a few readable recovered files. Do not send passwords or private content. Owner acceptance remains pending; successful phone checks will not alone resolve native metadata encryption, recovery coverage or first-submission gates.
+
+
+## Build 44 — standard native video viewer (2026-10-23)
+
+Owner requested a standard interface in place of the Figma card layout. The viewer now uses full-screen aspect-fit AVKit playback on black, native transport controls, navigation-bar Done/Share and an Info/Delete menu. Existing media/credentials and installed identity are unchanged. Complete unit regression passed 260 tests; imported-video UI verifies the full-size player and normal close/share controls.
+
+Phone acceptance: open disposable landscape and portrait videos, tap to show controls, play/pause/scrub and rotate the phone. Check Info and share/cancel. Background/lock, return/unlock and reopen a video; sound should stop while backgrounded and a fresh open should work normally. Do not delete non-disposable content. Owner acceptance remains pending.
+
+Build44 installation succeeded and the installed-app query confirms 1.3.8 (44). Remote launch was denied because the phone is locked; unlock/open WagLock normally. The additional tap-to-show native Play/Pause/Replay UI check passed.

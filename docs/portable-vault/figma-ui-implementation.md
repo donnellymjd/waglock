@@ -60,3 +60,10 @@ Owner accepted build 35 with one visual defect: Notes background did not cover t
 - Local results: `/private/tmp/waglock-ui-complete-final-units.xcresult`, `/private/tmp/waglock-ui-complete-checks3.xcresult`, `/private/tmp/waglock-build37-device.log`. Failed intermediate runs are retained as local diagnostics and are not presented as passing.
 
 The staged repository snapshot also built successfully from a clean directory (`/private/tmp/waglock-clean-ui37`, unsigned simulator build). This checks that required source, assets and project files are present without relying on untracked local build inputs.
+
+
+## Owner override — native video viewer, build 44 (2026-10-23)
+
+The owner rejected the redesigned stacked video-player page and requested a standard interface. Full-screen playback now uses Apple's AVPlayerViewController on a black canvas with aspect-fit video and native transport/scrubbing/volume/rate controls. Done and Share live in the navigation bar; an actions menu contains Info and confirmed deletion. This deliberately supersedes the Figma video-player card layout. Grid thumbnail proportions and other screens are unchanged.
+
+Playback remains session-bound. Background/logout/dismissal cancel pending loads, pause/detach the player and clean its owned plaintext temporary file; late results cannot republish a player. Sharing keeps the existing session-bound export service with an additional per-view generation check. Picture in Picture, external playback and lock-screen Now Playing publication are disabled for this authenticated viewer. Native device sound, rotation and sharing remain owner acceptance checks.

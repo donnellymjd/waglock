@@ -66,7 +66,15 @@ final class UICompletionUITests: XCTestCase {
         let preview = app.descendants(matching: .any).matching(identifier: "videos.preview").firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 10)); preview.tap()
         XCTAssertTrue(app.buttons["video.close"].waitForExistence(timeout: 10))
-        let capture = XCTAttachment(screenshot: app.screenshot()); capture.name = "Generated video - player"; capture.lifetime = .keepAlways; add(capture)
+        let player = app.descendants(matching: .any).matching(identifier: "video.player").firstMatch
+        XCTAssertTrue(player.waitForExistence(timeout: 15))
+        XCTAssertGreaterThan(player.frame.height, app.frame.height * 0.65, "Use the screen for playback rather than a small card")
+        XCTAssertGreaterThan(player.frame.width, app.frame.width * 0.95)
+        XCTAssertTrue(app.buttons["video.share"].exists)
+        player.tap()
+        let transport = app.buttons.matching(NSPredicate(format: "label IN %@", ["Play", "Pause", "Replay"])).firstMatch
+        XCTAssertTrue(transport.waitForExistence(timeout: 5), "Native playback controls must be accessible")
+        let capture = XCTAttachment(screenshot: app.screenshot()); capture.name = "Native full-screen video player"; capture.lifetime = .keepAlways; add(capture)
         app.buttons["video.close"].tap()
         XCTAssertTrue(app.tabBars.buttons["Media"].waitForExistence(timeout: 5))
     }

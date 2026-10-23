@@ -329,3 +329,14 @@ Evidence: `/private/tmp/waglock-build43-complete.log` and `.xcresult`; `/private
 
 
 Build 43 installed and launched successfully on the owner iPhone as an update to `com.d2sci.vaultito.dev`; installed-app metadata confirms 1.3.8 (43). No uninstall, reset, credential change or library access/export was performed. Evidence: `/private/tmp/waglock-build43-install.log`, `/private/tmp/waglock-build43-launch.log`, `/private/tmp/waglock-build43-installed.log`. Owner acceptance is pending.
+
+
+## Standard native video viewer — build 44 (2026-10-23)
+
+Owner requested replacing the redesigned stacked player page. VideoPlayerView now fills the available screen with AVPlayerViewController, black aspect-fit playback and native controls. Navigation-bar Done/Share and an Info/Delete menu replace custom transport/volume/speed cards. Removed the unused custom controls and player-layer wrapper.
+
+Immutable preview metadata and authenticated source actions are preserved. Playback/load generations reject late decryption results; background/logout/dismissal pause/detach playback and remove the operation's plaintext temporary file. Native play/pause observation drives the idle timer. Sharing retains its session-bound export service plus a per-view generation check, and an interrupted completion cancels its owned job. PiP/external playback/Now Playing publication are disabled for the protected viewer. No native encryption, schema, identity or credential change.
+
+Final complete unit regression: **260 passed** (149 XCTest +111 Swift Testing), including the rendered video teardown after logout/store release. Native-video import/full-screen layout UI test passed, confirming viewport height/width and Done/Share presence. Signed device build passed. Final unit evidence: `/private/tmp/waglock-build44-final-units.log` and `.xcresult`; native-video UI evidence: `/private/tmp/waglock-build44-player-ui.log` and `.xcresult`; signed build: `/private/tmp/waglock-build44-device-final.log`.
+
+Native-control UI check also passed after tapping the playback surface and confirming an accessible native Play/Pause/Replay action. Evidence: `/private/tmp/waglock-build44-native-controls-ui.log` and `.xcresult`. Screenshot inspection uses only the generated synthetic fixture. Build44 installed successfully over the same app identity; installed-app metadata confirms 1.3.8 (44). Remote launch was denied because the phone is locked (FBSOpenApplicationErrorDomain 7); the owner can unlock/open the installed update normally. No reinstall/reset or private content access was performed. Phone acceptance is pending. Installation evidence: `/private/tmp/waglock-build44-install.log`, `/private/tmp/waglock-build44-installed.log`, `/private/tmp/waglock-build44-launch.log`.

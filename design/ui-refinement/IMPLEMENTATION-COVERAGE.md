@@ -20,7 +20,7 @@ Photo Favorite is represented by the working Info destination rather than an ine
 | albumContents | AlbumBrowserView / AlbumConfigurationView / AlbumUnlockView | Nested albums, tiled contents, policy choices, device-bound acknowledgement, real verified moves and native confirmations. |
 | selection | PhotosView | Date-grouped live photos, search, selection/export and owner/guest empty states. |
 | export | BatchExportView / ShareSheet | Selected IDs, live preparation and immediate native share sheet. No fake ready/example screen; actual export creates unencrypted copies. |
-| videoPlayer | VideosView / VideoPlayerView | Search, aspect-fit thumbnails, native navigation, real playback/seek/rate/volume, export and deletion. |
+| videoPlayer | VideosView / VideoPlayerView | Owner override in build44: full-screen native AVKit controls on black, navigation-bar Done/Share and Info/Delete menu. Supersedes the stacked card design. |
 | audioPlayer | AudioView / AudioPlaybackSheet | Live audio rows, inline playback and player sheet; recording controls retained. Hardware sound/recording acceptance is separate. |
 | filePreview | FilesView / MediaDetailView / FilePreviewView | Live file cards; PDFKit, text/Markdown and native QuickLook with actual format/error handling. |
 | editor | SecretSpaceView / NoteEditorView | Pinned/regular note cards, actual editor/save flow, adaptive full-screen backgrounds. Does not imply encrypted Markdown-note implementation. |
