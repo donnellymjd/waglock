@@ -182,3 +182,5 @@ Signed WagLock Dev 1.3.8 (41) compiles with unchanged `com.d2sci.vaultito.dev`, 
 
 
 **Build 41 installed:** after the owner reconnected/unlocked the phone, installation and foreground launch succeeded without uninstall/reset. Filtered device app inventory confirms WagLock Dev 1.3.8/build 41, `com.d2sci.vaultito.dev`. No media/passwords were read or exported. Physical note Save/Back, existing media and unlock acceptance is pending. Logs: `/private/tmp/waglock-build41-install.log`, `/private/tmp/waglock-build41-launch.log`, `/private/tmp/waglock-build41-app-info.log`. The preceding disconnected status is historical preparation evidence.
+
+**Build 41 owner acceptance:** owner replied “passed” to disposable note edit → Back → reopen → Done/save, existing sample access, and password/Face ID unlock after backgrounding. This validates the requested phone workflows, not legacy-conflict reproduction, complete backup recovery or live metadata migration.

@@ -27,3 +27,5 @@ Preferences/settings, active credentials/biometric registration, coordinated sou
 - Physical installation/acceptance is separate. The metadata index/draft stage remains disconnected from phone mounting.
 
 Build 41 subsequently installed and launched on the owner iPhone. Device inventory confirms version 1.3.8/build 41 under the existing identity. Physical workflow acceptance remains pending; installation does not validate the source-conflict fix on owner data. No tools inspected owner drafts/media.
+
+Owner phone workflow acceptance passed: disposable note Back/reopen/save, existing sample access and normal password/Face ID unlock after backgrounding. Synthetic tests remain the evidence for conflicting legacy drafts and failure injection; no owner draft contents were inspected.
