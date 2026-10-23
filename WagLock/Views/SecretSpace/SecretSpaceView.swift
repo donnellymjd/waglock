@@ -17,6 +17,8 @@ struct SecretSpaceView: View {
     @EnvironmentObject private var guestModeManager: GuestModeManager
     @Environment(\.scenePhase) private var scenePhase
     @State private var draft: SecretNoteDraft?
+    private struct NewNotePresentation: Hashable { let id = UUID() }
+    @State private var newNote: NewNotePresentation?
 
     private var draftManager: SecretNoteDraftManager { LibraryWriteCoordinator.draftManager(in: modelContext) }
 
@@ -33,14 +35,11 @@ struct SecretSpaceView: View {
             .toolbar {
                 if guestModeManager.isOwnerMode {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        NavigationLink {
-                            createNoteEditor()
-                        } label: {
-                            Text("New")
-                        }
+                        Button("New") { newNote = NewNotePresentation() }
                     }
                 }
             }
+            .navigationDestination(item: $newNote) { _ in createNoteEditor() }
         }
         .onChange(of: scenePhase) { _, phase in if phase == .active { refreshDraft() } }
     }
@@ -58,13 +57,17 @@ struct SecretSpaceView: View {
             List {
                 if let draft {
                     Section("Unfinished note") {
-                        NavigationLink { createNoteEditor() } label: {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Label("Resume draft", systemImage: "square.and.pencil").font(.headline)
-                                Text(draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Untitled note" : draft.title)
-                                    .foregroundStyle(ColorTheme.secondaryText).lineLimit(1)
-                            }
-                        }.accessibilityIdentifier("notes.resumeDraft").wagLockCardRow()
+                        Button { newNote = NewNotePresentation() } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Label("Resume draft", systemImage: "square.and.pencil").font(.headline)
+                                    Text(draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Untitled note" : draft.title)
+                                        .foregroundStyle(ColorTheme.secondaryText).lineLimit(1)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").foregroundStyle(ColorTheme.secondaryText)
+                            }.contentShape(Rectangle())
+                        }.buttonStyle(.plain).accessibilityIdentifier("notes.resumeDraft").wagLockCardRow()
                     }
                 }
                 if !pinnedNotes.isEmpty {
@@ -111,7 +114,7 @@ struct SecretSpaceView: View {
             VStack(spacing: 24) {
                 WagLockEmptyState(symbol: "note.text", title: "A little room to think.", detail: "Keep the thoughts you want to come back to.")
                 if guestModeManager.isOwnerMode {
-                    NavigationLink { createNoteEditor() } label: { Text("New note") }
+                    Button("New note") { newNote = NewNotePresentation() }
                         .buttonStyle(WagLockPrimaryButtonStyle()).padding(.horizontal, 24)
                 }
             }.padding(.vertical, 48)
@@ -123,18 +126,22 @@ struct SecretSpaceView: View {
     @ViewBuilder
     private func createNoteEditor() -> some View {
         let session = auth.librarySessionID
+        // This destination is created only after an explicit presentation request.
+        // Seed text before constructing controls; later appearances never reload it.
+        let storedDraft = mayWrite(session) ? draftManager.loadDraft() : nil
         NoteEditorView(
-            initialTitle: "",
-            initialContent: "",
+            initialTitle: storedDraft?.title ?? "",
+            initialContent: storedDraft?.content ?? "",
             isNewNote: true,
-            loadDraft: { mayWrite(session) ? draftManager.loadDraft() : nil },
             sessionID: session, maySave: { mayWrite(session) },
             onSave: { title, content in
                 saveNote(existing: nil, title: title, content: content, clearDraft: true, session: session)
             },
             onAutoSave: { title, content in
                 guard mayWrite(session) else { return false }
-                return draftManager.saveDraft(title: title, content: content)
+                let saved = draftManager.saveDraft(title: title, content: content)
+                if saved { refreshDraft() }
+                return saved
             }
         )
         .environment(\.modelContext, modelContext)

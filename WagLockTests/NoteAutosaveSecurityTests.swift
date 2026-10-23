@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import XCTest
 @testable import WagLock
@@ -44,6 +45,34 @@ final class NoteAutosaveSecurityTests: XCTestCase {
         await gate.release(0); await old.value
         XCTAssertEqual(writes, ["latest"])
         XCTAssertNotNil(autosave.lastSavedAt)
+    }
+
+    func testDelayedAutosaveCommitsToCancellationCheckingEncryptedRepository() async throws {
+        let parent = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
+            .appendingPathComponent("note-autosave-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: parent) }
+        let root = parent.appendingPathComponent("index")
+        let domain = EncryptedMetadataStore.Domain(libraryID: UUID(), vaultID: UUID())
+        let key = SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) }
+        let repository = try EncryptedLibraryRepository.create(at: root, domain: domain, key: key, authorized: { true })
+        defer { repository.revoke() }
+        let drafts = LibraryWriteCoordinator.draftManager(in: repository.container.mainContext)
+        let authority = DocumentPreviewService(), gate = Gate(), session = UUID()
+        authority.beginSession(session)
+        let autosave = NoteAutosaveCoordinator(authority: authority, delay: { await gate.pause() })
+        let timer = try XCTUnwrap(autosave.schedule(session: session, authorize: { true }) {
+            drafts.saveDraft(title: "", content: "PUBLIC paused before background")
+        })
+        try await gate.waitForCount(1)
+        await gate.release(0); await timer.value
+        XCTAssertNotNil(autosave.lastSavedAt)
+        XCTAssertNil(autosave.error)
+        repository.revoke()
+        let reopened = try EncryptedLibraryRepository.open(at: root, domain: domain, key: key, authorized: { true })
+        defer { reopened.revoke() }
+        let recovered = LibraryWriteCoordinator.draftManager(in: reopened.container.mainContext).loadDraft()
+        XCTAssertEqual(recovered?.content, "PUBLIC paused before background")
     }
 
     func testExplicitSaveCannotResurrectTheClearedKeychainDraft() async throws {

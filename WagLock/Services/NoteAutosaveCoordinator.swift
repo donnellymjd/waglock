@@ -49,6 +49,9 @@ final class NoteAutosaveCoordinator: ObservableObject {
         task = Task { [weak self] in
             do { try await delay() } catch { return }
             guard let self, !Task.isCancelled, self.generation == token else { return }
+            // The delay has finished. Detach its handle before flush cancels
+            // pending timers, so the encrypted write runs in an uncancelled task.
+            self.task = nil
             self.flush()
         }
         return task

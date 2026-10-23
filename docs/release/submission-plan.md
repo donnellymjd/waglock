@@ -105,3 +105,16 @@ The owner clarified that the unsaved note remained accessible through New and wa
 
 
 Build49 final engineering evidence:282 unit/security tests pass without failure/skip; the actual encrypted release iOS26.5 UI passes background without Done, visible Resume draft, exact text recovery through cold relaunch and another background cycle, Done clearing the draft row, and background persistence of an existing-note edit. The controlled-delay background regression failed before the fix and now passes with wrong-session/late-timer protections. Signed build/package checks pass. Build49 is installed over the same release app with library/credentials intact; owner repetition is requested. Source tag: candidate-1.0-build49. This does not update historical archives/screenshots or clear the remaining physical/distribution/account gates.
+
+
+### Build50 follow-up — intermittent unfinished note report
+
+Build49 owner acceptance remains incomplete: the owner reported another newly typed draft missing, then a successful attempt. The release identity/build was verified. An initial suspected navigation reproduction was invalid: Foundation ignored the negative auto-lock test argument, so the app locked as configured. Final no-lock checks select Never through Settings. Build50 uses stable UUID-bound editor presentation, seeds draft text before constructing controls, and stops reloading text on each appearance. It retains build49's authorized background flush and persistence format. Simulator testing must cover both auto-lock settings and cold relaunch; physical iOS27.0.1 acceptance remains required. [Details](../portable-vault/draft-preservation.md). Unrelated design-handoff changes in the checkout are preserved separately. No App Store submission occurred.
+
+
+Build50 investigation also confirms a delayed-save defect: the debounce task cancelled itself immediately before calling the cancellation-checking encrypted repository. A controlled real-repository/reopen regression fails on old code. Detaching the completed timer handle before flush fixes that path without bypassing cancellation or lock checks. Immediate background could succeed while pausing first failed, consistent with the owner's intermittent report. Final post-fix regression/device evidence follows; initial282 passes preceded this additional correction and are not final evidence for it.
+
+
+Final build50 engineering verification:283 unit/security tests pass, including the formerly failing delayed encrypted-save/reopen regression. Actual signed release UI passes paused body-only draft/background/cold reopen and the longer draft/Done/existing-note workflow; corrected Settings-based Never mode passes five paused edit/background cycles. [Checked-in evidence](evidence/build-50/README.md). The mixed UI bundle's obsolete negative-argument case is a failure, not an overall pass. Physical owner repetition remains pending; no distribution gates are cleared by these tests.
+
+Build50 is installed over the existing release identity, preserving its library/credentials. Owner repetition is requested; do not mark the intermittent phone issue accepted until that reply. Source freeze: candidate-1.0-build50.

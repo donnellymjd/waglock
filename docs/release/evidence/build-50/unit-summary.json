@@ -1,0 +1,9 @@
+{
+  "result": "Passed",
+  "passedTests": 283,
+  "failedTests": 0,
+  "skippedTests": 0,
+  "totalTestCount": 283,
+  "testResultBundle": "/private/tmp/waglock-build50-debounce-full.xcresult",
+  "newRegression": "NoteAutosaveSecurityTests.testDelayedAutosaveCommitsToCancellationCheckingEncryptedRepository"
+}

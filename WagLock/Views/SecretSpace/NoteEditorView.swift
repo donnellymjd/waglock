@@ -19,7 +19,6 @@ struct NoteEditorView: View {
     @State private var savedExplicitly = false
 
     let isNewNote: Bool
-    let loadDraft: (() -> SecretNoteDraft?)?
     let sessionID: UUID?
     let maySave: @MainActor () -> Bool
     let onSave: (String, String) -> Bool
@@ -27,7 +26,6 @@ struct NoteEditorView: View {
 
     init(
         initialTitle: String, initialContent: String, isNewNote: Bool,
-        loadDraft: (() -> SecretNoteDraft?)? = nil,
         sessionID: UUID? = nil, maySave: @escaping @MainActor () -> Bool = { false },
         onSave: @escaping (String, String) -> Bool,
         onAutoSave: @escaping (String, String) -> Bool
@@ -35,7 +33,6 @@ struct NoteEditorView: View {
         self._title = State(initialValue: initialTitle)
         self._content = State(initialValue: initialContent)
         self.isNewNote = isNewNote
-        self.loadDraft = loadDraft
         self.sessionID = sessionID
         self.maySave = maySave
         self.onSave = onSave
@@ -48,6 +45,7 @@ struct NoteEditorView: View {
                 Text(isNewNote ? "Drafts are saved automatically" : "Changes are saved automatically").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
                 Text("Title").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
                 TextField(String(localized: "note.title.placeholder"), text: Binding(get: { title }, set: { value in
+                    guard value != title else { return }
                     title = value; scheduleAutoSave(title: value, content: content)
                 }))
                     .font(.body).textInputAutocapitalization(.sentences)
@@ -56,6 +54,7 @@ struct NoteEditorView: View {
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(ColorTheme.border))
                     .accessibilityIdentifier("note.title")
                 TextEditor(text: Binding(get: { content }, set: { value in
+                    guard value != content else { return }
                     content = value; scheduleAutoSave(title: title, content: value)
                 }))
                     .font(.body).lineSpacing(6).focused($focusedField, equals: .content)
@@ -82,13 +81,8 @@ struct NoteEditorView: View {
             }
         }
         .onAppear {
-            // Navigation destinations may be constructed before the preceding editor saves.
-            if isNewNote, let loadDraft {
-                let draft = loadDraft()
-                title = draft?.title ?? ""
-                content = draft?.content ?? ""
-            }
-            savedExplicitly = false
+            // Text is seeded at presentation. Reappearing after a keyboard,
+            // navigation or scene transition must not overwrite current edits.
             focusedField = .content
         }
         .onChange(of: scenePhase) { _, phase in if phase != .active { autosave.flush() } }

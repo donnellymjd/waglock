@@ -1,6 +1,6 @@
 # Final submission handoff — WagLock 1.0
 
-Engineering candidate: build49, separate bundle `com.d2sci.waglock`. Existing `com.d2sci.vaultito.dev` is preserved. The candidate is installed for [physical acceptance](device-acceptance.md). It is **not submitted**. Full evidence and open security limits are in [the readiness ledger](submission-plan.md).
+Engineering candidate: build50, separate bundle `com.d2sci.waglock`. Existing `com.d2sci.vaultito.dev` is preserved. The candidate is installed for [physical acceptance](device-acceptance.md). It is **not submitted**. Full evidence and open security limits are in [the readiness ledger](submission-plan.md).
 
 ## Account-holder decisions still needed
 
@@ -13,7 +13,7 @@ Engineering candidate: build49, separate bundle `com.d2sci.waglock`. Existing `c
 ## When those gates are satisfied
 
 1. Keep the existing development app installed. Register/select the explicit release identifier and create the WagLock App Store Connect record. Do not reuse the development ID or claim a library transfer.
-2. Build an archive from the frozen candidate source with `config/AppStore.xcconfig`, marketing1.0/build49 (or a new unique number if an uploaded build requires it). Use the approved account's distribution signing and correct entitlements. Preserve the source counter with `WAGLOCK_SKIP_BUILD_INCREMENT=YES` during verification. The current unsigned archive is packaging evidence, not a distribution archive.
+2. Build an archive from the frozen candidate source with `config/AppStore.xcconfig`, marketing1.0/build50 (or a new unique number if an uploaded build requires it). Use the approved account's distribution signing and correct entitlements. Preserve the source counter with `WAGLOCK_SKIP_BUILD_INCREMENT=YES` during verification. The current unsigned archive is packaging evidence, not a distribution archive.
 3. Run `python3 tools/verify_release_candidate.py PATH_TO_ARCHIVED_WagLock.app`. It must verify the actual public bundle, encrypted switch, notices/source hashes and manifest. Its `readyForUpload:false` is deliberate: the script cannot attest to account/legal/hardware gates. Use Organizer's distribution validation too.
 4. Publish/retain the exact matching GPL source tag/archive, build instructions, modification/dependency notices and recovery tools. No source encryption key or private credentials belong in it. The candidate tag is a source freeze, not a public binary release.
 5. Enter the [listing/review walkthrough](store-listing.md), approved contacts/countries/category/age/privacy/export answers and [actual screenshots](screenshots/build47/README.md). All local features are free; no IAP/subscription is offered. Do not advertise deferred features.
