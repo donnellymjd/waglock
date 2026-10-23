@@ -35,6 +35,8 @@ nonisolated enum AppConstants {
 
     /// GitHub仓库地址
     static let githubRepositoryURL = "https://github.com/donnellymjd/waglock"
+    static let privacyPolicyURL = URL(string: "https://github.com/donnellymjd/waglock/blob/main/PRIVACY_POLICY.md")!
+    static let supportURL = URL(string: "https://github.com/donnellymjd/waglock/blob/main/docs/release/support.md")!
 
     // MARK: - Security
 

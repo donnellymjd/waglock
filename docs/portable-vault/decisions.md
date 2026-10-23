@@ -149,3 +149,8 @@ Accepted: the owner selected **WagLock — All wag. No tell.** Rename active sou
 ### ADR-024 implementation follow-up — typed models and encrypted resume progress
 
 Versioned adapters now preserve all three current SwiftData models into an unused memory-only projection. Staging binds a declared model-only scope and immutable source fingerprint to encrypted progress committed atomically with each batch; resume verifies the saved prefix and completed stages are idempotent. No live activation, default-root capture, source cleanup, credential/identifier change or approved native-format replacement. Draft/settings/every-writer/WAL coordination and reviewed recovery/rollback remain gates. [Contract and integration boundaries](encrypted-metadata-candidate.md#typed-model-adapter-and-resumable-staging).
+
+
+## ADR-025 — Narrow first App Store submission, manual release
+
+**Status: owner direction accepted 2026-10-22; readiness gates open.** Prepare a small initial store version while developing later improvements separately. First close inherited distribution/licensing, native sensitive-metadata protection, complete supported recovery and exact-release privacy/crypto/source validation. Shared albums, Trash, independent alternative vaults, encrypted search, self-destruct and unlock-camera capture remain later work. Prepare a separate opt-in `com.d2sci.waglock` store identity without changing the installed development identity or claiming a data transfer. Select manual release when an accepted candidate is submitted; no automatic publication or guaranteed review time. [Scope, evidence and gates](../release/submission-plan.md). No live storage migration or rights clearance follows from this scheduling decision.

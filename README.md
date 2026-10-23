@@ -28,7 +28,9 @@ The app also includes inherited notes and recording features. **Notes are not ye
 
 ## Current development status
 
-As of **October 22, 2026**, the latest owner-accepted phone build is **WagLock Dev 1.3.8 (35)**. Build 35 fixed a photo-viewer teardown crash and passed the owner's checks, with one Notes background defect corrected in installed build 36. Installed build 37 completes the remaining Figma UI implementation; its validation is recorded in the [UI implementation record](docs/portable-vault/figma-ui-implementation.md). Build 38 adds [session-bound note saves](docs/portable-vault/note-write-boundary.md), with 181 unit/security tests and the editor integration check passing; phone acceptance remains separate. The owner confirmed independent extraction of a fresh build39 phone backup; an earlier copy's password rejection remains unexplained. Build40 adds readable recovered filenames/album folders and an editable export filename; it is installed for the next check. The build 35 validation included **172 unit/security tests and repeated simulator UI workflows**. These results cover specific behavior, not the entire security model.
+As of **October 22, 2026**, the latest owner-accepted phone build is **WagLock Dev 1.3.8 (41)**. Its note Save/Back, existing-sample access and background/password/Face ID checks passed. The full unit suite passes **247 tests**. Build 41 fixes conflicting-draft loss; typed encrypted model/draft staging remains unused by phone mounting. Native metadata protection, independent alternative vaults and complete recovery validation remain open.
+
+The immediate target is a narrowly scoped first App Store submission with manual release. [Submission preparation and readiness gates](docs/release/submission-plan.md) track the licensing route, security/recovery work, final identity, privacy/support, listing and exact-archive validation. The proposed store identity is separate from the existing development app. **No App Store submission or public-release approval is announced.**
 
 | Capability | Status |
 | --- | --- |

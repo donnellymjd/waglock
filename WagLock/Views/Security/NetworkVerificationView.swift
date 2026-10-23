@@ -6,9 +6,11 @@ struct NetworkVerificationView: View {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Plain-language privacy details").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
                 WagLockInfoCard(title: "Local storage", detail: "Imported files are encrypted and stored on this device. This build does not transfer vault media through an app backend.")
+                Link("Privacy policy", destination: AppConstants.privacyPolicyURL)
+                Link("Support", destination: AppConstants.supportURL)
                 Text("WHAT IOS MAY DO").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
                 WagLockNavigationRow(symbol: "arrow.down.to.line", title: "Cloud file downloads", detail: "The system picker may fetch a file")
-                WagLockNavigationRow(symbol: "square.and.arrow.up", title: "Export & sharing", detail: "Chosen destination apps receive unencrypted copies")
+                WagLockNavigationRow(symbol: "square.and.arrow.up", title: "Export & sharing", detail: "Ordinary sharing sends decrypted copies; encrypted backup sends the finished encrypted file")
                 Text("Open source helps you inspect behavior. These explanations do not replace an independent security review.")
                     .font(.body).foregroundStyle(ColorTheme.secondaryText)
                 Text("Guest Mode and alternate icons do not make a vault undetectable.")

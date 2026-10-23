@@ -308,3 +308,10 @@ Validation: 247 unit tests passed (136 XCTest + 111 Swift Testing), including ei
 Build 41 device follow-up: owner reconnected/unlocked the phone; install and foreground launch succeeded. Filtered app inventory confirms WagLock Dev 1.3.8 (41), com.d2sci.vaultito.dev. No uninstall/reset or owner media/draft inspection. Physical workflow acceptance pending. Evidence: `/private/tmp/waglock-build41-install.log`, `/private/tmp/waglock-build41-launch.log`, `/private/tmp/waglock-build41-app-info.log`.
 
 Build 41 owner acceptance passed for the requested note Back/reopen/Done/save, existing sample access and background/unlock checks. No phone regression reported. Complete readable backup recovery remains a separate unconfirmed gate; encrypted metadata migration is still inactive.
+
+
+## First App Store preparation — build 42 source (2026-10-22)
+
+Added an opt-in unsigned identity overlay for com.d2sci.waglock / WagLock / 1.0 while retaining the normal development identity. Replaced the obsolete upstream privacy policy with current English behavior/limits, preserving the original byte-for-byte under provenance (SHA-256 95b741356122e8b8a7771a5fbda1c94860dd05d45b784b09f000324feb5379c1). Added in-app policy/support links and clarified ordinary sharing versus encrypted backup. Checked-in submission scope, listing/review draft, support, licensing packet and privacy/encryption worksheet; no App Store upload/registration/clearance.
+
+247 unit tests passed; existing Light/Dark remaining-destinations UI test passed. Unsigned opt-in Release build succeeded and built Info.plist confirms com.d2sci.waglock / WagLock / 1.0 (42); Debug simulator retains com.d2sci.vaultito.dev / WagLock Dev / 1.3.8 (42). Logs: `/private/tmp/waglock-submission-prep-units.log`, `/private/tmp/waglock-submission-prep-ui.log`, `/private/tmp/waglock-appstore-preview.log`; corresponding local unit/UI xcresults use the same prefixes. Owner phone remains build 41. No live metadata migration. Distribution/licensing review, native protection and complete recovery remain release gates.
