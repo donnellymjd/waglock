@@ -1,0 +1,43 @@
+{
+  "fixtureOnly": true,
+  "version": "1.0",
+  "build": 45,
+  "developmentLibraryUnchanged": true,
+  "unitTests": {
+    "passed": 279,
+    "failed": 0,
+    "skipped": 0,
+    "xcresult": "/private/tmp/waglock-release45-remount-final-regression.xcresult"
+  },
+  "pythonTests": {
+    "passed": 58,
+    "log": "/private/tmp/waglock-release45-all-python.log"
+  },
+  "passwordChangeUI": {
+    "passed": true,
+    "xcresult": "/private/tmp/waglock-release45-remount-fixed-device-ui.xcresult"
+  },
+  "crashTerminationProbe": {
+    "beforeCommit": "passed",
+    "afterCommit": "passed"
+  },
+  "archive": {
+    "path": "/private/tmp/WagLock-1.0-build45-final.xcarchive",
+    "unsigned": true,
+    "sourceBuildCounterPreserved": true
+  },
+  "phoneInstall": {
+    "bundle": "com.d2sci.waglock",
+    "installed": true,
+    "launchBlockedByDeviceLock": true,
+    "physicalAcceptance": "pending"
+  },
+  "scale": {
+    "records": 1000,
+    "thumbnailBytesEach": 24576,
+    "saveSeconds": 2.91,
+    "reopenSeconds": 1.55,
+    "platform": "iOS simulator"
+  },
+  "submitted": false
+}

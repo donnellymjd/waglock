@@ -6546,7 +6546,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Changing your password will re-encrypt all files with the new password. This process may take a while, please keep the app open until it completes."
+            "value": "Changing your password updates access to the same library. Separate album passwords and backup recovery credentials stay unchanged."
           }
         }
       }

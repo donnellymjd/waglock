@@ -57,12 +57,12 @@ def terminal(command, password_for, timeout=120):
         os.close(master)
 
 
-def check(age):
-    expected = json.loads((FIXTURE / "expected.public.json").read_text())
+def check(age, fixture=FIXTURE):
+    expected = json.loads((fixture / "expected.public.json").read_text())
     if expected.get("fixtureOnly") is not True:
         raise RuntimeError("Only the checked-in public fixture is supported")
-    source = FIXTURE / "public-fixture.tar.age"
-    provenance = json.loads((FIXTURE / "provenance.json").read_text())
+    source = fixture / "public-fixture.tar.age"
+    provenance = json.loads((fixture / "provenance.json").read_text())
     if hashlib.sha256(source.read_bytes()).hexdigest() != provenance["sha256"]:
         raise RuntimeError("Public fixture hash changed")
     def credential(domain):
@@ -78,6 +78,19 @@ def check(age):
             for entry in report["files"] if entry["kind"] == "media"}
         if actual != expected["expectedPayloadHashes"]:
             raise RuntimeError("Recovered payload hashes differ")
+        formats = expected.get("expectedMediaFormats", {})
+        for entry in report["files"]:
+            suffix = formats.get(entry.get("recordID"))
+            if not suffix or entry["kind"] != "media":
+                continue
+            payload = (output / entry["recoveredPath"]).read_bytes()
+            if Path(entry["recoveredPath"]).suffix != "." + suffix:
+                raise RuntimeError("Recovered media extension differs")
+            valid = {"png": payload.startswith(b"\x89PNG\r\n\x1a\n"),
+                "mov": payload[4:8] == b"ftyp", "wav": payload.startswith(b"RIFF") and payload[8:12] == b"WAVE",
+                "pdf": payload.startswith(b"%PDF-")}
+            if not valid.get(suffix, False):
+                raise RuntimeError("Recovered real-media signature differs")
         metadata = [json.loads(p.read_text()) for p in output.rglob("metadata.json")]
         if ([n["content"] for m in metadata for n in m["notes"]] != expected["expectedNotes"]
             or [d["content"] for m in metadata for d in m["drafts"]] != expected["expectedDrafts"]
@@ -111,11 +124,12 @@ def check(age):
         return {"fixtureOnly": True, "officialAgeCLI": subprocess.check_output([age, "--version"], text=True).strip(),
             "independentColdRecovery": True, "payloadCount": len(actual), "payloadHashesMatch": True,
             "metadataNotesDraftsUnicodeMatch": True, "parentOnlyCredentialsRejected": rejected,
-            "tamperAndTruncationRejected": rejected_mutations, "phoneKeychainRequired": False}
+            "tamperAndTruncationRejected": rejected_mutations, "phoneKeychainRequired": False, "realMediaFormatsVerified": sorted(formats.values())}
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--age", default="age", help="Path to unmodified official age executable")
+    parser.add_argument("--fixture", type=Path, default=FIXTURE, help="Explicit public-only generated fixture directory")
     args = parser.parse_args()
-    print(json.dumps(check(args.age), indent=2))
+    print(json.dumps(check(args.age, args.fixture), indent=2))

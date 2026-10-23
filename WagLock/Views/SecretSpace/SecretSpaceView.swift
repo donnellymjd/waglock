@@ -16,7 +16,7 @@ struct SecretSpaceView: View {
     @EnvironmentObject private var auth: AuthenticationViewModel
     @EnvironmentObject private var guestModeManager: GuestModeManager
 
-    private var draftManager: SecretNoteDraftManager { .shared }
+    private var draftManager: SecretNoteDraftManager { LibraryWriteCoordinator.draftManager(in: modelContext) }
 
     var body: some View {
         NavigationStack {

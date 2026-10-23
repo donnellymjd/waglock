@@ -17,8 +17,27 @@ Apple's [privacy-label documentation](https://developer.apple.com/app-store/app-
 | Native originals | Existing AES-GCM buffered/stream formats, legacy readers and authenticated ZNSC v2 framing; no native standard-format compatibility claim. |
 | Credentials and album keys | Password-derived verification/wrapping, OS Keychain, optional biometric access. Review exact KDF/credential paths in the release. |
 | age backup | Standard age envelope implemented over Apple CryptoKit; X25519 recipient or password/scrypt choice, nested password domains. Original BSD-2-Clause scrypt C core plus CommonCrypto adapter. No third-party age CLI is embedded in iOS. |
-| Metadata candidate | Currently unused CryptoKit/SQLite store; identify whether present/active in the final release rather than assuming fixture tests equal production adoption. |
+| Release metadata | The separate first-release configuration mounts the CryptoKit/SQLite encrypted index with password-wrapped random root keys, domain-bound record encryption and an authenticated inventory; the legacy development identity remains unchanged. |
 
 The account holder/reviewer must determine the applicable export classification and territory-specific documentation from the actual implementation and Apple's questionnaire. Do not infer exemption solely because Apple APIs are used; scrypt and custom framing/format code must be described accurately. Do not set `ITSAppUsesNonExemptEncryption` to false as a way to bypass review. No CCATS, exemption, French filing or compliance-code outcome is asserted here.
 
 Apple's [export-compliance overview](https://developer.apple.com/help/app-store-connect/manage-app-information/overview-of-export-compliance) describes the determination and documentation flow. Record the supported conclusion, territories, reviewer and any required approvals/code before setting the final plist answers or uploading. No account agreement or export declaration has been accepted during this preparation.
+
+
+## Candidate source/API review — October 23, 2026
+
+The actual first-release simulator bundle is com.d2sci.waglock, marketing1.0/build45. Its explicit Info.plist template resolves WagLockEncryptedLibrary=YES. An arbitrary INFOPLIST_KEY custom setting alone was ignored by Xcode, so the switch is now in the actual template and verified in the built artifact. Normal development builds resolve it empty/false and keep their separate legacy library.
+
+Required-reason inventory, checked against [Apple's category/reason definitions](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitype):
+
+| Category | Reason | Inspected purpose |
+| --- | --- | --- |
+| File timestamps/metadata | C617.1 | Own-container metadata, source revision checks and protected index path validation. |
+| File timestamps/metadata | 3B52.1 | Metadata/size of files selected through the system picker. |
+| Disk space | E174.1 | Check capacity before imports, encryption and complete backup creation; stop with a visible failure when insufficient. |
+| Disk space | 85F4.1 | Show device storage information in Settings. |
+| UserDefaults | CA92.1 | App-only appearance, layout, keyboard and auto-lock preferences. |
+
+No production systemUptime/mach_absolute_time/activeInputModes call was found in the app source scan. The manifest declares no tracking, no tracking domains and no app-collected data types. Source inspection found no URLSession/URLRequest backend, analytics/ads SDK or app-operated vault service. Optional external support links, Apple diagnostics and user-selected Files providers remain separate policy disclosures. The engineering privacy-label recommendation is Data Not Collected for this implementation; the account holder must confirm the actual App Store diagnostics/support arrangements before filing. This is not a claim that the operating system or another app never communicates.
+
+Encryption questionnaire inventory is prepared above. Countries and any required export documentation are awaiting account-holder input; no exemption/non-exempt flag, compliance code, account agreement or legal determination has been invented or filed.

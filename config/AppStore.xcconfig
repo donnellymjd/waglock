@@ -1,4 +1,4 @@
-// Opt-in preview only. Not attached to the normal phone/debug configuration.
+// Opt-in first-release candidate. Not attached to the normal phone/debug configuration.
 // Use only for the app build/archive, not as a global override for test targets.
 // No App ID registration, provisioning update, upload or migration is implied.
 PRODUCT_BUNDLE_IDENTIFIER = com.d2sci.waglock
@@ -7,3 +7,6 @@ MARKETING_VERSION = 1.0
 PRODUCT_MODULE_NAME = WagLock
 // Export-compliance classification remains an explicit submission gate.
 // Do not add ITSAppUsesNonExemptEncryption = NO without a supported determination.
+
+// Fresh release libraries use password-keyed encrypted metadata; no legacy conversion.
+WAGLOCK_ENCRYPTED_LIBRARY = YES

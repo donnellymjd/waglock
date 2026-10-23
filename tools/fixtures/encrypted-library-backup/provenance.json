@@ -1,0 +1,7 @@
+{
+  "fixtureOnly": true,
+  "generator": "PortableExportSnapshotTests.testEncryptedLibraryBackupFixtureForIndependentRecovery",
+  "writer": "iOS18.4 simulator; actual encrypted library mount and draft backend",
+  "sha256": "31791d4dd81cffd831e73b8607fa350597c07ba5856ec59d895de7accb57a81f",
+  "contents": "Generated PNG, MOV, WAV, PDF, nested password albums, notes and encrypted-vault draft. All credentials are public synthetic fixtures; no phone or private data."
+}

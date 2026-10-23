@@ -38,7 +38,7 @@ enum KeychainError: Error {
 /// Owner verification and data-secret wrapping share one authenticated record.
 /// Legacy salted SHA-256 credentials remain readable until successful promotion.
 /// 安全级别：kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-class KeychainService {
+class KeychainService: LibraryIdentityAnchor {
     // Avoid the isolated-deinit back-deployment path when a scoped instance is released
     // from a SwiftUI property graph on older iOS. No credential work belongs in teardown.
     nonisolated deinit {}
@@ -47,15 +47,18 @@ class KeychainService {
 
     static let shared = KeychainService()
     /// 独立命名空间用于隔离凭据，不迁移其他 service 的数据。
-    init(service: String = AppConstants.bundleIdentifier, storage: (any KeychainStorage)? = nil) {
+    init(service: String = AppConstants.bundleIdentifier, storage: (any KeychainStorage)? = nil,
+         makeDataPassword: (() throws -> String)? = nil) {
         self.service = service
         self.storage = storage ?? SystemKeychainStorage(service: service)
+        self.makeDataPassword = makeDataPassword ?? (LibraryStoragePolicy.encryptedMetadata ? { try FreshEncryptedLibrary.randomSecret() } : nil)
     }
 
     // MARK: - Constants
 
     private let service: String
     private let storage: any KeychainStorage
+    private let makeDataPassword: (() throws -> String)?
     private let ownerAccount = "vaultito.owner-credentials.v1"
     private struct OwnerCredentials: Codable {
         let version: Int
@@ -78,6 +81,15 @@ class KeychainService {
 
     private let encryptionService = EncryptionService.shared
 
+    func loadLibraryIdentity() throws -> Data? {
+        do { return try storage.read(account: "waglock.library-identity.v1") }
+        catch KeychainError.itemNotFound { return nil }
+    }
+    func establishLibraryIdentity(_ identity: Data) throws {
+        guard identity.count == 32 else { throw KeychainError.invalidData }
+        try storage.write(account: "waglock.library-identity.v1", data: identity, createOnly: true)
+    }
+
     // MARK: - Public Methods
 
     /// 保存密码（首次设置）
@@ -88,7 +100,8 @@ class KeychainService {
         guard Self.validatePasswordStrength(password).isValid else { throw KeychainError.invalidData }
         guard !isPasswordSet() else { throw KeychainError.duplicateItem }
         guard !verifyGuestPassword(password) else { throw KeychainError.invalidData }
-        let dataPassword = password
+        let dataPassword = try makeDataPassword?() ?? password
+        guard !dataPassword.isEmpty else { throw KeychainError.invalidData }
         let record = try encodeOwnerCredentials(dataPassword, using: password)
         try storage.write(account: ownerAccount, data: record, createOnly: true)
         BiometricSecretStore.remove(account: "vault-unlock", service: service + ".biometrics")
@@ -134,6 +147,7 @@ class KeychainService {
     /// 清空所有Keychain数据（包括主密码、访客密码、计算器登录密码）
     /// Explicit reset/test-fixture cleanup only. Never infer consent from preferences.
     func clearAllKeychainData() {
+        try? deleteFromKeychain(account: "waglock.library-identity.v1")
         BiometricSecretStore.remove(account: "vault-unlock", service: service + ".biometrics")
         try? deleteFromKeychain(account: ownerAccount)
         // 清空主密码
@@ -292,6 +306,7 @@ extension KeychainService {
     /// - Parameter password: Guest credential, using the same 6–128 character policy as the owner.
     /// - Throws: KeychainError
     func saveGuestPassword(_ password: String) throws {
+        guard !LibraryStoragePolicy.encryptedMetadata else { throw KeychainError.invalidData }
         // Input rules match the owner; existing credential encoding/readers are retained.
         guard Self.validateGuestPassword(password).isValid else {
             throw KeychainError.invalidData
@@ -315,6 +330,7 @@ extension KeychainService {
     /// - Parameter password: 用户输入的密码
     /// - Returns: 密码是否正确
     func verifyGuestPassword(_ password: String) -> Bool {
+        guard !LibraryStoragePolicy.encryptedMetadata else { return false }
         do {
             let savedHash = try readFromKeychain(account: guestPasswordAccount)
             let salt = try readFromKeychain(account: guestSaltAccount)
@@ -328,6 +344,7 @@ extension KeychainService {
     /// 检查是否已设置访客密码
     /// - Returns: 是否已设置访客密码
     func isGuestPasswordSet() -> Bool {
+        guard !LibraryStoragePolicy.encryptedMetadata else { return false }
         do {
             let data = try readFromKeychain(account: isGuestSetAccount)
             return data.first == 1

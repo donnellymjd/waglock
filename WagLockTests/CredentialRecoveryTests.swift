@@ -15,6 +15,40 @@ struct CredentialRecoveryTests {
         return (KeychainService(service: "recovery-fixture", storage: storage), storage)
     }
 
+    @Test func freshRandomSecretIsRetainedAcrossPasswordChange() throws {
+        let storage = FaultKeychainStorage()
+        var calls = 0
+        let keychain = KeychainService(service: "fresh-secret-fixture", storage: storage, makeDataPassword: {
+            calls += 1; return "PUBLIC-generated-independent-data-secret"
+        })
+        let secret = try keychain.savePassword("first-password")
+        #expect(secret != "first-password")
+        #expect(try keychain.retrieveDataPassword(using: "first-password") == secret)
+        #expect(try keychain.changePassword(oldPassword: "first-password", newPassword: "changed-password") == secret)
+        #expect(try keychain.retrieveDataPassword(using: "changed-password") == secret)
+        #expect(!keychain.verifyPassword("first-password"))
+        #expect(calls == 1)
+    }
+    @Test func failedFreshRandomGenerationLeavesNoCredentials() {
+        let storage = FaultKeychainStorage()
+        let keychain = KeychainService(service: "fresh-secret-failure", storage: storage, makeDataPassword: {
+            throw EncryptionError.randomGenerationFailed
+        })
+        #expect(throws: (any Error).self) { try keychain.savePassword("first-password") }
+        #expect(storage.items.isEmpty)
+    }
+    @Test func libraryIdentityCannotBeOverwrittenAndUnavailableIsNotAbsence() throws {
+        let (keychain, storage) = fixture()
+        #expect(try keychain.loadLibraryIdentity() == nil)
+        let identity = Data(repeating: 7, count: 32)
+        try keychain.establishLibraryIdentity(identity)
+        #expect(try keychain.loadLibraryIdentity() == identity)
+        #expect(throws: (any Error).self) { try keychain.establishLibraryIdentity(Data(repeating: 8, count: 32)) }
+        storage.failReads = true
+        #expect(throws: (any Error).self) { try keychain.loadLibraryIdentity() }
+        #expect(storage.items["waglock.library-identity.v1"] == identity)
+    }
+
     private func legacy(_ storage: FaultKeychainStorage, password: String = "legacy-password",
                         secret: String = "original-data-secret") throws {
         let salt = Data(repeating: 42, count: 16)

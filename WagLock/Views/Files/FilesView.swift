@@ -117,33 +117,12 @@ struct FilesView: View {
             } message: {
                 Text(deleteErrorMessage ?? "")
             }
-            .task {
-                cleanupInvalidFiles()
-            }
+
         }
     }
 
-    // MARK: - Cleanup
-
-    /// 清理失效的文件记录
-    private func cleanupInvalidFiles() {
-        let storage = FileStorageService.shared
-        var removedCount = 0
-
-        for file in files {
-            if !storage.fileExists(path: file.encryptedPath) {
-                modelContext.delete(file)
-                removedCount += 1
-            }
-        }
-
-        if removedCount > 0 {
-            do {
-                try LibraryWriteCoordinator.save(modelContext)
-            } catch {
-            }
-        }
-    }
+    // Missing ciphertext is an explicit read/recovery error. Never delete
+    // library records automatically or inspect dismissed models in a late task.
 
     // MARK: - Empty State
 

@@ -10,7 +10,7 @@ WagLock combines encrypted media storage with nested albums, separate album pass
 
 WagLock is an independent fork of [SealedPocket / ZeroNet Space](https://github.com/materialofair/zeroNet_Space), not the official upstream app. Original attribution and license notices are preserved.
 
-> **Development preview:** test with disposable media and keep independent originals. Metadata encryption, portable recovery and independent alternative vaults are unfinished. WagLock has not completed an independent security audit.
+> **Development preview:** test with disposable media and keep independent originals. The fresh release candidate encrypts library metadata and supports explicit age backup recovery. Existing development libraries retain legacy limitations. Independent alternative vaults are unfinished. WagLock has not completed an independent security audit.
 
 [Build it](#build-and-run) · [Security and recovery](#security-and-recovery) · [Roadmap](#roadmap) · [Development docs](docs/portable-vault/README.md)
 
@@ -24,12 +24,11 @@ WagLock is an independent fork of [SealedPocket / ZeroNet Space](https://github.
 - **Adaptive interface:** redesigned libraries, players and settings; System, Light and Dark appearance.
 - **English beta interface:** app-controlled UI and diagnostics are English. User filenames, passwords and other Unicode content are preserved.
 
-The app also includes inherited notes and recording features. **Notes are not yet fully encrypted private Markdown notes**; see the limitations below.
+The app also includes notes and recording. In the fresh release configuration, note fields and drafts are encrypted with the library; a full Markdown editing/rendering feature remains planned.
 
 ## Current development status
 
-As of **October 23, 2026**, the owner reports the normal **build 43** app checks working, with a request to replace the video-viewer design. **WagLock Dev 1.3.8 (44)** is installed with standard native video controls; review of that viewer is pending. The full unit suite passes **260 tests**. Build 43 centralizes model saves under the authenticated mount and preserves resources after uncertain saves. Typed encrypted model/draft staging remains unused by phone mounting. Native metadata protection, independent alternative vaults and complete recovery validation remain open.
-
+As of **October 23, 2026**, build 45 prepares a separate **WagLock 1.0** fresh encrypted library under `com.d2sci.waglock`. Models, thumbnails, notes and drafts persist in an authenticated encrypted index with a memory-only UI projection. New credentials use an independent random data secret retained across password changes. Existing **WagLock Dev 1.3.8 (44)** and its library are preserved. This is not a migration. See [the fresh-library contract](docs/portable-vault/fresh-encrypted-library.md) for evidence and limits. Native video viewing uses standard AVKit controls.
 The immediate target is a narrowly scoped first App Store submission with manual release. [Submission preparation and readiness gates](docs/release/submission-plan.md) track the licensing route, security/recovery work, final identity, privacy/support, listing and exact-archive validation. The proposed store identity is separate from the existing development app. **No App Store submission or public-release approval is announced.**
 
 | Capability | Status |
@@ -38,7 +37,7 @@ The immediate target is a narrowly scoped first App Store submission with manual
 | Encrypted export with independent desktop extraction | Build 39 development candidate; password/recovery-key choices, nested protection and Files/cloud destinations; see limits below |
 | Separate populated vault selected by an alternative passcode | In development; current Guest Mode is presentation-only |
 | Encrypted Trash with configurable retention | Planned; enabled with seven-day retention by default when implemented |
-| Encrypted Markdown notes and encrypted file search | Backlog |
+| Encrypted note fields/drafts | Fresh release candidate; full Markdown editing and encrypted search remain backlog |
 | Consent-controlled shared albums | Discovery/prototype planning; not available in the app |
 
 See [device-testing records](docs/portable-vault/device-testing.md), [build evidence](BUILD_ERRORS_SUMMARY.md) and the [prioritized backlog](docs/portable-vault/backlog-priorities.md) for scope and outstanding work. An internal TestFlight beta is planned; this README does not announce a public beta or App Store release.
@@ -49,10 +48,10 @@ WagLock currently uses its inherited custom encryption format, extended with aut
 
 Important boundaries in the current build:
 
-- Main-library metadata, thumbnails, note fields and album names/hierarchy still have open encryption findings. Encrypting media originals does not mean every piece of library data is encrypted at the application level.
+- Fresh release libraries encrypt metadata, thumbnails, notes/drafts and album names/hierarchy. Existing development libraries retain their legacy plaintext metadata; no automatic conversion is performed. Whole authentic database rollback remains an open limitation.
 - Copying encrypted media alone is not a supported recovery procedure. Device-bound Keychain material can be required, especially after password changes. Do not rely on WagLock as the only copy of a library.
 - Face ID-only albums have no album-password fallback. Losing their device-bound biometric factor can permanently prevent access. Password-or-Face-ID albums retain a password path.
-- Guest Mode currently presents an empty in-memory library. It does not provide the requested independent alternative vault or establish forensic deniability.
+- The public release candidate hides presentation-only Guest Mode. The development app retains it; neither provides the requested independent alternative vault or forensic deniability.
 - Local cleanup cannot retract a copy already handed to another app. PDFKit, QuickLook, decoder caches and other preview paths remain part of the ongoing audit; no secure-deletion guarantee is made.
 
 Read the [architecture/security audit](docs/portable-vault/audits/D2S-105.md), [album key boundaries](docs/portable-vault/albums-and-biometrics.md) and [recovery requirements](docs/portable-vault/requirements.md) before testing with meaningful data.
@@ -63,9 +62,9 @@ The export experiment creates a Cryptomator-format candidate with encrypted mani
 
 Completeness requires additional verification: the standard reader can accept a valid prefix after a complete final chunk is removed. The experimental manifest verifier detects that loss. Successful desktop opening alone is not a completeness check.
 
-Build 39 adds an additional **age-encrypted backup** under Settings → Encrypted backup. Choose a password or an existing age X25519 recovery recipient, retain separate protected album passwords, and save finished ciphertext through the native iOS Files picker to local storage, iCloud Drive or an installed provider. Optional Face ID-only album copies require explicit consent, real biometric authorization and a new separate export password. Native storage and credentials remain unchanged.
+Build 39 adds an additional **age-encrypted backup** under Settings → Encrypted backup. Choose a password or an existing age X25519 recovery recipient, retain separate protected album passwords, and save finished ciphertext through the native iOS Files picker to local storage, iCloud Drive or an installed provider. Optional Face ID-only album copies require explicit consent, real biometric authorization and a new separate export password. Export does not rewrite native storage or credentials.
 
-The open-source recovery helper automatically downloads and verifies age if needed, then invokes the official tool and verifies content/hierarchy before publishing a new desktop extraction directory. Recovered photos/files use original names and extensions under **Library**, albums become nested folders, and notes/drafts are available as Markdown files. The app's ready screen lets you edit or clear the backup filename before saving. Synthetic iOS exports recover seven payloads plus notes/drafts and two nested password domains without the phone/Keychain; a 64 MiB + 3-byte stream also recovers byte-exactly. Build40 automated regression passes 207 unit/security tests plus 57 Python tool tests. **Older buffered native files above 64 MiB currently block complete export**; device settings/biometric registrations are excluded explicitly. This is not an in-app restore wizard. Native metadata encryption, broad platform/device/provider validation and inherited distribution review remain open.
+The open-source recovery helper automatically downloads and verifies age if needed, then invokes the official tool and verifies content/hierarchy before publishing a new desktop extraction directory. Recovered photos/files use original names and extensions under **Library**, albums become nested folders, and notes/drafts are available as Markdown files. The app's ready screen lets you edit or clear the backup filename before saving. Synthetic iOS exports recover seven payloads plus notes/drafts and two nested password domains without the phone/Keychain; a 64 MiB + 3-byte stream also recovers byte-exactly. Build40 automated regression passes 207 unit/security tests plus 57 Python tool tests. **Older buffered native files above 64 MiB currently block complete export**; device settings/biometric registrations are excluded explicitly. This is not an in-app restore wizard. Fresh release metadata encryption is implemented; broad physical-device/provider validation and inherited distribution review remain open.
 
 - [Create, save and independently recover a backup](docs/portable-vault/backup-recovery.md)
 - [Age format, cryptographic options and dependency decisions](docs/portable-vault/age-backup-design.md)
@@ -83,6 +82,19 @@ The open-source recovery helper automatically downloads and verifies age if need
 - An Apple signing team for installation on a physical device.
 
 Recent app validation used **Xcode 27.1**. The app uses Swift language mode 5; the optional isolated Cryptomator experiment requires Swift 6.2 or later.
+
+### Fresh encrypted release configuration
+
+The default scheme builds the separate legacy development app. For a **new** encrypted release library, explicitly use the release overlay:
+
+```sh
+xcodebuild build -project WagLock.xcodeproj -scheme WagLock \
+  -configuration Release -xcconfig config/AppStore.xcconfig \
+  -destination 'generic/platform=iOS' \
+  -derivedDataPath /tmp/waglock-release CODE_SIGNING_ALLOWED=NO
+```
+
+This verifies compilation; device installation needs your own signing. Check the built Info.plist for `com.d2sci.waglock` and `WagLockEncryptedLibrary=YES`. A new identity has a separate library/Keychain. Never uninstall an existing app or copy live native storage as a migration shortcut. An explicit age backup is the supported independent desktop recovery path; automatic iOS backup and raw native-folder portability are not established.
 
 ### Open in Xcode
 

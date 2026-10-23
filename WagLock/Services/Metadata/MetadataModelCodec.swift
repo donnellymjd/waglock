@@ -87,6 +87,33 @@ enum MetadataModelCodec {
         return records.sorted { ($0.kind, $0.id.uuidString) < ($1.kind, $1.id.uuidString) }
     }
 
+    static func record(_ model: any PersistentModel) throws -> EncryptedMetadataStore.Record {
+        switch model {
+        case let item as MediaItem: return .init(kind: "media", id: item.id, payload: try encode(Envelope(version: 1, value: Media(item))))
+        case let item as SecretNote: return .init(kind: "note", id: item.id, payload: try encode(Envelope(version: 1, value: Note(item))))
+        case let item as VaultAlbum: return .init(kind: "album", id: item.id, payload: try encode(Envelope(version: 1, value: Album(item))))
+        default: throw Failure.unsupportedSchema
+        }
+    }
+
+    static func insert(_ record: EncryptedMetadataStore.Record, into context: ModelContext) throws {
+        guard context.container.configurations.allSatisfy(\.isStoredInMemoryOnly) else { throw Failure.invalidRecord }
+        switch try decode(record) {
+        case .media(let x):
+            let item = MediaItem(id: x.id, fileName: x.fileName, fileExtension: x.fileExtension, fileSize: x.fileSize,
+                type: .document, encryptedPath: x.encryptedPath, thumbnailData: x.thumbnailData,
+                createdAt: x.createdAt, modifiedAt: x.modifiedAt, width: x.width, height: x.height, duration: x.duration)
+            item.typeRawValue = x.typeRawValue; context.insert(item)
+        case .note(let x):
+            let item = SecretNote(title: x.title, content: x.content, isFavorite: x.isFavorite, tags: x.tags)
+            item.id = x.id; item.createdAt = x.createdAt; item.modifiedAt = x.modifiedAt; context.insert(item)
+        case .album(let x):
+            let item = VaultAlbum(id: x.id, parentID: x.parentID, name: x.name, protection: .inherited,
+                wrappedKey: x.wrappedKey, encryptedCatalog: x.encryptedCatalog, biometricAccount: x.biometricAccount)
+            item.protectionRawValue = x.protectionRawValue; item.createdAt = x.createdAt; context.insert(item)
+        }
+    }
+
     static func decode(_ record: EncryptedMetadataStore.Record) throws -> Value {
         guard record.payload.count <= EncryptedMetadataStore.maximumPayloadBytes else { throw Failure.tooLarge }
         func open<T: Codable>(_ type: T.Type) throws -> T {

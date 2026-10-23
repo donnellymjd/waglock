@@ -1,6 +1,7 @@
 import Foundation
 import CryptoKit
 import Security
+import UIKit
 import SwiftData
 import XCTest
 @testable import WagLock
@@ -21,9 +22,18 @@ final class PortableExportSnapshotTests: XCTestCase {
         func remove(account: String) { values.removeValue(forKey: account) }
     }
     @MainActor
+    private final class FixtureAnchor: LibraryIdentityAnchor {
+        nonisolated deinit { }
+        private var value: Data?
+        func loadLibraryIdentity() throws -> Data? { value }
+        func establishLibraryIdentity(_ identity: Data) throws {
+            guard value == nil else { throw KeychainError.duplicateItem }; value = identity
+        }
+    }
+    @MainActor
     private final class Fixture {
         let root: URL
-        let db: ModelContainer
+        var db: ModelContainer!
         let mounts: LibraryMountCoordinator
         let authority = DocumentPreviewService()
         let biometric = Biometrics()
@@ -34,20 +44,27 @@ final class PortableExportSnapshotTests: XCTestCase {
         var keys: [UUID: String] = [:]
         var factors: [UUID: String] = [:]
         var records: [VaultAlbum] = []
-        init(unsupported: Bool = false) throws {
+        init(unsupported: Bool = false, encrypted: Bool = false) throws {
             root = FileManager.default.temporaryDirectory.appendingPathComponent("SnapshotFixture-" + UUID().uuidString)
             var types: [any PersistentModel.Type] = [MediaItem.self, SecretNote.self, VaultAlbum.self]
             if unsupported { types.append(UnsupportedExportRecord.self) }
             let schema = Schema(types)
-            db = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true))
-            let container = db
-            mounts = LibraryMountCoordinator { _ in container }
+            if encrypted {
+                mounts = LibraryMountCoordinator(encryptedRoot: root.resolvingSymlinksInPath().appendingPathComponent("encrypted-metadata"), anchor: FixtureAnchor())
+            } else {
+                let container = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true))
+                db = container
+                mounts = LibraryMountCoordinator { _ in container }
+            }
             albums = AlbumStore(biometrics: biometric)
             storage = FileStorageService(directory: root, availableCapacity: { _ in Int64.max })
             authority.beginSession(request.sessionID)
             albums.beginSession(vaultSecret: "synthetic-vault-key")
         }
-        func begin() async { await mounts.mount(request) { true } }
+        func begin() async {
+            await mounts.mount(request, dataPassword: "synthetic-vault-key") { true }
+            if db == nil { db = mounts.active?.container }
+        }
         func cleanup() { albums.endSession(); mounts.invalidate(); try? FileManager.default.removeItem(at: root) }
         func collector(limit: Int = 64 * 1024 * 1024,
                        drafts: @escaping PortableExportSnapshotService.DraftReader = { [] }) -> PortableExportSnapshotService {
@@ -63,7 +80,7 @@ final class PortableExportSnapshotTests: XCTestCase {
                 type: type, encryptedPath: try source(), thumbnailData: Data([0, 1, 2]),
                 width: 320, height: 240, duration: type == .video ? 2.5 : nil)
             db.mainContext.insert(item)
-            try db.mainContext.save()
+            try LibraryWriteCoordinator.save(db.mainContext)
             return item
         }
         /// Real authenticated catalogs and independent wrappers, all synthetic secrets.
@@ -79,7 +96,7 @@ final class PortableExportSnapshotTests: XCTestCase {
                 wrappedKey: try crypto.encrypt(data: inner, password: parentKey),
                 encryptedCatalog: try crypto.encrypt(data: JSONEncoder().encode(assets), password: secret),
                 biometricAccount: policy.usesBiometrics ? account : nil)
-            db.mainContext.insert(album); try db.mainContext.save()
+            db.mainContext.insert(album); try LibraryWriteCoordinator.save(db.mainContext)
             records.append(album); keys[id] = secret; factors[id] = factor
             if policy.usesBiometrics { biometric.values[account] = factor }
             try await albums.unlock(album, password: factor, useBiometrics: policy == .faceIDOnly, albums: records)
@@ -91,7 +108,7 @@ final class PortableExportSnapshotTests: XCTestCase {
         let f = try Fixture(); defer { f.cleanup() }; await f.begin()
         let items = try MediaType.allCases.map { try f.media(type: $0) }
         let note = SecretNote(title: "秘密 café", content: "# Unmodified **Markdown**", isFavorite: true, tags: ["旅行", "café"])
-        f.db.mainContext.insert(note); try f.db.mainContext.save()
+        f.db.mainContext.insert(note); try LibraryWriteCoordinator.save(f.db.mainContext)
         let asset = AlbumAsset(id: UUID(), fileName: "inner.mov", encryptedPath: try f.source(), fileSize: 18,
             type: .video, thumbnail: Data([3, 4]), createdAt: Date(timeIntervalSince1970: 123))
         let outer = try await f.album(name: "Outer private", policy: .password, assets: [asset])
@@ -128,7 +145,7 @@ final class PortableExportSnapshotTests: XCTestCase {
         let collector = f.collector(), snapshot = try collector.capture(f.request)
         item.fileName = "Changed without modifiedAt update"
         XCTAssertThrowsError(try collector.capture(f.request))
-        try f.db.mainContext.save()
+        try LibraryWriteCoordinator.save(f.db.mainContext)
         XCTAssertEqual(snapshot.content.domains[0].assets[0].name, "家族–café")
         XCTAssertThrowsError(try collector.validateUnchanged(snapshot))
     }
@@ -176,13 +193,13 @@ final class PortableExportSnapshotTests: XCTestCase {
         let album = try await f.album(name: "Test", policy: .inherited)
         let collector = f.collector()
         for parent in [album.id, UUID()] {
-            album.parentID = parent; try f.db.mainContext.save()
+            album.parentID = parent; try LibraryWriteCoordinator.save(f.db.mainContext)
             XCTAssertThrowsError(try collector.capture(f.request))
         }
-        album.parentID = nil; album.protectionRawValue = "future-policy"; try f.db.mainContext.save()
+        album.parentID = nil; album.protectionRawValue = "future-policy"; try LibraryWriteCoordinator.save(f.db.mainContext)
         XCTAssertThrowsError(try collector.capture(f.request))
         album.protectionRawValue = AlbumProtection.inherited.rawValue
-        album.encryptedCatalog = Data("corrupt".utf8); try f.db.mainContext.save()
+        album.encryptedCatalog = Data("corrupt".utf8); try LibraryWriteCoordinator.save(f.db.mainContext)
         XCTAssertThrowsError(try collector.capture(f.request))
     }
 
@@ -194,7 +211,7 @@ final class PortableExportSnapshotTests: XCTestCase {
         let link = f.root.appendingPathComponent("link")
         try FileManager.default.createSymbolicLink(at: link, withDestinationURL: sentinel)
         for path in ["missing", sentinel.path, link.path, "../" + sentinel.lastPathComponent] {
-            item.encryptedPath = path; try f.db.mainContext.save()
+            item.encryptedPath = path; try LibraryWriteCoordinator.save(f.db.mainContext)
             XCTAssertThrowsError(try f.collector().capture(f.request))
         }
         XCTAssertEqual(try Data(contentsOf: sentinel), Data("keep".utf8))
@@ -217,9 +234,9 @@ final class PortableExportSnapshotTests: XCTestCase {
         let f = try Fixture(); defer { f.cleanup() }; await f.begin()
         let item = try f.media()
         XCTAssertThrowsError(try f.collector(limit: 1).capture(f.request))
-        item.typeRawValue = "future-kind"; try f.db.mainContext.save()
+        item.typeRawValue = "future-kind"; try LibraryWriteCoordinator.save(f.db.mainContext)
         XCTAssertThrowsError(try f.collector().capture(f.request))
-        item.typeRawValue = MediaType.photo.rawValue; try f.db.mainContext.save()
+        item.typeRawValue = MediaType.photo.rawValue; try LibraryWriteCoordinator.save(f.db.mainContext)
         _ = try f.media(id: item.id)
         XCTAssertThrowsError(try f.collector().capture(f.request))
     }
@@ -242,21 +259,21 @@ final class PortableExportSnapshotTests: XCTestCase {
         XCTAssertNotEqual(Array(composed.utf8), Array(decomposed.utf8))
         item.fileName = composed
         let note = SecretNote(title: composed, content: composed, tags: [composed])
-        f.db.mainContext.insert(note); try f.db.mainContext.save()
+        f.db.mainContext.insert(note); try LibraryWriteCoordinator.save(f.db.mainContext)
         let album = try await f.album(name: composed, policy: .inherited)
         var draft = PortableExportSnapshot.Draft(origin: .keychain, title: composed, content: composed, updatedAt: Date())
         let collector = f.collector(drafts: { [draft] })
         var snapshot = try collector.capture(f.request)
-        item.fileName = decomposed; try f.db.mainContext.save()
+        item.fileName = decomposed; try LibraryWriteCoordinator.save(f.db.mainContext)
         XCTAssertThrowsError(try collector.validateUnchanged(snapshot))
         snapshot = try collector.capture(f.request)
-        note.content = decomposed; try f.db.mainContext.save()
+        note.content = decomposed; try LibraryWriteCoordinator.save(f.db.mainContext)
         XCTAssertThrowsError(try collector.validateUnchanged(snapshot))
         snapshot = try collector.capture(f.request)
-        note.tags = [decomposed]; try f.db.mainContext.save()
+        note.tags = [decomposed]; try LibraryWriteCoordinator.save(f.db.mainContext)
         XCTAssertThrowsError(try collector.validateUnchanged(snapshot))
         snapshot = try collector.capture(f.request)
-        album.name = decomposed; try f.db.mainContext.save()
+        album.name = decomposed; try LibraryWriteCoordinator.save(f.db.mainContext)
         XCTAssertThrowsError(try collector.validateUnchanged(snapshot))
         snapshot = try collector.capture(f.request)
         draft = .init(origin: .keychain, title: decomposed, content: composed, updatedAt: draft.updatedAt)
@@ -274,7 +291,7 @@ final class PortableExportSnapshotTests: XCTestCase {
         encoded[0]["futureCaption"] = "Metadata must not disappear"
         album.encryptedCatalog = try EncryptionService.shared.encrypt(
             data: JSONSerialization.data(withJSONObject: encoded), password: try XCTUnwrap(f.keys[album.id]))
-        try f.db.mainContext.save()
+        try LibraryWriteCoordinator.save(f.db.mainContext)
         // Ordinary viewing remains compatible; a complete export must stop.
         XCTAssertEqual(try f.albums.assets(in: album, albums: f.records).count, 1)
         XCTAssertThrowsError(try collector.capture(f.request))
@@ -303,10 +320,62 @@ final class PortableExportSnapshotTests: XCTestCase {
     }
 
     func testCompleteNativeBackupFixtureForIndependentRecovery() async throws {
-        let f = try Fixture(); defer { f.cleanup() }; await f.begin()
-        let items = try MediaType.allCases.map { try f.media(type: $0) }
+        try await completeBackupFixture(encrypted: false)
+    }
+    func testEncryptedLibraryBackupFixtureForIndependentRecovery() async throws {
+        try await completeBackupFixture(encrypted: true)
+    }
+    private func recoveryPayload(_ type: MediaType) throws -> (Data, String) {
+        switch type {
+        case .photo:
+            let image = UIGraphicsImageRenderer(size: CGSize(width: 64, height: 96)).image { context in
+                UIColor.systemBlue.setFill(); context.fill(CGRect(x: 0, y: 0, width: 64, height: 96))
+            }
+            return (try XCTUnwrap(image.pngData()), "png")
+        case .video:
+            let bundle = Bundle(for: Self.self)
+            let url = bundle.url(forResource: "public-synthetic-video", withExtension: "mov", subdirectory: "Fixtures")
+                ?? bundle.url(forResource: "public-synthetic-video", withExtension: "mov")
+            return (try Data(contentsOf: XCTUnwrap(url)), "mov")
+        case .audio:
+            func little<T: FixedWidthInteger>(_ value: T) -> Data {
+                var word = value.littleEndian; return Data(bytes: &word, count: MemoryLayout<T>.size)
+            }
+            let samples = Data(repeating: 0, count: 16_000)
+            var bytes = Data("RIFF".utf8); bytes += little(UInt32(36 + samples.count)); bytes += Data("WAVEfmt ".utf8)
+            bytes += little(UInt32(16)); bytes += little(UInt16(1)); bytes += little(UInt16(1))
+            bytes += little(UInt32(8_000)); bytes += little(UInt32(16_000)); bytes += little(UInt16(2)); bytes += little(UInt16(16))
+            bytes += Data("data".utf8); bytes += little(UInt32(samples.count)); bytes += samples
+            return (bytes, "wav")
+        case .document:
+            let bytes = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 320, height: 240)).pdfData { context in
+                context.beginPage(); ("Public synthetic recovery document" as NSString).draw(at: CGPoint(x: 20, y: 20), withAttributes: nil)
+            }
+            return (bytes, "pdf")
+        }
+    }
+
+    private func completeBackupFixture(encrypted: Bool) async throws {
+        let f = try Fixture(encrypted: encrypted); defer { f.cleanup() }; await f.begin()
+        XCTAssertNotNil(f.db)
+        guard f.db != nil else { return XCTFail("Encrypted fixture failed to mount") }
+        var originals: [String: String] = [:], formats: [String: String] = [:]
+        let items: [MediaItem]
+        if encrypted {
+            items = try MediaType.allCases.map { type in
+                let (bytes, suffix) = try recoveryPayload(type)
+                let item = MediaItem(fileName: "Recovery " + type.rawValue + " café", fileExtension: suffix,
+                    fileSize: Int64(bytes.count), type: type, encryptedPath: try f.source(bytes),
+                    thumbnailData: type == .photo ? bytes : nil)
+                f.db.mainContext.insert(item)
+                originals[item.id.uuidString] = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
+                formats[item.id.uuidString] = suffix
+                return item
+            }
+            try LibraryWriteCoordinator.save(f.db.mainContext)
+        } else { items = try MediaType.allCases.map { try f.media(type: $0) } }
         let note = SecretNote(title: "Public café 家族", content: "# Disposable **recovery** note", isFavorite: true, tags: ["cafe\u{301}"])
-        f.db.mainContext.insert(note); try f.db.mainContext.save()
+        f.db.mainContext.insert(note); try LibraryWriteCoordinator.save(f.db.mainContext)
         let parent = try await f.album(name: "Private parent", policy: .passwordAndFaceID)
         let child = try await f.album(name: "Private child", parent: parent, policy: .password)
         let leaf = try await f.album(name: "Inherited leaf", parent: child, policy: .inherited)
@@ -319,11 +388,18 @@ final class PortableExportSnapshotTests: XCTestCase {
             album.encryptedCatalog = try EncryptionService.shared.encrypt(data: JSONEncoder().encode([asset]), password: key)
             expected[asset.id.uuidString] = SHA256.hash(data: content).map { String(format: "%02x", $0) }.joined()
         }
-        try f.db.mainContext.save()
-        for item in items { expected[item.id.uuidString] = SHA256.hash(data: Data("generated original".utf8)).map { String(format: "%02x", $0) }.joined() }
+        try LibraryWriteCoordinator.save(f.db.mainContext)
+        for item in items { expected[item.id.uuidString] = originals[item.id.uuidString] ?? SHA256.hash(data: Data("generated original".utf8)).map { String(format: "%02x", $0) }.joined() }
         let draft = PortableExportSnapshot.Draft(origin: .keychain, title: "Public draft", content: "Saved, not omitted", updatedAt: Date(timeIntervalSince1970: 99))
-        let collector = f.collector(drafts: { [draft] })
+        let collector: PortableExportSnapshotService
+        if encrypted {
+            let manager = LibraryWriteCoordinator.draftManager(in: f.db.mainContext)
+            XCTAssertTrue(manager.saveDraft(title: draft.title, content: draft.content))
+            collector = PortableExportSnapshotService(mounts: f.mounts, authority: f.authority, albums: f.albums,
+                storage: f.storage, isOwner: { true })
+        } else { collector = f.collector(drafts: { [draft] }) }
         let snapshot = try collector.capture(f.request)
+        if encrypted { XCTAssertEqual(snapshot.content.domains.first { $0.id == .root }?.drafts.first?.origin, .encryptedVault) }
         let rootPassword = "WagLock*public._backup-test2026"
         let credentials: [PortableExportSnapshot.DomainID: AgeFileWriter.Credential] = [
             .root: .password(rootPassword), .album(parent.id): .password(try XCTUnwrap(f.factors[parent.id])),
@@ -332,18 +408,18 @@ final class PortableExportSnapshotTests: XCTestCase {
         let folder = f.root.appendingPathComponent("backup-job")
         let output = try await Task.detached { try BackupArchiveBuilder.build(plan, directory: folder, lease: BackupLease()) }.value
         try collector.validateUnchanged(snapshot)
-        let encrypted = try Data(contentsOf: output)
-        XCTAssertNil(encrypted.range(of: Data(note.content.utf8)))
-        XCTAssertNil(encrypted.range(of: Data("Private child".utf8)))
+        let encryptedBytes = try Data(contentsOf: output)
+        XCTAssertNil(encryptedBytes.range(of: Data(note.content.utf8)))
+        XCTAssertNil(encryptedBytes.range(of: Data("Private child".utf8)))
         XCTAssertFalse(FileManager.default.fileExists(atPath: folder.appendingPathComponent("working-media").path))
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path).count, 1)
         let fixture: [String: Any] = ["fixtureOnly": true, "rootPassword": rootPassword,
             "childPasswords": [parent.id.uuidString: f.factors[parent.id]!, child.id.uuidString: f.factors[child.id]!],
-            "expectedPayloadHashes": expected, "expectedNotes": [note.content], "expectedDrafts": [draft.content],
+            "expectedPayloadHashes": expected, "expectedMediaFormats": formats, "expectedNotes": [note.content], "expectedDrafts": [draft.content],
             "expectedAlbums": [parent.name, child.name, leaf.name], "originalPhoneKeychainRequired": false]
-        let archive = XCTAttachment(contentsOfFile: output); archive.name = "public-native-backup.tar.age"; archive.lifetime = .keepAlways; add(archive)
+        let archive = XCTAttachment(contentsOfFile: output); archive.name = encrypted ? "public-encrypted-library-backup.tar.age" : "public-native-backup.tar.age"; archive.lifetime = .keepAlways; add(archive)
         let details = XCTAttachment(data: try JSONSerialization.data(withJSONObject: fixture, options: [.sortedKeys]), uniformTypeIdentifier: "public.json")
-        details.name = "public-native-backup-expected.json"; details.lifetime = .keepAlways; add(details)
+        details.name = encrypted ? "public-encrypted-library-backup-expected.json" : "public-native-backup-expected.json"; details.lifetime = .keepAlways; add(details)
     }
 
     func testFaceIDOnlyPortableCopyNeedsExplicitConsentAndKeepsItsOwnDomain() async throws {
@@ -375,7 +451,7 @@ final class PortableExportSnapshotTests: XCTestCase {
         let request = LibraryMountCoordinator.Request(sessionID: auth.librarySessionID, scope: .legacyOwner)
         await f.mounts.mount(request) { true }
         let note = SecretNote(title: "Public handoff", content: "Only ciphertext may leave")
-        f.db.mainContext.insert(note); try f.db.mainContext.save()
+        f.db.mainContext.insert(note); try LibraryWriteCoordinator.save(f.db.mainContext)
         let session = PortableBackupSession(authority: f.authority)
         session.start(mounts: f.mounts, auth: auth, rootCredential: .password("public backup password"), passwords: [:], consent: [])
         let deadline = Date().addingTimeInterval(30)
@@ -443,7 +519,7 @@ final class PortableExportSnapshotTests: XCTestCase {
         try EncryptionService.shared.encryptFile(inputURL: plain, to: encrypted, password: "synthetic-vault-key")
         try FileManager.default.removeItem(at: plain)
         let item = MediaItem(fileName: "large fixture", fileExtension: ".bin", fileSize: size, type: .video, encryptedPath: encrypted.path)
-        f.db.mainContext.insert(item); try f.db.mainContext.save()
+        f.db.mainContext.insert(item); try LibraryWriteCoordinator.save(f.db.mainContext)
         let collector = f.collector(), snapshot = try collector.capture(f.request)
         let recipient = "age1zvkyg2lqzraa2lnjvqej32nkuu0ues2s82hzrye869xeexvn73equnujwj"
         let plan = try BackupPlanFactory.make(snapshot: snapshot, rootKey: "synthetic-vault-key", albumStore: f.albums, albums: [], credentials: [.root: .recipient(recipient)])

@@ -44,7 +44,7 @@ struct SettingsView: View {
                             List { securitySection }.wagLockList().navigationTitle("Security & access")
                                 .navigationBarTitleDisplayMode(.inline)
                         } label: {
-                            settingsCard("lock.shield", "Security & access", "Face ID, password and Guest Mode")
+                            settingsCard("lock.shield", "Security & access", LibraryStoragePolicy.encryptedMetadata ? "Face ID, password and auto-lock" : "Face ID, password and Guest Mode")
                         }.accessibilityIdentifier("settings.security")
                     }
                     VStack(alignment: .leading, spacing: 8) {
@@ -71,13 +71,13 @@ struct SettingsView: View {
                             }.accessibilityIdentifier("settings.backup")
                         }
                         Button { showAboutSheet = true } label: {
-                            settingsCard("info.circle", "About WagLock", "Open source · Early test build")
+                            settingsCard("info.circle", "About WagLock", LibraryStoragePolicy.encryptedMetadata ? "Open source · On-device encryption" : "Open source · Early test build")
                         }.accessibilityIdentifier("settings.about")
                     }
                     Button { showLogoutConfirmation = true } label: {
                         Label("Lock WagLock", systemImage: "lock")
                             .frame(maxWidth: .infinity, minHeight: 44)
-                    }.foregroundStyle(ColorTheme.accent)
+                    }.foregroundStyle(ColorTheme.accent).accessibilityIdentifier("settings.lock")
                 }.padding(24)
             }
             .background(ColorTheme.primaryBackground)
@@ -214,7 +214,7 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings.autoLock").wagLockCardRow()
             }
             Section("OTHER WAYS IN") {
-                if guestModeManager.isOwnerMode {
+                if guestModeManager.isOwnerMode && !LibraryStoragePolicy.encryptedMetadata {
                     NavigationLink {
                         List {
                             Section { guestModeRow }
@@ -231,7 +231,7 @@ struct SettingsView: View {
                 }.accessibilityIdentifier("settings.calculator").wagLockCardRow()
             }
             Section {
-                WagLockInfoCard(title: "Keep your password safe", detail: "This beta has no password reset. Keep independent originals.")
+                WagLockInfoCard(title: "Keep your password safe", detail: "There is no password reset. Keep independent originals.")
                     .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
             }
             Section {
@@ -376,19 +376,20 @@ struct ChangePasswordView: View {
                         .onChange(of: keyboard) { _, _ in hideKeyboard() }
                     SecureField(
                         String(localized: "settings.changePassword.current"), text: $currentPassword
-                    )
+                    ).accessibilityIdentifier("passwordChange.current")
                     .keyboardType(keyboard.keyboardType)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     SecureField(
                         String(localized: "settings.changePassword.new"), text: $newPassword
-                    )
+                    ).accessibilityIdentifier("passwordChange.new")
                     .keyboardType(keyboard.keyboardType)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     SecureField(
                         String(localized: "settings.changePassword.confirm"), text: $confirmPassword
-                    )
+                    ).accessibilityIdentifier("passwordChange.confirm")
+                    .submitLabel(.done).onSubmit { hideKeyboard() }
                     .keyboardType(keyboard.keyboardType)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -442,9 +443,10 @@ struct ChangePasswordView: View {
                             Text(String(localized: "settings.confirmChange"))
                         }
                     }
-                    .disabled(!isValid || isChanging)
+                    .disabled(!isValid || isChanging).accessibilityIdentifier("passwordChange.save")
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(String(localized: "settings.changePassword.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -524,8 +526,15 @@ struct AboutView: View {
                     NavigationLink { NetworkVerificationView() } label: {
                         WagLockNavigationRow(symbol: "network.slash", title: "Offline & privacy", detail: "What stays local and what iOS handles")
                     }
-                    WagLockInfoCard(title: "Early test build", detail: AppConstants.developmentNotice)
-                    Text("Guest Mode hides content; it is not a separate encrypted vault. Local imports have no item limit or purchase requirement.")
+                    if LibraryStoragePolicy.encryptedMetadata {
+                        WagLockInfoCard(title: "Encrypted library", detail: "Originals, library metadata, thumbnails, notes and saved drafts are encrypted on device. Keep independent originals and encrypted backups.")
+                            .accessibilityIdentifier("about.encryptedLibrary")
+                    } else {
+                        WagLockInfoCard(title: "Early test build", detail: AppConstants.developmentNotice)
+                        Text("Guest Mode hides content; it is not a separate encrypted vault.")
+                            .font(.footnote).foregroundStyle(ColorTheme.secondaryText)
+                    }
+                    Text("Local imports have no item limit or purchase requirement.")
                         .font(.footnote).foregroundStyle(ColorTheme.secondaryText)
                     Text("Version \(AppConstants.appVersion)").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
                     if let url = URL(string: AppConstants.githubRepositoryURL) {

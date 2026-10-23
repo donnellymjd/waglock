@@ -14,6 +14,8 @@ enum LibraryWriteCoordinator {
         let encrypted: Bool
         var save: ((ModelContext) throws -> Void)?
         var mayDiscard: (() -> Bool)?
+        var readDraft: (() throws -> Data?)?
+        var writeDraft: ((Data?) throws -> Void)?
         init(_ container: ModelContainer, encrypted: Bool) { self.container = container; self.mainContext = container.mainContext; self.encrypted = encrypted }
     }
     struct Lease { fileprivate let containerID: ObjectIdentifier; fileprivate let id: UUID }
@@ -35,10 +37,27 @@ enum LibraryWriteCoordinator {
         }, mayDiscard: { authorized() && !failedSave })
     }
     static func bindEncrypted(_ repository: EncryptedLibraryRepository) -> Lease {
-        bind(repository.container, encrypted: true, save: { [weak repository] context in
+        let lease = bind(repository.container, encrypted: true, save: { [weak repository] context in
             guard let repository else { throw Failure.revoked }
             try repository.save(context)
         }, mayDiscard: { [weak repository] in repository?.mayDiscardUncommittedResources == true })
+        let entry = entries[lease.containerID]!
+        entry.readDraft = { [weak repository] in
+            guard let repository else { throw Failure.revoked }; return try repository.loadDraft()
+        }
+        entry.writeDraft = { [weak repository] data in
+            guard let repository else { throw Failure.revoked }; try repository.saveDraft(data)
+        }
+        return lease
+    }
+    static func draftManager(in context: ModelContext) -> SecretNoteDraftManager {
+        guard let entry = managedEntry(for: context) else { return .shared }
+        if !entry.encrypted, entry.container != nil, entry.save != nil { return .shared }
+        return SecretNoteDraftManager(read: {
+            guard entry.container != nil, let read = entry.readDraft else { throw Failure.revoked }; return try read()
+        }, write: { data in
+            guard entry.container != nil, let write = entry.writeDraft else { throw Failure.revoked }; try write(data)
+        })
     }
     private static func bind(_ container: ModelContainer, encrypted: Bool = false, save: @escaping (ModelContext) throws -> Void,
                              mayDiscard: @escaping () -> Bool) -> Lease {
@@ -51,7 +70,7 @@ enum LibraryWriteCoordinator {
     }
     static func revoke(_ lease: Lease) {
         guard let entry = entries[lease.containerID], entry.id == lease.id else { return }
-        entry.save = nil; entry.mayDiscard = nil
+        entry.save = nil; entry.mayDiscard = nil; entry.readDraft = nil; entry.writeDraft = nil
     }
     static func save(_ context: ModelContext) throws {
         if let entry = managedEntry(for: context) {

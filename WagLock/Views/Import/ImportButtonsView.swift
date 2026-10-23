@@ -142,7 +142,7 @@ struct ImportButtonsView: View {
                 Text("Keep this screen open").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
                 WagLockProgressCard(title: "Encrypting your selection", detail: viewModel.progressText, progress: viewModel.importProgress?.percentage)
                 WagLockNavigationRow(symbol: "folder", title: "Destination", detail: "Main library")
-                WagLockInfoCard(title: "Your originals stay where they are", detail: "WagLock copies and encrypts selected items. Avoid deleting the originals until you have checked the import.")
+                WagLockInfoCard(title: "Your originals stay where they are", detail: "WagLock copies and encrypts selected items. Photos edit history and Live Photo motion are not imported. Keep independent originals.")
             }.padding(24)
         }
     }
@@ -164,7 +164,7 @@ struct ImportButtonsView: View {
                     viewModel.selectAudio()
                 }.accessibilityIdentifier("import.audio")
                 WagLockInfoCard(title: "Choosing a cloud file?", detail: "The iOS picker may download it first. That transfer is handled by iOS.")
-                Text("Use sample media in this early test build. Keep independent originals.")
+                Text(LibraryStoragePolicy.encryptedMetadata ? "Keep independent originals and verify your encrypted backups." : "Use sample media in this early test build. Keep independent originals.")
                     .font(.footnote).foregroundStyle(ColorTheme.secondaryText)
                 if viewModel.isImporting {
                     Button(role: .destructive) { viewModel.cancelImport(); dismiss() } label: {

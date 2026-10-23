@@ -186,33 +186,12 @@ struct PhotosView: View {
                 // 搜索条件变化后清除选择，避免"已选择 N 项"与实际可见结果不一致
                 selectedPhotoIDs.removeAll()
             }
-            .task {
-                cleanupInvalidPhotos()
-            }
+
         }
     }
 
-    // MARK: - Cleanup
-
-    /// 清理失效的图片记录
-    private func cleanupInvalidPhotos() {
-        let storage = FileStorageService.shared
-        var removedCount = 0
-
-        for photo in photos {
-            if !storage.fileExists(path: photo.encryptedPath) {
-                modelContext.delete(photo)
-                removedCount += 1
-            }
-        }
-
-        if removedCount > 0 {
-            do {
-                try LibraryWriteCoordinator.save(modelContext)
-            } catch {
-            }
-        }
-    }
+    // Missing ciphertext is an explicit read/recovery error. Never delete
+    // library records automatically or inspect dismissed models in a late task.
 
     // MARK: - Empty State
 

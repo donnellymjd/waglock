@@ -33,7 +33,7 @@ struct SetupPasswordView: View {
                     Text("Start with a password you can keep").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
                     Text("A space that is yours.").font(.title2.bold())
                     passwordForm
-                    WagLockInfoCard(title: "No password reset in this beta", detail: "Keep this password and independent originals. Do not rely on this test build as your only copy.")
+                    WagLockInfoCard(title: LibraryStoragePolicy.encryptedMetadata ? "Keep your password safe" : "No password reset in this beta", detail: LibraryStoragePolicy.encryptedMetadata ? "WagLock cannot reset your password. Keep independent originals and an encrypted backup with its recovery credentials." : "Keep this password and independent originals. Do not rely on this test build as your only copy.")
                     setupButton
                 }.padding(24).frame(maxWidth: 560).frame(maxWidth: .infinity)
             }

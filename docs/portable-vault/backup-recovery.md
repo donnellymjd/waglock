@@ -105,3 +105,10 @@ Use `--raw-layout` to keep the previous UUID-based archive layout for tooling/in
 - This does not encrypt the native SwiftData metadata or remedy inherited stream-v1 weaknesses. It cannot restore source information never recorded by the app. It is not an independent security audit, recovery guarantee for every library, or approval for public/TestFlight distribution.
 
 See [format and cryptographic decisions](age-backup-design.md), [validation evidence](backup-validation-results.json) and [the open architecture/security audit](audits/D2S-105.md).
+
+
+## Fresh encrypted release libraries (build 45)
+
+The same age recovery command supports exports from the new encrypted-metadata library. Draft origin `encryptedVault` identifies the encrypted native source; older preference/Keychain origins remain readable. This affects provenance, not the password prompt. Native device-only keys and biometric registrations are not exported. Raw native-folder copies plus a password are not a supported recovery substitute.
+
+The [public encrypted-library fixture](../../tools/fixtures/encrypted-library-backup/README.md) verifies seven actual PNG/MOV/PDF/WAV samples, Unicode, notes/drafts and independent nested password domains using official age 1.3.2 without phone/Keychain access. Full supported exports still reject unsupported/locked material rather than omit it. Keep independent originals and test your own readable recovery before relying on a backup.

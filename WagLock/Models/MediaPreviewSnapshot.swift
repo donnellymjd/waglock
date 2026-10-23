@@ -9,6 +9,8 @@ struct MediaPreviewSnapshot {
     let encryptedPath: String
     let type: MediaType
     let fullFileName: String
+    let fileSize: Int64
+    let createdAt: Date
     let formattedFileSize: String
     let formattedDimensions: String?
     let formattedDuration: String?
@@ -23,6 +25,7 @@ struct MediaPreviewSnapshot {
         encryptedPath = item.encryptedPath
         type = item.type
         fullFileName = item.fullFileName
+        fileSize = item.fileSize; createdAt = item.createdAt
         formattedFileSize = item.formattedFileSize
         formattedDimensions = item.formattedDimensions
         formattedDuration = item.formattedDuration

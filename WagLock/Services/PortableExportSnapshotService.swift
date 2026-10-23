@@ -60,7 +60,7 @@ struct PortableExportSnapshot: Equatable {
         }
     }
     struct Draft: Equatable {
-        enum Origin: String { case keychain, legacyPreferences }
+        enum Origin: String { case keychain, legacyPreferences, encryptedVault }
         let origin: Origin
         let title: String
         let content: String
@@ -122,7 +122,7 @@ final class PortableExportSnapshotService {
         self.storage = storage
         self.metadataLimit = metadataLimit
         self.isOwner = isOwner
-        self.readDrafts = readDrafts ?? { try Self.drafts(keychain: .shared, defaults: .standard) }
+        self.readDrafts = readDrafts ?? { try mounts.exportDrafts() }
     }
 
     /// Synchronous MainActor capture: no live SwiftData records escape to a worker.

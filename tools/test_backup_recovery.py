@@ -64,6 +64,15 @@ class BackupRecoveryTests(unittest.TestCase):
         self.assertEqual(files["media/" + ASSET], bytes(range(256)))
         self.assertEqual(json.loads(files["metadata.json"])["assets"][0]["name"].encode(), meta["assets"][0]["name"].encode())
 
+    def test_encrypted_vault_draft_is_recovered_and_unknown_origin_rejected(self):
+        meta = metadata()
+        meta["drafts"] = [{"origin": "encryptedVault", "title": "Vault draft", "content": "# Kept encrypted", "updatedAt": 44}]
+        _, files = self.unpack(archive(meta))
+        self.assertEqual(json.loads(files["metadata.json"])["drafts"], meta["drafts"])
+        meta["drafts"][0]["origin"] = "future-unsupported-source"
+        with self.assertRaises(InvalidBackup):
+            self.unpack(archive(meta))
+
     def test_modified_missing_or_extra_payload_fails_completeness(self):
         meta = metadata(); meta["assets"] = [asset_record()]
         files = {"media/" + ASSET: bytes(range(256)), "thumbnails/" + ASSET: b"thumbnail"}

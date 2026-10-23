@@ -8,6 +8,7 @@
 
 import AVFoundation
 import Foundation
+import ImageIO
 import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
@@ -53,6 +54,7 @@ struct ImportProgress {
 
 /// 媒体导入服务
 class MediaImportService {
+    nonisolated deinit { }
 
     // MARK: - Singleton
 
@@ -154,100 +156,62 @@ class MediaImportService {
         return nil
     }
 
-    /// 导入图片
-    private func importImage(from itemProvider: NSItemProvider, password: String) async throws
-        -> MediaItem?
-    {
-        return try await withCheckedThrowingContinuation { continuation in
-            itemProvider.loadObject(ofClass: UIImage.self) { [weak self] (image, error) in
-                guard let self = self else {
-                    continuation.resume(throwing: ImportError.loadFailed)
-                    return
-                }
-
-                if let error = error {
-                    continuation.resume(throwing: ImportError.loadFailed)
-                    return
-                }
-
-                guard let image = image as? UIImage else {
-                    continuation.resume(throwing: ImportError.loadFailed)
-                    return
-                }
-
-                Task {
-                    do {
-                        let item = try await self.processImage(image, password: password)
-                        continuation.resume(returning: item)
-                    } catch {
-                        continuation.resume(throwing: error)
-                    }
-                }
-            }
-        }
+    /// Preserve the provider's current encoded representation; never re-encode originals.
+    func importImage(from itemProvider: NSItemProvider, password: String) async throws -> MediaItem? {
+        let type = itemProvider.registeredTypeIdentifiers.first { UTType($0)?.conforms(to: .image) == true } ?? UTType.image.identifier
+        let url = try await ownedRepresentation(from: itemProvider, type: type)
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        return try processOriginalImage(url, password: password)
     }
 
-    /// 导入视频
-    private func importVideo(from itemProvider: NSItemProvider, password: String) async throws
-        -> MediaItem?
-    {
-        return try await withCheckedThrowingContinuation { continuation in
-            itemProvider.loadFileRepresentation(forTypeIdentifier: UTType.movie.identifier) {
-                [weak self] (url, error) in
-                guard let self = self else {
-                    continuation.resume(throwing: ImportError.loadFailed)
-                    return
-                }
+    private func importVideo(from itemProvider: NSItemProvider, password: String) async throws -> MediaItem? {
+        let type = itemProvider.registeredTypeIdentifiers.first { UTType($0)?.conforms(to: .movie) == true } ?? UTType.movie.identifier
+        let url = try await ownedRepresentation(from: itemProvider, type: type)
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        return try await processVideo(url, password: password)
+    }
 
-                if let error = error {
-                    continuation.resume(throwing: ImportError.loadFailed)
-                    return
-                }
-
-                guard let originalURL = url else {
-                    continuation.resume(throwing: ImportError.loadFailed)
-                    return
-                }
-
-                // ⚠️ 关键: 立即复制临时文件到我们自己的临时目录
-                // 因为系统提供的临时文件会在回调后立即被删除
-                let fileManager = FileManager.default
-                let ourTempDir = fileManager.temporaryDirectory.appendingPathComponent(
-                    "video_import", isDirectory: true)
-
-                do {
-                    // 创建临时目录
-                    try? fileManager.createDirectory(
-                        at: ourTempDir, withIntermediateDirectories: true)
-
-                    // 复制到我们的临时目录
-                    let copiedURL = ourTempDir.appendingPathComponent(originalURL.lastPathComponent)
-
-                    // 如果已存在则删除
-                    try? fileManager.removeItem(at: copiedURL)
-
-                    // 复制文件
-                    try fileManager.copyItem(at: originalURL, to: copiedURL)
-
-                    Task {
-                        do {
-                            // 使用复制后的文件处理
-                            let item = try await self.processVideo(copiedURL, password: password)
-
-                            // 处理完成后删除复制的临时文件
-                            try? fileManager.removeItem(at: copiedURL)
-
-                            continuation.resume(returning: item)
-                        } catch {
-                            // 失败时也要清理
-                            try? fileManager.removeItem(at: copiedURL)
-                            continuation.resume(throwing: error)
-                        }
-                    }
-                } catch {
-                    continuation.resume(throwing: ImportError.loadFailed)
-                }
+    private func ownedRepresentation(from provider: NSItemProvider, type: String) async throws -> URL {
+        try Task.checkCancellation()
+        let suggested = provider.suggestedName
+        let url: URL = try await withCheckedThrowingContinuation { continuation in
+            provider.loadFileRepresentation(forTypeIdentifier: type) { url, error in
+                guard error == nil, let url else { continuation.resume(throwing: ImportError.loadFailed); return }
+                do { continuation.resume(returning: try Self.copyRepresentation(url, suggestedName: suggested, type: type)) }
+                catch { continuation.resume(throwing: error) }
             }
+        }
+        do { try Task.checkCancellation(); return url }
+        catch { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()); throw error }
+    }
+
+    nonisolated private static func copyRepresentation(_ source: URL, suggestedName: String?, type: String) throws -> URL {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("waglock-media-import-" + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false,
+            attributes: [.posixPermissions: 0o700, .protectionKey: FileProtectionType.complete])
+        do {
+            var name = suggestedName.map { URL(fileURLWithPath: $0).lastPathComponent } ?? source.lastPathComponent
+            if name.isEmpty || name == "." || name == ".." { name = "Imported media" }
+            if URL(fileURLWithPath: name).pathExtension.isEmpty {
+                let suffix = source.pathExtension.isEmpty ? UTType(type)?.preferredFilenameExtension : source.pathExtension
+                if let suffix, !suffix.isEmpty { name += "." + suffix }
+            }
+            let target = folder.appendingPathComponent(name)
+            try FileManager.default.copyItem(at: source, to: target)
+            try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: target.path)
+            return target
+        } catch { try? FileManager.default.removeItem(at: folder); throw error }
+    }
+
+    static func removeAbandonedProviderCopies() {
+        let root = FileManager.default.temporaryDirectory
+        guard let entries = try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey]) else { return }
+        for folder in entries {
+            guard folder.lastPathComponent.hasPrefix("waglock-media-import-"),
+                  UUID(uuidString: String(folder.lastPathComponent.dropFirst("waglock-media-import-".count))) != nil,
+                  let values = try? folder.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey]),
+                  values.isDirectory == true, values.isSymbolicLink != true else { continue }
+            try? FileManager.default.removeItem(at: folder)
         }
     }
 
@@ -270,31 +234,13 @@ class MediaImportService {
         if mediaType == .audio {
             return try await AudioImportService.importFile(url: url, password: password)
         }
+        if mediaType == .photo { return try processOriginalImage(url, password: password) }
 
         var encryptedPath: String
         var thumbnailData: Data?
 
-        if mediaType == .photo {
-            let data = try Data(contentsOf: url)
-            try Task.checkCancellation()
-            let encryptedData = try encryptionService.encrypt(data: data, password: password)
-            encryptedPath = try storageService.saveEncrypted(
-                data: encryptedData,
-                originalFileName: url.lastPathComponent
-            )
-            thumbnailData = generateThumbnail(
-                for: data,
-                type: mediaType,
-                fileExtension: url.pathExtension
-            )
-        } else {
-            encryptedPath = try storageService.saveEncryptedFile(
-                from: url,
-                password: password,
-                originalFileName: url.lastPathComponent
-            )
-            thumbnailData = nil
-        }
+        encryptedPath = try storageService.saveEncryptedFile(from: url, password: password, originalFileName: url.lastPathComponent)
+        thumbnailData = nil
 
         let mediaItem = MediaItem(
             fileName: fileName,
@@ -310,47 +256,29 @@ class MediaImportService {
 
     // MARK: - Image Processing
 
-    /// 处理图片
-    private func processImage(_ image: UIImage, password: String) async throws -> MediaItem {
+    /// Metadata/thumbnail decoding is separate from byte-preserving original encryption.
+    func processOriginalImage(_ url: URL, password: String) throws -> MediaItem {
         try Task.checkCancellation()
-        // 转换为JPEG数据
-        guard let imageData = image.jpegData(compressionQuality: 0.9) else {
-            throw ImportError.loadFailed
-        }
-
-        let fileName = "IMG_\(Date().timeIntervalSince1970)"
-        let fileExtension = ".jpg"
-        let fileSize = Int64(imageData.count)
-
-        // 加密图片
-        let encryptedData = try encryptionService.encrypt(data: imageData, password: password)
-
-        // 保存加密文件
-        let encryptedPath = try storageService.saveEncrypted(
-            data: encryptedData, originalFileName: fileName + fileExtension)
-
-        // 生成缩略图
-        let thumbnail = image.thumbnail(maxSize: AppConstants.thumbnailMaxSize)
-        let thumbnailData = thumbnail?.compressedJPEGData(
-            quality: AppConstants.thumbnailCompressionQuality)
-
-        // 获取图片尺寸
-        let width = Int(image.size.width)
-        let height = Int(image.size.height)
-
-        // 创建MediaItem
-        let mediaItem = MediaItem(
-            fileName: fileName,
-            fileExtension: fileExtension,
-            fileSize: fileSize,
-            type: .photo,
-            encryptedPath: encryptedPath,
-            thumbnailData: thumbnailData,
-            width: width,
-            height: height
-        )
-
-        return mediaItem
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
+              let identifier = CGImageSourceGetType(source), let type = UTType(identifier as String), type.conforms(to: .image),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let pixelWidth = properties[kCGImagePropertyPixelWidth] as? Int,
+              let pixelHeight = properties[kCGImagePropertyPixelHeight] as? Int else { throw ImportError.unsupportedType }
+        let orientation = properties[kCGImagePropertyOrientation] as? Int ?? 1
+        let rotated = [5, 6, 7, 8].contains(orientation)
+        let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: Int(AppConstants.thumbnailMaxSize),
+            kCGImageSourceShouldCacheImmediately: true] as CFDictionary)
+            .flatMap { UIImage(cgImage: $0).jpegData(compressionQuality: AppConstants.thumbnailCompressionQuality) }
+        let fileSize = (try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.int64Value ?? 0
+        let suffix = UTType(filenameExtension: url.pathExtension) == type ? url.pathExtension : type.preferredFilenameExtension ?? url.pathExtension
+        try Task.checkCancellation()
+        let path = try storageService.saveEncryptedFile(from: url, password: password, originalFileName: url.lastPathComponent)
+        return MediaItem(fileName: url.deletingPathExtension().lastPathComponent, fileExtension: "." + suffix,
+                         fileSize: fileSize, type: .photo, encryptedPath: path, thumbnailData: thumbnail,
+                         width: rotated ? pixelHeight : pixelWidth, height: rotated ? pixelWidth : pixelHeight)
     }
 
     // MARK: - Video Processing

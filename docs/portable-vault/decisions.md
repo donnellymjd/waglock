@@ -159,3 +159,8 @@ Versioned adapters now preserve all three current SwiftData models into an unuse
 ### ADR-024 implementation follow-up — session-bound save gateway
 
 Build 43 routes all explicit app model saves through a revocable mount lease and disables managed main-context autosave. Uncertain saves preserve potentially referenced ciphertext and biometric keys. An explicit-root model-only encrypted repository exercises this same boundary with durable-before-projection commits and reconciliation on uncertain outcomes. It remains unmounted and cannot read the complete staging scope. No live migration, root-key provisioning or source retirement is approved. [Contract, resource bounds and activation gates](library-write-boundary.md).
+
+
+## ADR-026 — Fresh encrypted first-release identity, preserve development library
+
+**Status: implemented for fresh installs under the owner's October 23 instruction to finish; release acceptance pending.** Enable the authenticated encrypted metadata repository only in the explicit `com.d2sci.waglock` release configuration. Use new random data/root secrets, a create-only device identity anchor, exclusive recoverable bootstrap and a memory-only UI projection. Persist notes/drafts with models inside the encrypted index. Preserve existing Dev identity, credentials, plaintext store and readers; do not migrate, retire sources, reset or infer empty-state permission from errors. Hide presentation-only Guest Mode in the public candidate. Portable recovery is explicit age export, not a claim that native files plus the current password suffice. Whole-copy rollback, legacy migration and independent alternative vaults remain open. [Contract and evidence](fresh-encrypted-library.md).

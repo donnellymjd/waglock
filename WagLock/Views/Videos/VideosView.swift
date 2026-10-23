@@ -104,32 +104,11 @@ struct VideosView: View {
         } message: {
             Text(deleteErrorMessage ?? "")
         }
-        .task {
-            cleanupInvalidVideos()
-        }
+
     }
 
-    // MARK: - Cleanup
-
-    /// 清理失效的视频记录
-    private func cleanupInvalidVideos() {
-        let storage = FileStorageService.shared
-        var removedCount = 0
-
-        for video in videos {
-            if !storage.fileExists(path: video.encryptedPath) {
-                modelContext.delete(video)
-                removedCount += 1
-            }
-        }
-
-        if removedCount > 0 {
-            do {
-                try LibraryWriteCoordinator.save(modelContext)
-            } catch {
-            }
-        }
-    }
+    // Missing ciphertext is an explicit read/recovery error. Never delete
+    // library records automatically or inspect dismissed models in a late task.
 
     // MARK: - Empty State
 
@@ -200,8 +179,14 @@ struct VideosView: View {
 // MARK: - Video Card View
 
 struct VideoCardView: View {
-    let video: MediaItem
+    let video: MediaPreviewSnapshot
+    private let thumbnailData: Data?
     @State private var thumbnailImage: UIImage?
+
+    init(video: MediaItem) {
+        self.video = MediaPreviewSnapshot(video)
+        self.thumbnailData = video.thumbnailData
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -272,7 +257,7 @@ struct VideoCardView: View {
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
         .task(id: video.id) {
-            guard let thumbnailData = video.thumbnailData else { return }
+            guard let thumbnailData else { return }
             let image = await ThumbnailImageLoader.shared.image(
                 for: video.id.uuidString,
                 data: thumbnailData

@@ -13,9 +13,13 @@ struct NetworkVerificationView: View {
                 WagLockNavigationRow(symbol: "square.and.arrow.up", title: "Export & sharing", detail: "Ordinary sharing sends decrypted copies; encrypted backup sends the finished encrypted file")
                 Text("Open source helps you inspect behavior. These explanations do not replace an independent security review.")
                     .font(.body).foregroundStyle(ColorTheme.secondaryText)
-                Text("Guest Mode and alternate icons do not make a vault undetectable.")
+                Text("Alternate icons do not make a vault undetectable.")
                     .font(.footnote).foregroundStyle(ColorTheme.secondaryText)
-                WagLockInfoCard(title: "Early test build", detail: "Portable recovery, protected metadata and independent alternative vaults are still in development. Keep independent originals.")
+                if LibraryStoragePolicy.encryptedMetadata {
+                    WagLockInfoCard(title: "Keep a recoverable backup", detail: "Use Encrypted backup and keep its recovery credentials. Do not rely on reinstalling the app, Face ID or an iOS device backup to restore device-only keys.")
+                } else {
+                    WagLockInfoCard(title: "Early test build", detail: "Portable recovery, protected metadata and independent alternative vaults are still in development. Keep independent originals.")
+                }
             }.padding(24)
         }.background(ColorTheme.primaryBackground.ignoresSafeArea()).navigationTitle("Offline & privacy")
             .navigationBarTitleDisplayMode(.inline)

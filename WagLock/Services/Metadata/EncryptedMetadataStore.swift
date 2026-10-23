@@ -57,29 +57,54 @@ final class EncryptedMetadataStore {
             try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: file.path)
             #endif
             let store = try EncryptedMetadataStore(file: file, domain: domain, key: key)
-            try store.execute("PRAGMA journal_mode=DELETE")
-            try store.execute("BEGIN IMMEDIATE")
-            do {
-                for sql in tables { try store.execute(sql) }
-                try store.execute("PRAGMA application_id=1464681521")
-                try store.execute("PRAGMA user_version=1")
-                var hashes: [Data] = []
-                for index in 0..<256 {
-                    let bytes = try store.seal(store.encode(Bucket(entries: [:])), purpose: "bucket-\(index)")
-                    hashes.append(Data(SHA256.hash(data: bytes)))
-                    try store.execute("INSERT INTO buckets VALUES (?,?)", [.integer(Int64(index)), .bytes(bytes)])
-                }
-                let head = Head(revision: 0, count: 0, buckets: hashes)
-                try store.execute("INSERT INTO head VALUES (0,?)", [.bytes(try store.seal(store.encode(head), purpose: "head"))])
-                try store.execute("COMMIT")
-            } catch { try? store.execute("ROLLBACK"); throw error }
-            _ = try store.state(store.access())
+            try store.initializeEmpty()
             return store
         } catch {
             // The invocation exclusively created this directory; no source/media scan.
             try? FileManager.default.removeItem(at: root)
             throw error
         }
+    }
+
+    /// Resume only a never-published fresh bootstrap. No tables are dropped/reset.
+    static func resumeUnpublishedEmpty(at root: URL, domain: Domain, key: Data) throws -> EncryptedMetadataStore {
+        guard key.count == 32 else { throw Failure.corrupt }
+        let root = try checked(root)
+        let file = root.appendingPathComponent("metadata.sqlite")
+        let names = Set(try FileManager.default.contentsOfDirectory(atPath: root.path))
+        guard names.isSubset(of: ["metadata.sqlite", "metadata.sqlite-journal"]) else { throw Failure.corrupt }
+        if !FileManager.default.fileExists(atPath: file.path) {
+            guard names.isEmpty else { throw Failure.corrupt }
+            let fd = Darwin.open(file.path, O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW, S_IRUSR | S_IWUSR)
+            guard fd >= 0 else { throw Failure.storage }; Darwin.close(fd)
+        }
+        _ = try checked(file)
+        guard try FileManager.default.attributesOfItem(atPath: file.path)[.type] as? FileAttributeType == .typeRegular else { throw Failure.unsafePath }
+        let store = try EncryptedMetadataStore(file: file, domain: domain, key: key)
+        do {
+            guard try store.schema().isEmpty, try store.scalar("PRAGMA user_version") == 0,
+                  try store.scalar("PRAGMA application_id") == 0 else { throw Failure.corrupt }
+            try store.initializeEmpty(); return store
+        } catch { store.revoke(); throw error }
+    }
+    private func initializeEmpty() throws {
+        try self.execute("PRAGMA journal_mode=DELETE")
+        try self.execute("BEGIN IMMEDIATE")
+        do {
+            for sql in Self.tables { try self.execute(sql) }
+            try self.execute("PRAGMA application_id=1464681521")
+            try self.execute("PRAGMA user_version=1")
+            var hashes: [Data] = []
+            for index in 0..<256 {
+                let bytes = try self.seal(self.encode(Bucket(entries: [:])), purpose: "bucket-\(index)")
+                hashes.append(Data(SHA256.hash(data: bytes)))
+                try self.execute("INSERT INTO buckets VALUES (?,?)", [.integer(Int64(index)), .bytes(bytes)])
+            }
+            let head = Head(revision: 0, count: 0, buckets: hashes)
+            try self.execute("INSERT INTO head VALUES (0,?)", [.bytes(try self.seal(self.encode(head), purpose: "head"))])
+            try self.execute("COMMIT")
+        } catch { try? self.execute("ROLLBACK"); throw error }
+        _ = try self.state(self.access())
     }
 
     static func open(at root: URL, domain: Domain, key: Data) throws -> EncryptedMetadataStore {
@@ -184,9 +209,9 @@ final class EncryptedMetadataStore {
 
     @discardableResult
     func apply(_ access: Access, revision: UInt64, mutations: [Mutation],
-               checkpoint: (Checkpoint) throws -> Void = { _ in }) throws -> State {
+               checkpoint: (Checkpoint) throws -> Void = { _ in }, mutationLimit: Int = 128) throws -> State {
         try check(access)
-        guard !busy, mutations.count <= 128 else { throw Failure.busy }
+        guard !busy, mutationLimit > 0, mutations.count <= mutationLimit else { throw Failure.busy }
         busy = true
         defer { busy = false; if encryptionKey == nil { connection.close() } }
         try execute("BEGIN IMMEDIATE")

@@ -313,7 +313,7 @@ def validate_metadata(meta, actual, nested, domain, parent):
         note_ids.add(value)
     origins = set()
     for draft in meta["drafts"]:
-        if not isinstance(draft, dict) or set(draft) != {"origin", "title", "content", "updatedAt"} or draft["origin"] not in ["keychain", "legacyPreferences"] or draft["origin"] in origins or any(not text(draft[k]) for k in ["title", "content"]):
+        if not isinstance(draft, dict) or set(draft) != {"origin", "title", "content", "updatedAt"} or draft["origin"] not in ["keychain", "legacyPreferences", "encryptedVault"] or draft["origin"] in origins or any(not text(draft[k]) for k in ["title", "content"]):
             raise InvalidBackup("Malformed saved draft")
         if not number(draft["updatedAt"]):
             raise InvalidBackup("Invalid draft date")

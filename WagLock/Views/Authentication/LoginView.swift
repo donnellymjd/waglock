@@ -35,7 +35,7 @@ struct LoginView: View {
                     Button { showPasswordHelp = true } label: {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Need help unlocking?").font(.body).foregroundStyle(ColorTheme.accent)
-                            Text("This beta has no password reset. Keep your password and independent originals.")
+                            Text("There is no password reset. Keep your password and independent originals.")
                                 .font(.footnote).foregroundStyle(ColorTheme.secondaryText)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading).padding(16)
@@ -53,7 +53,7 @@ struct LoginView: View {
             .alert("Password help", isPresented: $showPasswordHelp) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("There is no password reset in this beta. Face ID may help only if you previously enabled it. Keep independent originals; reinstalling will not recover a forgotten password.")
+                Text("There is no password reset. Face ID may help only if you previously enabled it. Keep independent originals; reinstalling will not recover a forgotten password.")
             }
         }
         .loadingOverlay(isShowing: viewModel.isProcessing, message: String(localized: "login.verifying"))

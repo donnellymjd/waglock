@@ -1,6 +1,6 @@
 # WagLock privacy policy
 
-Updated October 22, 2026. This describes the current WagLock development build. The first App Store release is still being prepared; this policy will be checked against the exact release before submission.
+Updated October 23, 2026. This describes the first-release candidate and distinguishes older development storage. The App Store package is still being validated; no submission or independent security certification is implied.
 
 WagLock is an independent open-source fork of SealedPocket / ZeroNet Space. It is not the official upstream app. [Source and notices](https://github.com/donnellymjd/waglock).
 
@@ -10,13 +10,15 @@ WagLock uses photos, videos, files, audio recordings, notes and the information 
 
 Imported media and file contents are encrypted on your device. Password verification and key material use local credentials and Apple's Keychain; optional Face ID uses Apple's authentication interfaces. WagLock does not receive your Face ID biometric template.
 
-**Current development limitation:** names, thumbnails, note text and other library metadata are still stored in the legacy local database without vault-level encryption. Some legacy draft conflicts may also remain in preferences. Device protection is not the same as encrypting these fields with your vault password. The replacement storage is not active yet. Do not use this development build as the only copy of sensitive or irreplaceable content.
+**First-release storage:** new libraries in the separate WagLock release configuration encrypt names, thumbnails, note text, saved drafts and other content metadata. The unlocked interface uses an in-memory projection. General device preferences, such as appearance, grid layout and auto-lock choices, remain in system preferences. Stored content is decrypted as needed for viewing and sharing.
+
+**Older development builds:** the WagLock Dev library retains its legacy database, where names, thumbnails and notes are not protected by vault-level encryption; conflicting legacy drafts may also remain in preferences. The release configuration does not silently convert, delete or move that development library. Keep independent originals and verified encrypted backups.
 
 ## When data can leave your device
 
 - **Ordinary sharing/export:** destinations you choose receive decrypted copies. Recipient apps and people control those copies afterward.
 - **Encrypted backups:** you can explicitly create a password- or recipient-key-encrypted backup and save it through the iOS Files interface, including a cloud provider you have configured. Separately protected albums retain their required export passwords. Keep passwords/recovery keys separately; WagLock cannot reset them for you. There is no automatic two-way vault sync.
-- **System services:** Photos, Files and installed providers may download selected content or upload saved copies. iOS device backups and diagnostics depend on Apple's settings and services. App-wide backup inclusion and cold restore are not yet fully validated.
+- **System services:** Photos, Files and installed providers may download selected content or upload saved copies. iOS device backups and diagnostics depend on Apple's settings and services. The independent recovery method described here is the explicit encrypted-backup export. Device-only Keychain credentials and Face ID registrations must not be assumed to transfer with an iOS device backup or reinstallation.
 - **External links:** opening source, support or recovery links contacts the external website through iOS. That site applies its own privacy practices.
 
 These actions do not send your library to a WagLock-operated service. Apple and the providers or recipients you choose may process information under their own terms. A provider accepting a file does not prove a remote upload has finished.
@@ -25,7 +27,7 @@ These actions do not send your library to a WagLock-operated service. Apple and 
 
 Photos access is used to choose media for import. The system Files picker grants access to selected files or destinations. Microphone access is requested for audio recording. Face ID is optional for the app or albums you configure. You can change permissions in iOS Settings. Denying an optional permission prevents its related function; it does not give someone a password bypass.
 
-Importing does not automatically delete the original in Photos or Files. Content may retain embedded information such as capture dates or location metadata; this is not an automatic metadata-removal tool.
+Importing does not automatically delete the original in Photos or Files. WagLock preserves the encoded file representation supplied by Photos or Files, which may retain capture dates or location metadata. Photos edit history and Live Photo motion are not imported; keep the original assets. This is not an automatic metadata-removal tool.
 
 ## Retention and deletion
 

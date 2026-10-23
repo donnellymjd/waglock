@@ -36,7 +36,7 @@ struct AuthenticatedLibraryView: View {
             }
         }
         .task(id: MountTask(request: expected, retry: retry)) {
-            await library.mount(expected) {
+            await library.mount(expected, dataPassword: authentication.sessionPassword) {
                 authentication.isAuthenticated
                     && authentication.librarySessionID == expected.sessionID
                     && mode.currentMode != .unauthenticated

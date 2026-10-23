@@ -12,6 +12,7 @@ import SwiftUI
 @main
 struct WagLockApp: App {
     init() {
+        MediaImportService.removeAbandonedProviderCopies()
         ExportService.shared.cleanupAbandonedExports()
         PortableBackupSession.cleanupAbandonedJobs()
         AlbumStore.removeAbandonedTemporaryFiles()

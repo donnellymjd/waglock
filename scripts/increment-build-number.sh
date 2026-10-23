@@ -2,6 +2,12 @@
 
 set -eu
 
+# Verification archives must preserve the exact source/build number under review.
+if [ "${WAGLOCK_SKIP_BUILD_INCREMENT:-NO}" = "YES" ]; then
+    echo "Verification archive: keeping the source build number unchanged."
+    exit 0
+fi
+
 project_root="${SRCROOT:?SRCROOT is required}"
 archive_path="${ARCHIVE_PATH:?ARCHIVE_PATH is required}"
 cd "$project_root"
@@ -21,8 +27,8 @@ if [ ! -f "$archive_info_plist" ]; then
     exit 1
 fi
 
-# PostAction 即使归档失败也会执行；失败归档的 Products 目录下没有完整 .app 包，
-# 以 .app 存在作为归档成功的前置条件，防止失败归档后构建号被错误递增。
+# Archive post-actions also run on failure. Increment only after a complete app
+# exists, so a failed archive cannot advance the project build number.
 archived_app_bundle="$(
     find "$archive_path/Products/Applications" -maxdepth 1 -name '*.app' -type d 2>/dev/null \
         | head -n 1
