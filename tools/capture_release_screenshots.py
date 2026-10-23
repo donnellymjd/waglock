@@ -17,6 +17,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('simulator')
     parser.add_argument('output', type=Path)
+    parser.add_argument('--screenshots-only', action='store_true', help='Capture four prepared screens after the full workflow passes')
     args = parser.parse_args()
     devices = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', '--json']))
     device = next(d for group in devices['devices'].values() for d in group if d['udid'] == args.simulator)
@@ -29,9 +30,9 @@ def main():
     args.output.mkdir(parents=True, exist_ok=False)
     command = ['xcodebuild', 'test', '-project', 'WagLock.xcodeproj', '-scheme', 'WagLock',
                '-destination', f'platform=iOS Simulator,id={args.simulator}', '-parallel-testing-enabled', 'NO',
-               '-derivedDataPath', '/private/tmp/waglock-release45-ui-tests',
+               '-derivedDataPath', '/private/tmp/waglock-release-ui-' + args.simulator,
                '-resultBundlePath', str(args.output / 'Workflow.xcresult'),
-               '-only-testing:WagLockUITests/EncryptedReleaseUITests/testFreshReleasePersistenceAndScreenshots']
+               '-only-testing:WagLockUITests/EncryptedReleaseUITests/' + ('testStoreReadyScreenshots' if args.screenshots_only else 'testFreshReleasePersistenceAndScreenshots')]
     shots = []
     with (args.output / 'workflow.log').open('w') as log:
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
@@ -39,16 +40,16 @@ def main():
             log.write(line); log.flush()
             if line.startswith('WAGLOCK_NATIVE_CAPTURE:'):
                 name = line.strip().split(':', 1)[1].replace('Store - ', '').lower().replace(' ', '-')
-                target = args.output / (name + '.png')
-                subprocess.run(['xcrun', 'simctl', 'io', args.simulator, 'screenshot', str(target)], check=True)
+                target = args.output / (name + '.jpg')
+                subprocess.run(['xcrun', 'simctl', 'io', args.simulator, 'screenshot', '--type=jpeg', str(target)], check=True)
                 shots.append(dict(file=target.name, sha256=hashlib.sha256(target.read_bytes()).hexdigest()))
                 print('Captured ' + target.name, flush=True)
         status = process.wait()
     record = dict(bundle=info['CFBundleIdentifier'], version=info['CFBundleShortVersionString'],
                   build=info['CFBundleVersion'], encryptedMetadata=True, simulator=device['name'],
-                  uneditedNativePixels=True, publicFixturesOnly=True, workflowExitStatus=status, screenshots=shots)
+                  nativeCapture=True, format='JPEG (no alpha)', resized=False, retouched=False, publicFixturesOnly=True, workflowExitStatus=status, screenshots=shots)
     (args.output / 'capture.json').write_text(json.dumps(record, indent=2) + '\n')
-    return status if status else (0 if len(shots) == 6 else 1)
+    return status if status else (0 if len(shots) == (4 if args.screenshots_only else 6) else 1)
 
 
 if __name__ == '__main__':

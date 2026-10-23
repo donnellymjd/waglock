@@ -50,11 +50,11 @@ final class EncryptedReleaseUITests: XCTestCase {
     }
     @MainActor func testFreshReleasePersistenceAndScreenshots() throws {
         let app = try launch()
-        app.tabBars.buttons["Settings"].tap()
+        app.buttons["Settings"].firstMatch.tap()
         let about = app.buttons["settings.about"]; reveal(app, about); about.tap()
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "about.encryptedLibrary").firstMatch.waitForExistence(timeout: 10), "The actual release must enable encrypted storage")
         app.buttons["Done"].tap()
-        app.tabBars.buttons["Notes"].tap(); app.navigationBars.buttons["New"].tap()
+        app.buttons["Notes"].firstMatch.tap(); app.navigationBars.buttons["New"].tap()
         let title = app.textFields["note.title"], body = app.textViews["note.content"]
         XCTAssertTrue(title.waitForExistence(timeout: 5))
         replace(title, with: "Travel plans"); replace(body, with: "# A little room to think\nKeep tickets, memories and ideas together.")
@@ -66,20 +66,20 @@ final class EncryptedReleaseUITests: XCTestCase {
         replace(title, with: "Packing list"); replace(body, with: "An encrypted draft that survives relaunch.")
         app.navigationBars.buttons.element(boundBy: 0).tap()
         app.terminate(); app.launch(); unlock(app, password: owner)
-        XCTAssertTrue(app.tabBars.buttons["Notes"].waitForExistence(timeout: 15)); app.tabBars.buttons["Notes"].tap()
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Travel plans"].firstMatch.waitForExistence(timeout: 5))
         app.navigationBars.buttons["New"].tap(); XCTAssertTrue(title.waitForExistence(timeout: 5))
         XCTAssertEqual(title.value as? String, "Packing list")
         XCTAssertEqual(body.value as? String, "An encrypted draft that survives relaunch.")
         app.navigationBars.buttons.element(boundBy: 0).tap()
-        app.tabBars.buttons["Photos"].tap()
+        app.buttons["Photos"].firstMatch.tap()
         app.buttons["photos.import"].tap(); app.buttons["import.photos"].tap()
         let image = app.images.matching(NSPredicate(format: "label BEGINSWITH %@", "Photo,")).firstMatch
         XCTAssertTrue(image.waitForExistence(timeout: 10)); image.tap(); app.buttons["Add"].tap()
         if app.alerts.buttons["OK"].waitForExistence(timeout: 20) { app.alerts.buttons["OK"].tap() }
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "photos.preview").firstMatch.waitForExistence(timeout: 10))
         capture(app, "Store - Photos")
-        app.tabBars.buttons["Media"].tap(); app.buttons["videos.import"].tap(); app.buttons["import.photos"].tap()
+        app.buttons["Media"].firstMatch.tap(); app.buttons["videos.import"].tap(); app.buttons["import.photos"].tap()
         let video = app.images.matching(NSPredicate(format: "label BEGINSWITH %@", "Video,")).firstMatch
         XCTAssertTrue(video.waitForExistence(timeout: 10)); video.tap(); app.buttons["Add"].tap()
         if app.alerts.buttons["OK"].waitForExistence(timeout: 20) { app.alerts.buttons["OK"].tap() }
@@ -87,7 +87,7 @@ final class EncryptedReleaseUITests: XCTestCase {
         XCTAssertTrue(preview.waitForExistence(timeout: 10)); capture(app, "Store - Media"); preview.tap()
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "video.player").firstMatch.waitForExistence(timeout: 15))
         app.buttons["video.close"].tap()
-        app.tabBars.buttons["Settings"].tap()
+        app.buttons["Settings"].firstMatch.tap()
         let backup = app.buttons["settings.backup"]; reveal(app, backup); backup.tap()
         let password = app.secureTextFields["backup.password"]
         XCTAssertTrue(password.waitForExistence(timeout: 5)); password.tap(); password.typeText("PUBLIC*release._backup-password")
@@ -101,18 +101,26 @@ final class EncryptedReleaseUITests: XCTestCase {
         save.tap()
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "Cancel").firstMatch.waitForExistence(timeout: 45))
         capture(app, "Store - Files destinations")
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.085)).press(forDuration: 0.1,
-            thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)))
+        let cancel = app.buttons["Cancel"].firstMatch
+        if cancel.exists && cancel.isHittable { cancel.tap() }
+        else {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.085)).press(forDuration: 0.1,
+                thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)))
+        }
         XCTAssertTrue(create.waitForExistence(timeout: 10))
         app.navigationBars.buttons.element(boundBy: 0).tap()
-        app.tabBars.buttons["Photos"].tap(); app.buttons["photos.albums"].tap()
+        app.buttons["Photos"].firstMatch.tap(); app.buttons["photos.albums"].tap()
         func album(_ name: String) {
-            app.buttons["album.create"].tap(); app.textFields["album.name"].tap(); app.textFields["album.name"].typeText(name)
-            app.buttons["album.save"].tap(); XCTAssertTrue(app.staticTexts[name].firstMatch.waitForExistence(timeout: 10)); app.staticTexts[name].firstMatch.tap()
+            if !app.staticTexts[name].firstMatch.exists {
+                app.buttons["album.create"].tap(); app.textFields["album.name"].tap(); app.textFields["album.name"].typeText(name)
+                app.buttons["album.save"].tap()
+            }
+            XCTAssertTrue(app.staticTexts[name].firstMatch.waitForExistence(timeout: 10)); app.staticTexts[name].firstMatch.tap()
+            if app.buttons["Open Album"].waitForExistence(timeout: 1) { app.buttons["Open Album"].tap() }
         }
         album("Trips"); album("Weekend")
         app.buttons["album.actions"].tap(); app.buttons["Album Security"].tap()
-        app.buttons["album.protection"].tap(); app.buttons["Album password"].tap()
+        app.buttons["album.protection"].coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5)).tap(); app.buttons["Album password"].tap()
         app.secureTextFields["album.password"].tap(); app.secureTextFields["album.password"].typeText("PUBLIC-album-password")
         app.secureTextFields["album.password.confirm"].tap(); app.secureTextFields["album.password.confirm"].typeText("PUBLIC-album-password")
         app.buttons["album.save"].tap()
@@ -121,32 +129,57 @@ final class EncryptedReleaseUITests: XCTestCase {
         app.secureTextFields["album.unlock.password"].tap(); app.secureTextFields["album.unlock.password"].typeText("PUBLIC-album-password")
         app.buttons["Unlock with Password"].tap(); XCTAssertTrue(app.buttons["album.create"].waitForExistence(timeout: 10))
         app.terminate(); app.launch(); unlock(app, password: owner)
-        XCTAssertTrue(app.tabBars.buttons["Notes"].waitForExistence(timeout: 15)); app.tabBars.buttons["Notes"].tap()
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Travel plans"].firstMatch.waitForExistence(timeout: 10))
     }
+    @MainActor func testRepeatedInProcessLockReopensEncryptedLibrary() throws {
+        let app = try launch()
+        for _ in 0..<3 {
+            app.buttons["Settings"].firstMatch.tap()
+            let lock = app.buttons["settings.lock"]; reveal(app, lock); lock.tap()
+            let confirm = app.buttons["Log Out"].firstMatch
+            if confirm.waitForExistence(timeout: 2) { confirm.tap() }
+            unlock(app, password: owner)
+            XCTAssertTrue(app.buttons["photos.albums"].waitForExistence(timeout: 15), app.debugDescription)
+            XCTAssertFalse(app.otherElements["library.mount.error"].exists)
+        }
+    }
+    @MainActor func testStoreReadyScreenshots() throws {
+        let app = try launch()
+        app.buttons["Notes"].firstMatch.tap(); capture(app, "Store - Notes")
+        app.buttons["Photos"].firstMatch.tap(); capture(app, "Store - Photos")
+        app.buttons["Media"].firstMatch.tap(); capture(app, "Store - Media")
+        app.buttons["Photos"].firstMatch.tap(); app.buttons["photos.albums"].tap()
+        app.staticTexts["Trips"].firstMatch.tap()
+        if app.buttons["Open Album"].waitForExistence(timeout: 2) { app.buttons["Open Album"].tap() }
+        XCTAssertTrue(app.staticTexts["Weekend"].firstMatch.waitForExistence(timeout: 10))
+        app.staticTexts["Weekend"].firstMatch.tap()
+        XCTAssertTrue(app.secureTextFields["album.unlock.password"].waitForExistence(timeout: 10))
+        capture(app, "Store - Protected album")
+    }
     @MainActor private func changePassword(_ app: XCUIApplication, from current: String, to replacement: String) {
-        app.tabBars.buttons["Settings"].tap(); let security = app.buttons["settings.security"]; reveal(app, security); security.tap()
+        app.buttons["Settings"].firstMatch.tap(); let security = app.buttons["settings.security"]; reveal(app, security); security.tap()
         app.buttons["settings.changePassword"].tap()
         let old = app.secureTextFields["passwordChange.current"]
         XCTAssertTrue(old.waitForExistence(timeout: 5)); old.tap(); old.typeText(current)
         app.secureTextFields["passwordChange.new"].tap(); app.secureTextFields["passwordChange.new"].typeText(replacement)
         app.secureTextFields["passwordChange.confirm"].tap(); app.secureTextFields["passwordChange.confirm"].typeText(replacement + "\n")
         let save = app.buttons["passwordChange.save"]; reveal(app, save); save.tap()
-        XCTAssertTrue(app.tabBars.buttons["Photos"].waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertTrue(app.buttons["Photos"].firstMatch.waitForExistence(timeout: 15), app.debugDescription)
     }
     @MainActor func testReleasePasswordChangePreservesLibrary() throws {
         let app = try launch()
-        app.tabBars.buttons["Notes"].tap(); app.navigationBars.buttons["New"].tap()
+        app.buttons["Notes"].firstMatch.tap(); app.navigationBars.buttons["New"].tap()
         replace(app.textFields["note.title"], with: "Password change sample")
         replace(app.textViews["note.content"], with: "The same encrypted note survives a new unlock password.")
         app.navigationBars.buttons["Done"].tap()
         changePassword(app, from: owner, to: changed)
         app.terminate(); app.launch(); unlock(app, password: changed)
-        XCTAssertTrue(app.tabBars.buttons["Notes"].waitForExistence(timeout: 15)); app.tabBars.buttons["Notes"].tap()
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Password change sample"].firstMatch.waitForExistence(timeout: 10))
         changePassword(app, from: changed, to: owner)
         app.terminate(); app.launch(); unlock(app, password: owner)
-        XCTAssertTrue(app.tabBars.buttons["Notes"].waitForExistence(timeout: 15)); app.tabBars.buttons["Notes"].tap()
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Password change sample"].firstMatch.waitForExistence(timeout: 10))
     }
 }

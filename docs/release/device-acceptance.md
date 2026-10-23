@@ -1,6 +1,6 @@
-# Build 45 physical acceptance
+# Fresh encrypted candidate physical acceptance
 
-Open **WagLock**, version1.0/build45, bundle `com.d2sci.waglock`. It is a separate fresh encrypted app. **Keep WagLock Dev installed**; no library has been migrated or deleted. Only disposable test samples are needed. The phone was locked when remote launch was attempted; open the new app manually.
+Open **WagLock**, version1.0/build47, bundle `com.d2sci.waglock`. It is a separate fresh encrypted app. **Keep WagLock Dev installed**; no library has been migrated or deleted. Only disposable test samples are needed. The phone was locked when remote launch was attempted; open the new app manually.
 
 1. Create a new password; switch Number pad/Full keyboard as needed. Quality feedback belongs only to setup/change forms. Import a photo and short video from Photos/Files. Open them and check standard native video controls and proportions.
 2. Create a note and a draft. Go Back, reopen and confirm the draft; save it. Create a nested album with a distinct password, put a sample inside and verify parent/album protection.
@@ -12,7 +12,9 @@ Open **WagLock**, version1.0/build45, bundle `com.d2sci.waglock`. It is a separa
 ```sh
 python3 ~/repos/WagLock/tools/backup_recovery.py \
   ~/Downloads/My-WagLock-Backup.tar.age \
-  ~/Downloads/WagLock-Recovered-Build45
+  ~/Downloads/WagLock-Recovered-Build47
 ```
 
 Substitute the actual saved filename. Keep all originals and the old app. This validates explicit portable export, not raw native-folder recovery, automatic iOS restore or an in-app restore wizard. Report “passed” or the failing step; acceptance is pending until the owner responds.
+
+Build47 specific acceptance: the owner confirms the same password opens the app and two lock/unlock cycles pass after the verified Apple-directory alias correction. Complete the remaining media/notes/album/FaceID/backup checks above before release.

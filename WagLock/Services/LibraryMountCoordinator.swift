@@ -29,6 +29,7 @@ final class LibraryMountCoordinator: ObservableObject {
     @Published private(set) var active: Mount?
     @Published private(set) var isLoading = false
     @Published private(set) var failed = false
+    @Published private(set) var failureReference: String?
     private var generation = UUID()
     private let factory: Factory
     private var writeLease: LibraryWriteCoordinator.Lease?
@@ -95,6 +96,7 @@ final class LibraryMountCoordinator: ObservableObject {
             }
             isLoading = false
             failed = true
+            failureReference = Self.reference(for: error)
             // No fallback store, reset, schema replacement or credential mutation.
         }
     }
@@ -111,6 +113,40 @@ final class LibraryMountCoordinator: ObservableObject {
         active = nil
         isLoading = false
         failed = false
+        failureReference = nil
+    }
+
+    /// Fixed diagnostic codes only: never render paths, passwords, keys or record content.
+    static func reference(for error: Error) -> String {
+        if let value = error as? FreshEncryptedLibrary.Failure {
+            switch value {
+            case .legacySource: return "WL-M01"
+            case .invalidDescriptor: return "WL-M02"
+            case .unsafePath: return "WL-M03"
+            case .storage: return "WL-M04"
+            case .conflictingRoots: return "WL-M05"
+            case .missingLibrary: return "WL-M06"
+            case .foreignLibrary: return "WL-M07"
+            }
+        }
+        if let value = error as? EncryptedMetadataStore.Failure {
+            switch value {
+            case .locked: return "WL-I01"
+            case .stale: return "WL-I02"
+            case .busy: return "WL-I03"
+            case .corrupt: return "WL-I04"
+            case .storage: return "WL-I05"
+            case .exists: return "WL-I06"
+            case .unsafePath: return "WL-I07"
+            case .tooLarge: return "WL-I08"
+            case .uncertainCommit: return "WL-I09"
+            }
+        }
+        if error is KeychainError { return "WL-K01" }
+        if error is MetadataModelCodec.Failure { return "WL-P01" }
+        if error is EncryptionError { return "WL-E01" }
+        if error is CancellationError { return "WL-C01" }
+        return "WL-U01"
     }
 
     func exportDrafts() throws -> [PortableExportSnapshot.Draft] {

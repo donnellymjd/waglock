@@ -25,6 +25,9 @@ struct AuthenticatedLibraryView: View {
                     Text("Unable to open this library.").font(.headline)
                     Text("Lock and try again. Your library and credentials have not been reset.")
                         .multilineTextAlignment(.center)
+                    if let reference = library.failureReference {
+                        Text("Reference: " + reference).font(.caption).accessibilityIdentifier("library.mount.reference")
+                    }
                     Button("Retry") { retry = UUID() }
                     Button("Lock") { authentication.logout() }
                 }

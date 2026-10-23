@@ -19,6 +19,23 @@ final class FreshEncryptedLibraryTests: XCTestCase {
             guard identity == nil else { throw KeychainError.duplicateItem }; identity = value
         }
     }
+    func testVerifiedSystemVarAliasIsAcceptedWithoutAllowingOtherSymlinks() throws {
+        try FreshEncryptedLibrary.safe(URL(fileURLWithPath: "/var"))
+        try FreshEncryptedLibrary.safe(URL(fileURLWithPath: "/private/var"))
+        let base = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let link = base.appendingPathComponent("untrusted-link")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: base)
+        XCTAssertThrowsError(try FreshEncryptedLibrary.safe(link))
+    }
+    func testMountFailureReferencesNeverIncludeAssociatedPrivateValues() {
+        XCTAssertEqual(LibraryMountCoordinator.reference(for: EncryptionError.fileNotFound(path: "PUBLIC-sensitive-path")), "WL-E01")
+        XCTAssertEqual(LibraryMountCoordinator.reference(for: KeychainError.unexpectedStatus(-25308)), "WL-K01")
+        XCTAssertEqual(LibraryMountCoordinator.reference(for: FreshEncryptedLibrary.Failure.missingLibrary), "WL-M06")
+        XCTAssertEqual(LibraryMountCoordinator.reference(for: EncryptedMetadataStore.Failure.corrupt), "WL-I04")
+        XCTAssertEqual(LibraryMountCoordinator.reference(for: NSError(domain: "PUBLIC-sensitive-domain", code: 42)), "WL-U01")
+    }
     private var parents: [URL] = []
     private let secret = "PUBLIC disposable storage secret *._ café"
     override func tearDown() { for parent in parents { try? FileManager.default.removeItem(at: parent) }; parents = [] }

@@ -146,10 +146,21 @@ enum FreshEncryptedLibrary {
     private static func exists(_ url: URL) -> Bool {
         var value = stat(); return lstat(url.path, &value) == 0
     }
-    private static func safe(_ url: URL) throws {
-        let canonical = url.standardizedFileURL
-        for count in 1...canonical.pathComponents.count {
-            let path = NSString.path(withComponents: Array(canonical.pathComponents.prefix(count)))
+    static func safe(_ url: URL) throws {
+        guard url.isFileURL else { throw Failure.unsafePath }
+        // Foundation can abbreviate an already-resolved /private/var URL back to
+        // /var. Expand only verified OS aliases, as the ciphertext index does;
+        // every other symlink component remains forbidden.
+        var canonicalPath = url.standardizedFileURL.path
+        for alias in ["/var", "/tmp"] where canonicalPath == alias || canonicalPath.hasPrefix(alias + "/") {
+            if let pointer = realpath(alias, nil) {
+                let target = String(cString: pointer); free(pointer)
+                if target == "/private" + alias { canonicalPath = target + canonicalPath.dropFirst(alias.count) }
+            }
+        }
+        let components = (canonicalPath as NSString).pathComponents
+        for count in 1...components.count {
+            let path = NSString.path(withComponents: Array(components.prefix(count)))
             var value = stat()
             guard lstat(path, &value) == 0, value.st_mode & S_IFMT != S_IFLNK else { throw Failure.unsafePath }
         }

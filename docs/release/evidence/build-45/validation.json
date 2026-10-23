@@ -30,7 +30,7 @@
     "bundle": "com.d2sci.waglock",
     "installed": true,
     "launchBlockedByDeviceLock": true,
-    "physicalAcceptance": "pending"
+    "physicalAcceptance": "failed: library reopen after lock"
   },
   "scale": {
     "records": 1000,
@@ -39,5 +39,6 @@
     "reopenSeconds": 1.55,
     "platform": "iOS simulator"
   },
-  "submitted": false
+  "submitted": false,
+  "releaseBlocked": true
 }

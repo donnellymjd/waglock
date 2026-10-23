@@ -1,0 +1,37 @@
+{
+  "version": "1.0",
+  "build": 47,
+  "fixtureOnly": true,
+  "sourceTag": "candidate-1.0-build47",
+  "unitTests": {
+    "passed": 281,
+    "failed": 0,
+    "skipped": 0,
+    "result": "/private/tmp/waglock-release47-full-regression.xcresult"
+  },
+  "pythonTests": {
+    "passed": 58,
+    "formatToolsUnchangedSinceValidatedBuild45": true
+  },
+  "newerRuntimeUI": {
+    "runtime": "iOS26.5",
+    "passed": 2,
+    "result": "/private/tmp/waglock-release47-lock-newer-ui.xcresult"
+  },
+  "iPadFullWorkflow": {
+    "passed": 1,
+    "result": "/private/tmp/waglock-release47-store-ipad/Workflow.xcresult"
+  },
+  "iPhoneScreens": {
+    "passed": 1,
+    "result": "/private/tmp/waglock-release47-store-iphone/Workflow.xcresult"
+  },
+  "phoneAcceptance": {
+    "installed": true,
+    "samePasswordAndTwoLockCycles": "owner confirmed passed",
+    "mediaAlbumsFaceIDAndReadableRecovery": "pending final acceptance"
+  },
+  "developmentLibraryUnchanged": true,
+  "unsignedArchive": "/private/tmp/WagLock-1.0-build47-candidate.xcarchive",
+  "submitted": false
+}
