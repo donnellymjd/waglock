@@ -64,3 +64,13 @@ Simulator packaging also required correction: disabling code signing left a link
 
 
 Final build50 engineering verification:283 unit/security tests pass, including the formerly failing delayed encrypted-save/reopen regression. Actual signed release UI passes paused body-only draft/background/cold reopen and the longer draft/Done/existing-note workflow; corrected Settings-based Never mode passes five paused edit/background cycles. [Checked-in evidence](../release/evidence/build-50/README.md). The mixed UI bundle's obsolete negative-argument case is a failure, not an overall pass. Physical owner repetition remains pending; no distribution gates are cleared by these tests.
+
+## Build50 physical follow-up — unexpected saved-note classification
+
+The owner reports that one newly created/backgrounded item appeared as a regular note and another as a draft, and confirms they did not tap Done/Save note or edit an existing saved note for the unexpected case. On a later disposable retry the owner cannot reproduce it. This is an unresolved intermittent report, not physical acceptance of that behavior or a confirmed root cause.
+
+New-note autosave is intended to write only the single encrypted draft slot. Explicit Done/Save note creates a regular note; existing-note autosave updates its existing record. Current New resumes the single existing draft rather than opening a second independent draft. Do not automatically promote an old draft to a saved note to make room, or claim support for multiple independent drafts.
+
+An added actual-release UI workflow checks both immediate and Settings-selected Never auto-lock, existing-note edit followed by New, paused new text/backgrounding, New resuming draft A before replacement with draft B, keyboard Return, exact cold recovery, unchanged saved-note content, and list counts separating draft heading/card from saved notes. The first counting attempt failed because XCTest also exposes the new section heading as a cell; the public screenshot showed only the expected draft and pre-existing notes. That harness failure does not reproduce promotion. Result evidence is recorded separately after completion. No production behavior, native format or phone data was changed for this investigation.
+
+The added actual signed release50 regression passes both lock configurations (188.650seconds; zero failures/skips), including Return and cold reopen. Evidence: `/private/tmp/waglock-build50-promotion-retry-ui.xcresult`, [checked-in summary](../release/evidence/build-50/draft-promotion-ui.json). No automatic promotion or saved-anchor mutation reproduces. Physical report remains unresolved/intermittent; no speculative production change or build51 installation was made.

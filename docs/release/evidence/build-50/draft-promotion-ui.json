@@ -1,0 +1,10 @@
+{
+  "result": "Passed",
+  "passedTests": 1,
+  "failedTests": 0,
+  "skippedTests": 0,
+  "totalTestCount": 1,
+  "testResultBundle": "/private/tmp/waglock-build50-promotion-retry-ui.xcresult",
+  "test": "EncryptedReleaseUITests.testBackgroundNeverPromotesNewDraftOrChangesAnotherSavedNote",
+  "productionBuild": "1.0 (50), unchanged"
+}

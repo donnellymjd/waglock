@@ -264,6 +264,68 @@ final class EncryptedReleaseUITests: XCTestCase {
         XCTAssertEqual(body.value as? String, "PUBLIC existing note edit also survives background.")
     }
 
+    @MainActor func testBackgroundNeverPromotesNewDraftOrChangesAnotherSavedNote() throws {
+        for timeout in [0, -1] {
+            let app = try launch(autoLock: timeout)
+            app.buttons["Notes"].firstMatch.tap(); app.navigationBars.buttons["New"].tap()
+            let title = app.textFields["note.title"], body = app.textViews["note.content"]
+            XCTAssertTrue(body.waitForExistence(timeout: 5))
+            let existing = body.value as? String ?? ""
+            XCTAssertTrue(existing.isEmpty || existing.contains("PUBLIC"))
+            let anchor = "PUBLIC anchor \(timeout)"
+            replace(title, with: anchor); replace(body, with: "PUBLIC saved anchor body")
+            // Only the anchor is explicitly saved; neither following draft is.
+            app.navigationBars.buttons["Done"].tap()
+            XCTAssertTrue(app.staticTexts[anchor].firstMatch.waitForExistence(timeout: 5))
+            XCTAssertFalse(app.buttons["notes.resumeDraft"].exists)
+            let savedRows = app.cells.count
+            app.staticTexts[anchor].firstMatch.tap()
+            XCTAssertTrue(body.waitForExistence(timeout: 5))
+            app.navigationBars.buttons.element(boundBy: 0).tap()
+            app.navigationBars.buttons["New"].tap()
+            XCTAssertTrue(body.waitForExistence(timeout: 5))
+            replace(title, with: "PUBLIC draft A"); replace(body, with: "PUBLIC draft A body")
+            for phase in ["A", "B"] {
+                if phase == "B" {
+                    app.navigationBars.buttons["New"].tap()
+                    XCTAssertTrue(body.waitForExistence(timeout: 5))
+                    XCTAssertEqual(body.value as? String, "PUBLIC draft A body", "New currently resumes the single draft slot")
+                    replace(title, with: "PUBLIC draft B")
+                    title.typeText("\n") // Return must not implicitly save a new note.
+                    XCTAssertTrue(body.waitForExistence(timeout: 5))
+                    replace(body, with: "PUBLIC draft B body")
+                }
+                Thread.sleep(forTimeInterval: 3)
+                XCTAssertFalse(app.staticTexts["note.save.error"].exists)
+                XCUIDevice.shared.press(.home); app.activate()
+                if timeout == 0 {
+                    unlock(app, password: owner)
+                    XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15))
+                    app.buttons["Notes"].firstMatch.tap()
+                } else {
+                    XCTAssertTrue(body.waitForExistence(timeout: 5))
+                    app.navigationBars.buttons.element(boundBy: 0).tap()
+                }
+                let resume = app.buttons["notes.resumeDraft"]
+                XCTAssertTrue(resume.waitForExistence(timeout: 5))
+                // XCTest exposes the new draft section heading as a cell as well.
+                XCTAssertEqual(app.cells.count, savedRows + 2, "Background must add only the draft heading/card, never a saved note")
+                XCTAssertTrue(resume.staticTexts["PUBLIC draft " + phase].exists)
+                XCTAssertTrue(app.staticTexts[anchor].firstMatch.exists)
+                if phase == "B" { XCTAssertFalse(app.staticTexts["PUBLIC draft A"].exists) }
+            }
+            app.terminate(); app.launch(); unlock(app, password: owner)
+            XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
+            XCTAssertEqual(app.cells.count, savedRows + 2)
+            app.buttons["notes.resumeDraft"].tap(); XCTAssertTrue(body.waitForExistence(timeout: 5))
+            XCTAssertEqual(body.value as? String, "PUBLIC draft B body")
+            app.navigationBars.buttons.element(boundBy: 0).tap()
+            app.staticTexts[anchor].firstMatch.tap(); XCTAssertTrue(body.waitForExistence(timeout: 5))
+            XCTAssertEqual(title.value as? String, anchor)
+            XCTAssertEqual(body.value as? String, "PUBLIC saved anchor body")
+        }
+    }
+
     @MainActor func testRepeatedInProcessLockReopensEncryptedLibrary() throws {
         let app = try launch()
         for _ in 0..<3 {
