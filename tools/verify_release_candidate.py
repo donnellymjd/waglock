@@ -20,6 +20,12 @@ def verify(app):
     for key, value in expected.items():
         if info.get(key) != value:
             raise ValueError(f'{key}: expected {value!r}, found {info.get(key)!r}')
+    # Localized values override Info.plist on the Home Screen and in system UI.
+    for localized in app.glob('*.lproj/InfoPlist.strings'):
+        values = plistlib.loads(localized.read_bytes())
+        display = values.get('CFBundleDisplayName', info['CFBundleDisplayName'])
+        if display != expected['CFBundleDisplayName']:
+            raise ValueError(f'{localized.parent.name}: localized display name overrides the release name')
     notices = (app / 'OpenSourceNotices.txt').read_text()
     if (repo / 'LICENSE').read_text().strip() not in notices:
         raise ValueError('Full GPL license missing from bundled notices')

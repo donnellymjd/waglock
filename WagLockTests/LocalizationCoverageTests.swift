@@ -20,7 +20,10 @@ final class LocalizationCoverageTests: XCTestCase {
         let permissionsPath = try XCTUnwrap(Bundle(path: path)?.path(forResource: "InfoPlist", ofType: "strings"))
         let data = try Data(contentsOf: URL(fileURLWithPath: permissionsPath))
         let values = try XCTUnwrap(PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String])
-        XCTAssertEqual(values["CFBundleDisplayName"], "WagLock Dev")
+        XCTAssertNil(values["CFBundleDisplayName"], "Use the configuration-specific name for Dev and release builds")
+        XCTAssertEqual(Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String,
+                       Bundle.main.infoDictionary?["CFBundleDisplayName"] as? String)
+        XCTAssertEqual(Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String, "WagLock Dev")
         let notices = try XCTUnwrap(Bundle.main.url(forResource: "OpenSourceNotices", withExtension: "txt"))
         let noticeText = try String(contentsOf: notices, encoding: .utf8)
         XCTAssertTrue(noticeText.contains("GNU GENERAL PUBLIC LICENSE"))

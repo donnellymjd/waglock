@@ -6,8 +6,8 @@
 
 */
 
-/* App name displayed on home screen */
-"CFBundleDisplayName" = "WagLock Dev";
+/* The home-screen display name comes from the build configuration.
+   A localized override here would incorrectly rename the release app. */
 
 /* App name in Settings and other system locations */
 "CFBundleName" = "WagLock";
