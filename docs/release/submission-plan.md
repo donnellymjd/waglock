@@ -16,7 +16,7 @@ Shared albums, Trash, encrypted search, self-destruct lock, unlock-camera captur
 
 | Gate | Current evidence / outstanding work |
 | --- | --- |
-| Distribution rights — D2S-106/118 | Review packet prepared. Written reviewed route/rights evidence remains missing; no permission presumed. |
+| Distribution rights — D2S-106/118 | GPL commercial use is permitted; upstream explicitly describes branded App Store forks. Exact platform/source-conveyance compliance review remains open. A lawyer or separate monetization permission is not a GPL prerequisite; see the clarified review packet. |
 | Native security — D2S-105/116/143 | 247 unit tests and build 41 phone checks passed. A01 metadata/notes and broader preview/key boundaries remain open. Candidate staging is unused. |
 | Recovery — D2S-110/114/141 | Independent official age fixture recovery exists. Owner readable output/filename confirmation, declared full-library coverage, large legacy sources, provider behavior and cold restoration gates remain. |
 | Identity — D2S-117/118 | Proposed store identity `com.d2sci.waglock`, display WagLock, initial marketing version 1.0. Opt-in [preview configuration](../../config/AppStore.xcconfig) does not change Debug or register an App ID. Existing phone `com.d2sci.vaultito.dev` is preserved. |

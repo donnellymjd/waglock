@@ -2,6 +2,16 @@
 
 D2S-106/118. Prepared October 22, 2026. **Open release gate; no clearance or distribution permission is asserted.** The owner selected a small first App Store submission with manual release, followed by later improvements.
 
+## Commercial model clarification
+
+GPLv3 permits charging for copies, including a compiled app, while conveying the covered work and matching Corresponding Source under its conditions. Keeping the source available under GPLv3 and charging for convenient compiled distribution is a permitted commercial model; neither a zero app price nor a lawyer's opinion is required by GPLv3. Source must match the distributed version and satisfy the applicable source-conveyance/build-information conditions; merely publishing some code is insufficient. Recipients retain GPL rights to modify and redistribute.
+
+The upstream TRADEMARK.md App Store section was rechecked through the public GitHub contents API: it explicitly discusses publishing forks with a different app name/icon/bundle identifier and upstream attribution. This supports upstream intent to permit appropriately branded App Store forks. No separate permission to monetize is presumed necessary merely because a price is charged.
+
+The remaining platform question concerns the exact Apple distribution/EULA/signing/content-protection terms and the recipients' GPL rights. Apple Developer Program License Agreement section 3.2(f) requires compatible licensing with the Program's signing/content-protection terms. This packet has not established a particular current incompatibility, and historical FSF disputes alone do not establish one for this release. Additional copyright permission would be a possible remedy only if a specific conflict is identified; it is not automatically required for every commercial fork. The project's request for legal review is a separate risk-management step, not a GPL condition.
+
+References: [upstream GPLv3 sections 4–6 and 10–12](https://github.com/materialofair/zeroNet_Space/blob/main/LICENSE), [upstream App Store branding guidance](https://github.com/materialofair/zeroNet_Space/blob/main/TRADEMARK.md), [current Apple agreement](https://developer.apple.com/support/terms/apple-developer-program-license-agreement/).
+
 ## Inspected evidence
 
 | Component | Evidence | Review consequence |
