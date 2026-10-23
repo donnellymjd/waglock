@@ -31,6 +31,7 @@ WagLock is an independent fork of [SealedPocket / ZeroNet Space](https://github.
 - [Import lifecycle hardening](import-lifecycle.md): build 25 commit/session checks, cancellation cleanup and older-runtime compatibility evidence.
 - [Migration fidelity test preparation](migration-fidelity.md): disposable fixtures, read-only export comparison and the source-app validation matrix.
 
+- [Draft preservation](draft-preservation.md): conflicting-source protection and unused encrypted draft staging.
 - [Mutable encrypted metadata candidate](encrypted-metadata-candidate.md): unused transactional index, corruption/crash checks and live-migration gates.
 
 Start with these docs and the root [AGENTS.md](../../AGENTS.md). Historical upstream docs remain for provenance and must not be read as audited WagLock promises. The working name is WagLock; the original Linear project is titled Portable Vault. The `docs/portable-vault/` path and source snapshot are retained for continuity. The development build has separate WagLock branding and app/Keychain identity. Build 23 extends the inherited stream format for new writes while retaining legacy readers; it performs no automatic conversion.

@@ -34,7 +34,7 @@ nonisolated enum AppConstants {
     static let bundleIdentifier = Bundle.main.bundleIdentifier ?? "com.d2sci.vaultito.dev"
 
     /// GitHub仓库地址
-    static let githubRepositoryURL = "https://github.com/donnellymjd/zeroNet_Space"
+    static let githubRepositoryURL = "https://github.com/donnellymjd/waglock"
 
     // MARK: - Security
 

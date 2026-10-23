@@ -7,6 +7,10 @@ enum MetadataTransitionStage {
     typealias Store = EncryptedMetadataStore
     enum Failure: Error { case unauthorized, invalidSource, sourceChanged, corruptProgress }
     enum Mode { case create, resume }
+    enum Scope: String {
+        case models = "legacy-models-and-retained-key-only"
+        case modelsAndDrafts = "legacy-models-drafts-and-retained-key-only"
+    }
     enum Checkpoint { case batchCommitted(Int), beforeVerification, verified }
     struct Result { let completed: Int; let revision: UInt64 }
     private enum Phase: String, Codable { case importing, verified }
@@ -26,13 +30,13 @@ enum MetadataTransitionStage {
     /// Resume requires the same immutable, independently captured source values and key.
     /// Caller authorization is rechecked at each batch and verification boundary.
     static func run(mode: Mode, root: URL, domain: Store.Domain, key: Data, sourceID: UUID,
-                    records: [Store.Record], authorized: () -> Bool,
+                    records: [Store.Record], scope: Scope = .models, authorized: () -> Bool,
                     checkpoint: (Checkpoint) throws -> Void = { _ in }) throws -> Result {
         func check() throws {
             guard authorized() else { throw Failure.unauthorized }; try Task.checkCancellation()
         }
         try check()
-        let ordered = try validate(records)
+        let ordered = try validate(records, scope: scope)
         let fingerprint = digest(ordered)
         let store: Store
         switch mode {
@@ -44,7 +48,7 @@ enum MetadataTransitionStage {
         var progress: Progress
         switch mode {
         case .create:
-            progress = Progress(version: 1, scope: "legacy-models-and-retained-key-only", sourceID: sourceID, fingerprint: fingerprint, count: ordered.count,
+            progress = Progress(version: 1, scope: scope.rawValue, sourceID: sourceID, fingerprint: fingerprint, count: ordered.count,
                                 completed: 0, commits: 1, phase: .importing)
             try check()
             try store.apply(access, revision: 0, mutations: [.put(try record(progress))])
@@ -61,7 +65,7 @@ enum MetadataTransitionStage {
                     found = try JSONDecoder().decode(Progress.self, from: row.payload)
                 }
             }
-            guard let saved = found, saved.version == 1, saved.scope == "legacy-models-and-retained-key-only", saved.count == ordered.count,
+            guard let saved = found, saved.version == 1, saved.scope == scope.rawValue, saved.count == ordered.count,
                   saved.sourceID == sourceID, saved.fingerprint == fingerprint else { throw Failure.sourceChanged }
             guard saved.completed >= 0, saved.completed <= ordered.count, saved.commits == state.revision,
                   state.count == saved.completed + 1,
@@ -108,9 +112,10 @@ enum MetadataTransitionStage {
         }
         guard seen.count == expected.count else { throw Failure.corruptProgress }; try check()
     }
-    private static func validate(_ records: [Store.Record]) throws -> [Store.Record] {
+    private static func validate(_ records: [Store.Record], scope: Scope) throws -> [Store.Record] {
         guard records.count <= MetadataModelCodec.maximumRecords else { throw Failure.invalidSource }
         var seen = Set<String>(), bytes = 0, keys = 0
+        var draftOrigins = Set<MetadataDraftCodec.Origin>()
         for row in records {
             try Task.checkCancellation()
             guard row.payload.count <= Store.maximumPayloadBytes,
@@ -120,7 +125,14 @@ enum MetadataTransitionStage {
             if row.kind == "retained-key" {
                 keys += 1
                 guard keys <= 1, !row.payload.isEmpty, row.payload.count <= 4096 else { throw Failure.invalidSource }
+            } else if row.kind == "draft" {
+                guard scope == .modelsAndDrafts else { throw Failure.invalidSource }
+                let entry = try MetadataDraftCodec.decode(row)
+                guard draftOrigins.insert(entry.origin).inserted else { throw Failure.invalidSource }
             } else { _ = try MetadataModelCodec.decode(row) }
+        }
+        if scope == .modelsAndDrafts {
+            guard draftOrigins == Set(MetadataDraftCodec.Origin.allCases) else { throw Failure.invalidSource }
         }
         return records.sorted { ($0.kind, $0.id.uuidString) < ($1.kind, $1.id.uuidString) }
     }

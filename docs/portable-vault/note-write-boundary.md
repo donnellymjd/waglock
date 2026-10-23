@@ -19,3 +19,6 @@ Full unit/security run: 181 passed (70 XCTest and 111 Swift Testing). Result: `/
 ## Remaining boundaries
 
 This does not encrypt persisted SwiftData note fields, add Markdown or implement independent vaults. A01 and D2S-143 remain open. Drafts remain device-only Keychain data with no portable recovery. Capability revocation cancels pending edits; the last unsaved keystrokes may not persist if locking wins the lifecycle race. Failed Back/background flush cannot keep an already-dismissed editor open. Keychain deletion and platform caches do not establish secure erasure. Physical-device acceptance remains separate from simulator validation.
+
+
+Build 41 tightens legacy draft promotion: preserve conflicting sources, distinguish checked-read failure from absence, and verify identical bytes before removing a duplicate. The unused metadata transition now preserves both draft origins without activating a live migration. See [draft preservation](draft-preservation.md). The earlier recovery limitation above describes the build 38 baseline; build 39 age exports separately capture supported drafts.

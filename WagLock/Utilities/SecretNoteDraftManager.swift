@@ -9,11 +9,15 @@ struct SecretNoteDraft: Codable {
 /// 草稿属于未落库的私密内容，存 Keychain（仅本机、设备解锁后可用），
 /// 不能明文写入 UserDefaults（明文 plist 会进入未加密备份）
 final class SecretNoteDraftManager {
+    nonisolated deinit { }
     static let shared = SecretNoteDraftManager()
     private let legacyDraftKey = "secretSpace.draft"
-    private let keychainService = KeychainService.shared
+    private let keychainService: KeychainService
+    private let defaults: UserDefaults
 
-    private init() {
+    init(keychainService: KeychainService = .shared, defaults: UserDefaults = .standard) {
+        self.keychainService = keychainService
+        self.defaults = defaults
         migrateLegacyDraftFromUserDefaults()
     }
 
@@ -39,17 +43,25 @@ final class SecretNoteDraftManager {
         keychainService.deleteSecretNoteDraft()
     }
 
-    /// 旧版本把草稿明文存在 UserDefaults，迁移到 Keychain 后删除明文副本。
-    /// Keychain 写入可能失败（如锁屏时冷启动），确认迁移成功才删除旧数据，
-    /// 失败则保留旧值，等下次启动重试
+    /// Preserve a conflicting legacy draft. A checked read and exact read-back
+    /// are required before removing the duplicate plaintext preferences copy.
     private func migrateLegacyDraftFromUserDefaults() {
-        let defaults = UserDefaults.standard
-        guard let data = defaults.data(forKey: legacyDraftKey) else { return }
-        let migrated =
-            keychainService.loadSecretNoteDraft() != nil
-            || keychainService.saveSecretNoteDraft(data)
-        if migrated {
+        guard let data = defaults.data(forKey: legacyDraftKey),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              Set(object.keys) == ["title", "content", "updatedAt"],
+              (try? JSONDecoder().decode(SecretNoteDraft.self, from: data)) != nil else { return }
+        do {
+            if let existing = try keychainService.loadSecretNoteDraftChecked() {
+                guard existing == data else { return }
+            } else {
+                guard keychainService.saveSecretNoteDraft(data),
+                      try keychainService.loadSecretNoteDraftChecked() == data else { return }
+            }
+            // Recheck the source too; never clear a newer legacy draft.
+            guard defaults.data(forKey: legacyDraftKey) == data else { return }
             defaults.removeObject(forKey: legacyDraftKey)
+        } catch {
+            // Inaccessibility is not absence or permission to replace either source.
         }
     }
 }

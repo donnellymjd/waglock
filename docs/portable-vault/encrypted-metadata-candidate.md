@@ -32,7 +32,7 @@ The inverse adapter creates only its own **memory-only** SwiftData projection. I
 
 Before resuming, it authenticates the inventory and compares **every saved row's exact payload** to the same source prefix and progress record. A changed source, foreign key/domain, edited prefix, stale revision, duplicate input or occupied create root fails closed. A completed stage can be reopened and verified without another write. Errors/revocation preserve already committed progress. A failure after the verified marker leaves a reconcilable copy rather than deleting it. An interrupted, uninitialized root is rejected on resume; there is no automatic reset, unknown-root cleanup, directory publication or mount-pointer change.
 
-The `verified` phase means these supplied model records match the staged inventory. **It does not mean complete-library recovery, safe activation or a completed migration.** Drafts, preferences/settings, active credentials/biometric enrollment, streamed original validation and all-writer quiescence still require separate adapters and policy. Neither service has a production mount/login caller.
+The `verified` phase means these supplied model records match the staged inventory. **It does not mean complete-library recovery, safe activation or a completed migration.** The later explicit models-and-drafts scope preserves both draft origins as described below. Preferences/settings, active credentials/biometric enrollment, streamed original validation and all-writer quiescence still require separate adapters and policy. Neither service has a production mount/login caller.
 
 ### Staging validation
 
@@ -41,6 +41,10 @@ The full regression with typed adapters/resume passed **230 tests** (119 XCTest 
 The staged 261-record fixture includes a retained synthetic secret. Tests interrupt after a committed batch, reopen, reject a changed source/foreign domain/key, verify the exact saved prefix, finish and reopen idempotently. Edited stages fail instead of being overwritten. Revocation and a lost completion result preserve recoverable progress. Model round-trip tests include raw future type/policy values, optional metadata, binary wrappers/catalogs, distinct Unicode encodings and timestamps. Fixture plaintext/raw base64 markers are absent from the stage files.
 
 The WAL case uses an already-open, quiescent **disposable** persistent ModelContext. It establishes that the note marker is present in committed WAL but absent from the main SQLite file; capture sees it, and source SQLite/WAL bytes are identical after encrypted staging. No plaintext clone, checkpoint or journal-mode change occurs. This does not establish a coordinated snapshot against other active writers, nor prove read-only reopening of an arbitrary external WAL database. Actual filesystem-full, abrupt process death during a multi-batch source transition, source-freeze/activation interruption and hardware power-loss tests remain open. The existing process probe covers the underlying index transaction boundaries, not the complete staging coordinator.
+
+### Draft scope follow-up — build 41
+
+An optional `modelsAndDrafts` scope now requires records for both Keychain and legacy preferences drafts, including explicit absence. The unused adapter retains exact original serialized bytes and rejects unknown/corrupt/unavailable input. Scope/source changes cannot silently upgrade a saved stage. Eight codec tests and eight production draft-promotion tests bring the full unit suite to 247 passing tests. [Production conflict-loss fix, limits and exact validation](draft-preservation.md). Settings, live writer integration and source-freeze/activation/recovery gates remain open.
 
 ### Next integration boundaries
 
