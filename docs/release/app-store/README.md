@@ -1,3 +1,5 @@
+> **SECURITY HOLD:** build50 is superseded for submission. Owner-supplied review items D2S-152–164 are being triaged for build51. Independent Guest Mode is also required for1.0. Do not upload the earlier archive.
+
 # WagLock 1.0 submission files
 
 Build50 passed the owner's full disposable-sample phone and independent Mac backup-recovery checklist on October23. Engineering evidence is in [build50](../evidence/build-50/README.md). The separately reported intermittent note classification remains tracked; no new root cause or independent audit certification is claimed.

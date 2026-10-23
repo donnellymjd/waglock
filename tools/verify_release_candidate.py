@@ -51,7 +51,7 @@ def verify(app):
                 signatureVerifies=signature.returncode == 0,
                 exportDeclarationPresent='ITSAppUsesNonExemptEncryption' in info,
                 readyForUpload=False,
-                remainingGates=['physical acceptance', 'distribution signing/validation', 'distribution compliance review',
+                remainingGates=['security launch triage and independent guest-vault acceptance', 'physical acceptance', 'distribution signing/validation', 'distribution compliance review',
                                 'account-holder privacy/export/territory/contact declarations', 'App Store record and manual-release submission'])
 
 

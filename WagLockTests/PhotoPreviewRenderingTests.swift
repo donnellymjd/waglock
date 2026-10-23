@@ -22,7 +22,10 @@ final class PhotoPreviewRenderingTests: XCTestCase {
         var context: ModelContext? = ModelContext(try XCTUnwrap(container))
         context?.autosaveEnabled = false
         let password = "disposable-photo-password"
-        let storage = FileStorageService(directory: root.appendingPathComponent("media"), availableCapacity: { _ in 1_000_000_000 })
+        // Rendering uses the production storage reader: fixtures must be inside its owned root.
+        // Cleanup removes only the ciphertext created by this test, never other media.
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let storage = FileStorageService.shared
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: 100, height: 80))
         let bytes = try XCTUnwrap(renderer.image { drawing in
             UIColor.blue.setFill()
@@ -31,7 +34,8 @@ final class PhotoPreviewRenderingTests: XCTestCase {
         let source = root.appendingPathComponent("synthetic.png")
         try bytes.write(to: source)
         let path = try storage.saveEncryptedFile(from: source, password: password)
-        let item = MediaItem(fileName: "synthetic-photo", fileExtension: "png", fileSize: Int64(bytes.count), type: video ? .video : .photo, encryptedPath: storage.getFileURL(for: path).path)
+        defer { try? storage.deleteFile(path: path) }
+        let item = MediaItem(fileName: "synthetic-photo", fileExtension: "png", fileSize: Int64(bytes.count), type: video ? .video : .photo, encryptedPath: try storage.getFileURL(for: path).path)
         context?.insert(item)
         try context?.save()
         let credentials = KeychainService(service: "photo-render-" + UUID().uuidString)

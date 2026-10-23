@@ -182,7 +182,7 @@ final class ExportService: ObservableObject {
 
     private func snapshot(_ item: MediaItem) throws -> Item {
         let root = storage.getStorageDirectory().resolvingSymlinksInPath().standardizedFileURL
-        let source = storage.getFileURL(for: item.encryptedPath).standardizedFileURL
+        let source = try storage.getFileURL(for: item.encryptedPath).standardizedFileURL
         let attributes = try FileManager.default.attributesOfItem(atPath: source.path)
         guard attributes[.type] as? FileAttributeType == .typeRegular,
               source.resolvingSymlinksInPath().path == root.appendingPathComponent(source.lastPathComponent).path else {

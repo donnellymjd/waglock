@@ -36,9 +36,67 @@ struct AlbumSecurityTests {
     }
 
     @Test
+    func passwordBudgetSurvivesAlbumStoreRecreationAndBiometricsDoNotResetIt() async throws {
+        let db = try container()
+        let storage = InMemoryAttemptStorage()
+        let biometric = TestBiometricStore()
+        var date = Date(timeIntervalSince1970: 1_800_000_000)
+        let make = { AlbumStore(biometrics: biometric, attemptStorage: storage, attemptNow: { date }) }
+        let initial = make()
+        initial.beginSession(vaultSecret: "vault-fixture")
+        let album = try await initial.create(name: "Budget", parent: nil, protection: .passwordAndFaceID,
+            password: "album-password", albums: [], context: db.mainContext)
+        let other = try await initial.create(name: "Other", parent: nil, protection: .password,
+            password: "other-password", albums: [album], context: db.mainContext)
+        initial.endSession()
+        for _ in 0..<5 {
+            let store = make(); store.beginSession(vaultSecret: "vault-fixture")
+            await denied { try await store.unlock(album, password: "wrong-password", albums: [album, other]) }
+            store.endSession()
+        }
+        let store = make(); store.beginSession(vaultSecret: "vault-fixture")
+        await denied { try await store.unlock(album, password: "album-password", albums: [album, other]) }
+        try await store.unlock(other, password: "other-password", albums: [album, other])
+        biometric.cancelled = true
+        await denied { try await store.unlock(album, useBiometrics: true, albums: [album, other]) }
+        biometric.cancelled = false
+        try await store.unlock(album, useBiometrics: true, albums: [album, other])
+        store.lock(album, albums: [album, other])
+        await denied { try await store.unlock(album, password: "album-password", albums: [album, other]) }
+        date = date.addingTimeInterval(301)
+        try await store.unlock(album, password: "album-password", albums: [album, other])
+        store.lock(album, albums: [album, other])
+        try await store.unlock(album, password: "album-password", albums: [album, other])
+        #expect(store.isUnlocked(album, albums: [album, other]))
+    }
+
+    @Test
+    func oldAlbumWrapperRemainsReadableAndExplicitProtectionChangeUsesNewKDF() async throws {
+        let db = try container()
+        let id = UUID(), secret = "PUBLIC preserved album data key"
+        let material = try JSONSerialization.data(withJSONObject: ["albumID": id.uuidString, "secret": secret])
+        let factor = try EncryptionService.shared.encrypt(data: material, password: "old-password")
+        let wrapped = try EncryptionService.shared.encrypt(data: factor, password: "vault-fixture")
+        let catalog = try EncryptionService.shared.encrypt(data: Data("[]".utf8), password: secret)
+        let album = VaultAlbum(id: id, parentID: nil, name: "Legacy", protection: .password,
+                               wrappedKey: wrapped, encryptedCatalog: catalog)
+        db.mainContext.insert(album)
+        let store = AlbumStore(biometrics: TestBiometricStore(), attemptStorage: InMemoryAttemptStorage())
+        store.beginSession(vaultSecret: "vault-fixture")
+        try await store.unlock(album, password: "old-password", albums: [album])
+        #expect(album.wrappedKey == wrapped)
+        try await store.changeProtection(of: album, to: .password, password: "new-password", albums: [album], context: db.mainContext)
+        let newFactor = try EncryptionService.shared.decrypt(encryptedData: album.wrappedKey, password: "vault-fixture")
+        #expect(newFactor.starts(with: Data("WLPE".utf8)))
+        await denied { try await store.unlock(album, password: "old-password", albums: [album]) }
+        try await store.unlock(album, password: "new-password", albums: [album])
+        #expect(try store.assets(in: album, albums: [album]).isEmpty)
+    }
+
+    @Test
     func parentAndChildPasswordsAreIndependentAndParentLockCascades() async throws {
         let db = try container()
-        let store = AlbumStore(biometrics: TestBiometricStore())
+        let store = AlbumStore(biometrics: TestBiometricStore(), attemptStorage: InMemoryAttemptStorage())
         store.beginSession(vaultSecret: "vault-fixture")
         let parent = try await store.create(name: "Parent", parent: nil, protection: .password,
             password: "parent-password", albums: [], context: db.mainContext)
@@ -61,7 +119,7 @@ struct AlbumSecurityTests {
     func faceIDOnlyRejectsPasswordsAndCancellationLeavesItLocked() async throws {
         let db = try container()
         let biometric = TestBiometricStore()
-        let store = AlbumStore(biometrics: biometric)
+        let store = AlbumStore(biometrics: biometric, attemptStorage: InMemoryAttemptStorage())
         store.beginSession(vaultSecret: "vault-fixture")
         let album = try await store.create(name: "Biometric", parent: nil, protection: .faceIDOnly,
             password: "", albums: [], context: db.mainContext)
@@ -82,7 +140,7 @@ struct AlbumSecurityTests {
     func passwordRemainsUsableWhenOptionalBiometricKeyIsLost() async throws {
         let db = try container()
         let biometric = TestBiometricStore()
-        let store = AlbumStore(biometrics: biometric)
+        let store = AlbumStore(biometrics: biometric, attemptStorage: InMemoryAttemptStorage())
         store.beginSession(vaultSecret: "vault-fixture")
         let album = try await store.create(name: "Optional Face ID", parent: nil, protection: .passwordAndFaceID,
             password: "album-password", albums: [], context: db.mainContext)
@@ -97,7 +155,7 @@ struct AlbumSecurityTests {
     func lateBiometricResultCannotReopenAnEndedSession() async throws {
         let db = try container()
         let biometric = TestBiometricStore()
-        let store = AlbumStore(biometrics: biometric)
+        let store = AlbumStore(biometrics: biometric, attemptStorage: InMemoryAttemptStorage())
         store.beginSession(vaultSecret: "vault-fixture")
         let album = try await store.create(name: "Late result", parent: nil, protection: .faceIDOnly,
             password: "", albums: [], context: db.mainContext)
@@ -110,7 +168,7 @@ struct AlbumSecurityTests {
     @Test
     func protectionChangeRewrapsKeysAndPreservesDescendants() async throws {
         let db = try container()
-        let store = AlbumStore(biometrics: TestBiometricStore())
+        let store = AlbumStore(biometrics: TestBiometricStore(), attemptStorage: InMemoryAttemptStorage())
         store.beginSession(vaultSecret: "vault-fixture")
         let parent = try await store.create(name: "Parent", parent: nil, protection: .inherited,
             password: "", albums: [], context: db.mainContext)
@@ -130,7 +188,7 @@ struct AlbumSecurityTests {
     func cancelledEnrollmentDoesNotDowngradeExistingProtection() async throws {
         let db = try container()
         let biometric = TestBiometricStore()
-        let store = AlbumStore(biometrics: biometric)
+        let store = AlbumStore(biometrics: biometric, attemptStorage: InMemoryAttemptStorage())
         store.beginSession(vaultSecret: "vault-fixture")
         let album = try await store.create(name: "Keep password", parent: nil, protection: .password,
             password: "old-password", albums: [], context: db.mainContext)
@@ -148,7 +206,7 @@ struct AlbumSecurityTests {
     @Test
     func albumMediaAndThumbnailsDoNotEnterGlobalGalleryAndRootKeyCannotDecrypt() async throws {
         let db = try container()
-        let store = AlbumStore(biometrics: TestBiometricStore())
+        let store = AlbumStore(biometrics: TestBiometricStore(), attemptStorage: InMemoryAttemptStorage())
         store.beginSession(vaultSecret: "vault-fixture")
         let album = try await store.create(name: "Media", parent: nil, protection: .password,
             password: "album-password", albums: [], context: db.mainContext)
@@ -179,7 +237,7 @@ struct AlbumSecurityTests {
     @Test
     func movingFromMainLibraryVerifiesContentBeforeRemovingOriginal() async throws {
         let db = try container()
-        let store = AlbumStore(biometrics: TestBiometricStore())
+        let store = AlbumStore(biometrics: TestBiometricStore(), attemptStorage: InMemoryAttemptStorage())
         store.beginSession(vaultSecret: "vault-fixture")
         let data = Data("fixture bytes to preserve".utf8)
         let source = try FileStorageService.shared.saveEncrypted(
@@ -205,7 +263,7 @@ struct AlbumSecurityTests {
     @Test
     func corruptedHierarchyAndCatalogFailClosed() async throws {
         let db = try container()
-        let store = AlbumStore(biometrics: TestBiometricStore())
+        let store = AlbumStore(biometrics: TestBiometricStore(), attemptStorage: InMemoryAttemptStorage())
         store.beginSession(vaultSecret: "vault-fixture")
         let album = try await store.create(name: "Invalid", parent: nil, protection: .inherited,
             password: "", albums: [], context: db.mainContext)

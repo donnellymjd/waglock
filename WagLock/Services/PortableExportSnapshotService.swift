@@ -298,7 +298,7 @@ final class PortableExportSnapshotService {
         guard let rootAttributes = try? FileManager.default.attributesOfItem(atPath: configuredRoot.path),
               rootAttributes[.type] as? FileAttributeType == .typeDirectory else { throw Failure.invalidInventory }
         let root = configuredRoot.resolvingSymlinksInPath().standardizedFileURL
-        let url = storage.getFileURL(for: path).standardizedFileURL
+        let url = try storage.getFileURL(for: path).standardizedFileURL
         guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
               attributes[.type] as? FileAttributeType == .typeRegular,
               url.resolvingSymlinksInPath().path == root.appendingPathComponent(url.lastPathComponent).path,

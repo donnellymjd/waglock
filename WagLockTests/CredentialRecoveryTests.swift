@@ -201,6 +201,20 @@ struct CredentialRecoveryTests {
     }
 
     @Test
+    func oldAuthenticatedCredentialReadsWithoutConversionAndExplicitChangeUsesVersionedKDF() throws {
+        let (keychain, storage) = fixture()
+        let payload = #"{"version":1,"service":"recovery-fixture","dataPassword":"PUBLIC-preserved-secret"}"#
+        let old = try EncryptionService.shared.encrypt(data: Data(payload.utf8), password: "old-password")
+        storage.items[ownerAccount] = old
+        #expect(try keychain.retrieveDataPassword(using: "old-password") == "PUBLIC-preserved-secret")
+        #expect(storage.items[ownerAccount] == old)
+        try keychain.changePassword(oldPassword: "old-password", newPassword: "new-password")
+        #expect(storage.items[ownerAccount]?.starts(with: Data("WLPE".utf8)) == true)
+        #expect(try keychain.retrieveDataPassword(using: "new-password") == "PUBLIC-preserved-secret")
+        #expect(!keychain.verifyPassword("old-password"))
+    }
+
+    @Test
     func malformedVersionOrEmptyDataKeyNeverAuthenticates() throws {
         let (keychain, storage) = fixture()
         for payload in [

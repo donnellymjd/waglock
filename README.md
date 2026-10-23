@@ -1,3 +1,5 @@
+> **Submission hold:** October 23 security fixes and independent Guest Mode are required for 1.0. Build50 is historical, not the submission candidate. See [launch triage](docs/portable-vault/security-launch-triage.md).
+
 <p align="center">
   <img src="WagLock/Assets.xcassets/AppIcon.appiconset/Icon.png" width="112" alt="WagLock app icon">
 </p>
@@ -19,23 +21,25 @@ WagLock is an independent fork of [SealedPocket / ZeroNet Space](https://github.
 - **Local media library:** browse photos, videos, audio and files; import through Photos and Files; preview and share supported formats.
 - **Nested albums:** create albums and subalbums under **Photos → Albums**. Choose inherited protection, a separate album password, password-or-Face-ID access, or Face ID-only access. Ancestor protection still applies.
 - **Vault unlock:** use a vault password with optional Face ID convenience. Switch between Number pad and Full keyboard without changing the password text. Password quality feedback appears when setting or changing a password, not during login.
-- **Session locking:** backgrounding locks albums and revokes managed export/document-preview access. Automatic vault locking follows the selected timeout, subject to the documented recording exception.
+- **Session locking:** backgrounding locks albums and revokes managed export/document-preview access. The fresh release locks the vault immediately on background; legacy Dev retains its documented timeout/recording policy.
 - **Free local features:** no purchase prompts or paid feature gates. Storage capacity is the practical limit on imports.
 - **Adaptive interface:** redesigned libraries, players and settings; System, Light and Dark appearance.
 - **English beta interface:** app-controlled UI and diagnostics are English. User filenames, passwords and other Unicode content are preserved.
 
-The app also includes notes and recording. In the fresh release configuration, note fields and drafts are encrypted with the library; a full Markdown editing/rendering feature remains planned.
+The app also includes notes and audio import/playback. New audio recording is deferred from the hardened 1.0 release. In the fresh release configuration, note fields and drafts are encrypted with the library; a full Markdown editing/rendering feature remains planned.
 
 ## Current development status
 
-As of **October 23, 2026**, build 50 prepares a separate **WagLock 1.0** fresh encrypted library under `com.d2sci.waglock`. Models, thumbnails, notes and drafts persist in an authenticated encrypted index with a memory-only UI projection. New credentials use an independent random data secret retained across password changes. Existing **WagLock Dev 1.3.8 (44)** and its library are preserved. This is not a migration. See [the fresh-library contract](docs/portable-vault/fresh-encrypted-library.md) for evidence and limits. Native video viewing uses standard AVKit controls. Build47 corrects Apple-directory alias validation; the owner confirms the new library opens and survives repeated locking. Build48 corrects the localized app label: release is WagLock, development is WagLock Dev. Build49 makes unfinished notes visible with Resume draft and flushes the latest pending edit before background locking. Build50 corrects delayed encrypted autosaves cancelling themselves, stabilizes editor navigation during draft-list refreshes, and preserves current text across reappearance; the owner has now passed the complete phone and independent backup-recovery checklist. The intermittent classification report remains tracked; Apple distribution signing and submission declarations remain pending.
-The immediate target is a narrowly scoped first App Store submission with manual release. [Submission preparation and readiness gates](docs/release/submission-plan.md) track the licensing route, security/recovery work, final identity, privacy/support, listing and exact-archive validation. The proposed store identity is separate from the existing development app. **No App Store submission or public-release approval is announced.**
+As of **October 23, 2026**, build 50 prepared a separate **WagLock 1.0** fresh encrypted library under `com.d2sci.waglock`. Models, thumbnails, notes and drafts persist in an authenticated encrypted index with a memory-only UI projection. New credentials use an independent random data secret retained across password changes. Existing **WagLock Dev 1.3.8 (44)** and its library are preserved. This is not a migration. See [the fresh-library contract](docs/portable-vault/fresh-encrypted-library.md) for evidence and limits. Native video viewing uses standard AVKit controls. Build47 corrects Apple-directory alias validation; the owner confirms the new library opens and survives repeated locking. Build48 corrects the localized app label: release is WagLock, development is WagLock Dev. Build49 makes unfinished notes visible with Resume draft and flushes the latest pending edit before background locking. Build50 corrects delayed encrypted autosaves cancelling themselves, stabilizes editor navigation during draft-list refreshes, and preserves current text across reappearance; the owner has now passed the complete phone and independent backup-recovery checklist. The intermittent classification report remains tracked; Apple distribution signing and submission declarations remain pending.
+Build51 hardening removes calculator authentication, persists password budgets, adds versioned stronger password wrappers, contains storage paths, owns temporary plaintext jobs and locks immediately with synchronous key revocation. Current verification:298 unit/security tests pass; physical acceptance and independent Guest Mode remain open.
+
+The immediate target is a first App Store submission with manual release, including the now-required independent Guest Mode. [Submission preparation and readiness gates](docs/release/submission-plan.md) track the licensing route, security/recovery work, final identity, privacy/support, listing and exact-archive validation. The proposed store identity is separate from the existing development app. **No App Store submission or public-release approval is announced.**
 
 | Capability | Status |
 | --- | --- |
 | Encrypted media, nested album passwords and optional biometrics | Available in the development app; further hardening remains |
 | Encrypted export with independent desktop extraction | Build 39 development candidate; password/recovery-key choices, nested protection and Files/cloud destinations; see limits below |
-| Separate populated vault selected by an alternative passcode | In development; current Guest Mode is presentation-only |
+| Separate populated vault selected by an alternative passcode | Required for1.0, in development; inherited Guest Mode is presentation-only and disabled in the public candidate |
 | Encrypted Trash with configurable retention | Planned; enabled with seven-day retention by default when implemented |
 | Encrypted note fields/drafts | Fresh release candidate; full Markdown editing and encrypted search remain backlog |
 | Consent-controlled shared albums | Discovery/prototype planning; not available in the app |

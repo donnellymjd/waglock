@@ -47,15 +47,13 @@ final class AuthenticationViewModel: ObservableObject {
             sessionPasswordData?.wipe()
         }
         didSet {
+            LibraryMountCoordinator.invalidateSession(librarySessionID)
             exports.endSession(matching: librarySessionID)
             documentPreviews.endSession(matching: librarySessionID)
             librarySessionID = UUID()
             AlbumStore.shared.endSession()
         }
     }
-
-    /// 当前登录密码（用户本次输入，用于显示/修改配置）
-    @Published private(set) var sessionLoginPassword: String?
 
     /// 获取会话密码（String格式，仅在需要时转换）
     var sessionPassword: String? {
@@ -71,7 +69,6 @@ final class AuthenticationViewModel: ObservableObject {
     // MARK: - Constants
 
     private let maxAttempts = 5  // 最多尝试5次
-    private let lockoutDuration: TimeInterval = 300  // 锁定5分钟
 
     // MARK: - Services
 
@@ -80,6 +77,7 @@ final class AuthenticationViewModel: ObservableObject {
     private let exports: ExportService
     private let documentPreviews: DocumentPreviewService
     private let keychainService: KeychainService
+    private let attemptLimiter: PasswordAttemptLimiter
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Task Management
@@ -93,17 +91,20 @@ final class AuthenticationViewModel: ObservableObject {
 
     init(keychainService: KeychainService? = nil, manageInstallationState: Bool = true,
          dataPasswordLoader: DataPasswordLoader? = nil, exportService: ExportService? = nil,
-         documentPreviewService: DocumentPreviewService? = nil) {
+         documentPreviewService: DocumentPreviewService? = nil, attemptLimiter: PasswordAttemptLimiter? = nil) {
         let keychainService = keychainService ?? .shared
         self.exports = exportService ?? .shared
         self.documentPreviews = documentPreviewService ?? .shared
         self.keychainService = keychainService
+        self.attemptLimiter = attemptLimiter ?? keychainService.passwordAttemptLimiter()
         self.loadDataPassword = dataPasswordLoader ?? { password in
             try await Task.detached { try await keychainService.retrieveDataPassword(using: password) }.value
         }
-        if manageInstallationState { markInstallationInitialized() }
+        if manageInstallationState {
+            markInstallationInitialized()
+            try? keychainService.retireCalculatorCredentials()
+        }
         checkPasswordStatus()
-        setupNotificationObservers()
     }
 
     deinit {
@@ -112,51 +113,7 @@ final class AuthenticationViewModel: ObservableObject {
         savePasswordTask?.cancel()
     }
 
-    // MARK: - Notification Observers
-
-    private func setupNotificationObservers() {
-        // 监听伪装模式解锁通知
-        NotificationCenter.default.publisher(for: .unlockFromDisguise)
-            .sink { [weak self] notification in
-                Task { @MainActor in
-                    // 获取解锁模式（owner 或 guest）和密码
-                    let mode = notification.userInfo?["mode"] as? String ?? "owner"
-                    let password = notification.userInfo?["password"] as? String ?? ""
-                    await self?.handleDisguiseUnlock(mode: mode, password: password)
-                }
-            }
-            .store(in: &cancellables)
-    }
-
-    private func handleDisguiseUnlock(mode: String, password: String) async {
-        guard !isAuthenticated, !isProcessing, !password.isEmpty,
-              lockoutUntil.map({ Date() >= $0 }) ?? true else { return }
-        let token = UUID()
-        authenticationGeneration = token
-        isProcessing = true
-        defer { if token == authenticationGeneration { isProcessing = false } }
-        do {
-            let dataPassword: String
-            if mode == "guest" {
-                let valid = await Task.detached {
-                    await self.keychainService.verifyGuestPassword(password)
-                }.value
-                guard valid else { throw VaultAccessError.invalidPassword }
-                dataPassword = password
-            } else {
-                dataPassword = try await loadDataPassword(password)
-            }
-            guard token == authenticationGeneration, !Task.isCancelled, !isAuthenticated else { return }
-            sessionPasswordData = SecureBytes(dataPassword)
-            sessionLoginPassword = password
-            GuestModeManager.shared.setAuthenticationMode(mode == "guest" ? .guest : .owner)
-            isAuthenticated = true
-            resumeAlbumAccess()
-        } catch {
-            guard token == authenticationGeneration, !Task.isCancelled else { return }
-            errorMessage = String(localized: "auth.error.disguiseUnlockFailed")
-        }
-    }
+    // Calculator notification unlocks are deliberately not observed.
 
     // MARK: - Public Methods
 
@@ -204,7 +161,6 @@ final class AuthenticationViewModel: ObservableObject {
 
                 // 保存成功
                 sessionPasswordData = SecureBytes(dataPassword)
-                sessionLoginPassword = inputPassword
                 isPasswordSet = true
                 isAuthenticated = true
 
@@ -234,27 +190,20 @@ final class AuthenticationViewModel: ObservableObject {
         // 清除之前的错误
         errorMessage = nil
 
-        // 🔒 检查是否被锁定
-        if let lockoutUntil = lockoutUntil, Date() < lockoutUntil {
-            let remaining = Int(lockoutUntil.timeIntervalSinceNow)
-            let minutes = remaining / 60
-            let seconds = remaining % 60
-            if minutes > 0 {
-                errorMessage = String(
-                    format: String(localized: "auth.error.tooManyAttemptsMinutes"),
-                    minutes,
-                    seconds)
-            } else {
-                errorMessage = String(
-                    format: String(localized: "auth.error.tooManyAttemptsSeconds"),
-                    seconds)
-            }
-            return nil
-        }
-
-        // 检查密码非空
         guard !password.isEmpty else {
             errorMessage = AppConstants.ErrorMessages.passwordEmpty
+            return nil
+        }
+        let reservation: PasswordAttemptLimiter.Reservation
+        do {
+            reservation = try attemptLimiter.reserve()
+            failedAttempts = reservation.failures
+            lockoutUntil = reservation.blockedUntil
+        } catch PasswordAttemptLimiter.Failure.blocked(let seconds) {
+            errorMessage = "Too many attempts. Try again in \(seconds) seconds."
+            return nil
+        } catch {
+            errorMessage = "Unable to verify login protection. Unlock your device and try again."
             return nil
         }
 
@@ -284,8 +233,8 @@ final class AuthenticationViewModel: ObservableObject {
                     let dataPassword = try await loadDataPassword(inputPassword)
                     guard token == authenticationGeneration, !Task.isCancelled else { return }
 
+                    try attemptLimiter.recordSuccess(reservation)
                     sessionPasswordData = SecureBytes(dataPassword)
-                    sessionLoginPassword = inputPassword
                     isAuthenticated = true
 
                     // 设置为主人模式
@@ -302,10 +251,11 @@ final class AuthenticationViewModel: ObservableObject {
                     errorMessage = String(localized: "auth.error.loadKeyFailed")
                 }
             } else if guestMatch {
+                do { try attemptLimiter.recordSuccess(reservation) }
+                catch { errorMessage = "Unable to complete login protection. Try again."; return }
                 // 访客模式登录成功
                 // 保存访客密码以便伪装模式解锁时使用
                 sessionPasswordData = SecureBytes(inputPassword)
-                sessionLoginPassword = inputPassword
                 isAuthenticated = true
 
                 // 设置为访客模式
@@ -318,15 +268,15 @@ final class AuthenticationViewModel: ObservableObject {
                 clearFields()
             } else {
                 // ❌ 两个密码都验证失败
-                failedAttempts += 1
+                // The guess was already persisted before any password verification.
+                failedAttempts = reservation.failures
                 password = ""
 
                 // 检查是否需要锁定
                 if failedAttempts >= maxAttempts {
-                    lockoutUntil = Date().addingTimeInterval(lockoutDuration)
-                    errorMessage = String(
-                        format: String(localized: "auth.error.lockedMinutes"),
-                        Int(lockoutDuration / 60))
+                    lockoutUntil = reservation.blockedUntil
+                    let minutes = Int(ceil(max(0, reservation.blockedUntil?.timeIntervalSinceNow ?? 0) / 60))
+                    errorMessage = "Too many attempts. Try again in \(max(1, minutes)) minutes."
                 } else {
                     let remaining = maxAttempts - failedAttempts
                     errorMessage = String(
@@ -349,7 +299,6 @@ final class AuthenticationViewModel: ObservableObject {
 
         // 🔒 安全清理密码内存（willSet 中就地清零）
         sessionPasswordData = nil
-        sessionLoginPassword = nil
 
         // 清空解密图片缓存，确保明文像素不跨会话残留
         MediaLoaderService.shared.clearCache()
@@ -397,17 +346,20 @@ final class AuthenticationViewModel: ObservableObject {
                 account: BiometricSecretStore.vaultAccount, reason: "Unlock WagLock")
             guard token == authenticationGeneration, !isAuthenticated else { throw CancellationError() }
             sessionPasswordData = SecureBytes(secret)
-            sessionLoginPassword = nil
             isAuthenticated = true
             GuestModeManager.shared.setAuthenticationMode(.owner)
             resumeAlbumAccess()
-            failedAttempts = 0
-            lockoutUntil = nil
             clearFields()
         } catch {
             guard token == authenticationGeneration else { return }
             errorMessage = "Biometric unlock was cancelled or unavailable. Use your vault password."
         }
+    }
+
+    /// Flush drafts before revocation. Release callers require immediate key disposal.
+    func handleBackground(lockImmediately: Bool) {
+        suspendAlbumAccess()
+        if lockImmediately { logout() }
     }
 
     func suspendAlbumAccess() {
@@ -455,7 +407,6 @@ final class AuthenticationViewModel: ObservableObject {
             newPassword: newPassword
         )
         sessionPasswordData = SecureBytes(dataPassword)
-        sessionLoginPassword = newPassword
         resumeAlbumAccess()
 
         // 密码变更同样清空明文图片缓存，只保留新会话下的解密结果

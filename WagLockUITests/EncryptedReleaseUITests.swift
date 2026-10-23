@@ -12,7 +12,7 @@ final class EncryptedReleaseUITests: XCTestCase {
         continueAfterFailure = false
         let app = XCUIApplication(bundleIdentifier: "com.d2sci.waglock")
         app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-waglock.passwordKeyboard", "fullKeyboard"]
-        // Foundation ignores a separate negative argument value; select Never in UI below.
+        // Old timeout preferences must not weaken the release background-lock policy.
         if autoLock >= 0 { app.launchArguments += ["-autoLockTimeout", String(autoLock)] }
         app.launch()
         let setup = app.secureTextFields["setup.password"]
@@ -30,15 +30,12 @@ final class EncryptedReleaseUITests: XCTestCase {
             }
         }
         XCTAssertTrue(app.buttons["photos.albums"].waitForExistence(timeout: 15), app.debugDescription)
-        if autoLock < 0 {
-            app.buttons["Settings"].firstMatch.tap()
-            app.buttons["settings.security"].tap()
-            app.buttons["settings.autoLock"].tap()
-            app.buttons["Never"].tap()
-            app.navigationBars.buttons.element(boundBy: 0).tap()
-            app.navigationBars.buttons.element(boundBy: 0).tap()
-            app.buttons["Photos"].firstMatch.tap()
-        }
+        app.buttons["Settings"].firstMatch.tap()
+        app.buttons["settings.security"].tap()
+        XCTAssertTrue(app.otherElements["settings.autoLock.immediate"].exists || app.staticTexts["Immediately when you leave the app"].exists, app.debugDescription)
+        XCTAssertFalse(app.buttons["settings.autoLock"].exists)
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["Photos"].firstMatch.tap()
         return app
     }
     @MainActor private func unlock(_ app: XCUIApplication, password: String) {
@@ -164,7 +161,7 @@ final class EncryptedReleaseUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Travel plans"].firstMatch.waitForExistence(timeout: 10))
     }
-    @MainActor func testDraftEditorSurvivesRepeatedBackgroundWithoutAutoLock() throws {
+    @MainActor func testDraftEditorSurvivesRepeatedImmediateBackgroundLocks() throws {
         let app = try launch()
         app.buttons["Notes"].firstMatch.tap(); app.navigationBars.buttons["New"].tap()
         let title = app.textFields["note.title"], body = app.textViews["note.content"]
@@ -179,6 +176,11 @@ final class EncryptedReleaseUITests: XCTestCase {
             Thread.sleep(forTimeInterval: 2)
             XCTAssertFalse(app.staticTexts["note.save.error"].exists)
             XCUIDevice.shared.press(.home); app.activate()
+            unlock(app, password: owner)
+            XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15))
+            app.buttons["Notes"].firstMatch.tap()
+            XCTAssertTrue(app.buttons["notes.resumeDraft"].waitForExistence(timeout: 5))
+            app.buttons["notes.resumeDraft"].tap()
             XCTAssertTrue(body.waitForExistence(timeout: 10), app.debugDescription)
             XCTAssertEqual(body.value as? String, expected)
         }
@@ -265,7 +267,7 @@ final class EncryptedReleaseUITests: XCTestCase {
     }
 
     @MainActor func testBackgroundNeverPromotesNewDraftOrChangesAnotherSavedNote() throws {
-        for timeout in [0, -1] {
+        for timeout in [0, 600] {
             let app = try launch(autoLock: timeout)
             app.buttons["Notes"].firstMatch.tap(); app.navigationBars.buttons["New"].tap()
             let title = app.textFields["note.title"], body = app.textViews["note.content"]
@@ -278,7 +280,10 @@ final class EncryptedReleaseUITests: XCTestCase {
             app.navigationBars.buttons["Done"].tap()
             XCTAssertTrue(app.staticTexts[anchor].firstMatch.waitForExistence(timeout: 5))
             XCTAssertFalse(app.buttons["notes.resumeDraft"].exists)
-            let savedRows = app.cells.count
+            let noteList = app.descendants(matching: .any).matching(identifier: "notes.list").firstMatch
+            XCTAssertTrue(noteList.waitForExistence(timeout: 5))
+            let savedCount = try XCTUnwrap(noteList.value as? String)
+            XCTAssertTrue(savedCount.hasSuffix(" saved notes"))
             app.staticTexts[anchor].firstMatch.tap()
             XCTAssertTrue(body.waitForExistence(timeout: 5))
             app.navigationBars.buttons.element(boundBy: 0).tap()
@@ -298,25 +303,21 @@ final class EncryptedReleaseUITests: XCTestCase {
                 Thread.sleep(forTimeInterval: 3)
                 XCTAssertFalse(app.staticTexts["note.save.error"].exists)
                 XCUIDevice.shared.press(.home); app.activate()
-                if timeout == 0 {
-                    unlock(app, password: owner)
-                    XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15))
-                    app.buttons["Notes"].firstMatch.tap()
-                } else {
-                    XCTAssertTrue(body.waitForExistence(timeout: 5))
-                    app.navigationBars.buttons.element(boundBy: 0).tap()
-                }
+                unlock(app, password: owner)
+                XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15))
+                app.buttons["Notes"].firstMatch.tap()
                 let resume = app.buttons["notes.resumeDraft"]
                 XCTAssertTrue(resume.waitForExistence(timeout: 5))
-                // XCTest exposes the new draft section heading as a cell as well.
-                XCTAssertEqual(app.cells.count, savedRows + 2, "Background must add only the draft heading/card, never a saved note")
+                // List virtualization and draft headings change visible cell counts.
+                // Compare the accessible saved-model count, excluding the draft slot.
+                XCTAssertEqual(noteList.value as? String, savedCount, "Background must never promote a draft into a saved note")
                 XCTAssertTrue(resume.staticTexts["PUBLIC draft " + phase].exists)
                 XCTAssertTrue(app.staticTexts[anchor].firstMatch.exists)
                 if phase == "B" { XCTAssertFalse(app.staticTexts["PUBLIC draft A"].exists) }
             }
             app.terminate(); app.launch(); unlock(app, password: owner)
             XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
-            XCTAssertEqual(app.cells.count, savedRows + 2)
+            XCTAssertEqual(noteList.value as? String, savedCount)
             app.buttons["notes.resumeDraft"].tap(); XCTAssertTrue(body.waitForExistence(timeout: 5))
             XCTAssertEqual(body.value as? String, "PUBLIC draft B body")
             app.navigationBars.buttons.element(boundBy: 0).tap()
@@ -324,6 +325,24 @@ final class EncryptedReleaseUITests: XCTestCase {
             XCTAssertEqual(title.value as? String, anchor)
             XCTAssertEqual(body.value as? String, "PUBLIC saved anchor body")
         }
+    }
+
+    @MainActor func testRetiredCalculatorAndAttemptBudgetSurviveRelaunch() throws {
+        let app = try launch()
+        app.buttons["Settings"].firstMatch.tap()
+        app.buttons["settings.security"].tap()
+        XCTAssertFalse(app.buttons["Calculator Login Mode"].exists)
+        app.terminate()
+        app.launchArguments += ["-disguiseModeEnabled", "YES"]
+        app.launch()
+        for attempt in 1...2 {
+            unlock(app, password: "PUBLIC deliberately incorrect password")
+            XCTAssertTrue(app.staticTexts["Incorrect password. \(5 - attempt) attempts remaining."].waitForExistence(timeout: 8), app.debugDescription)
+            app.terminate(); app.launch()
+            XCTAssertTrue(app.secureTextFields["Enter password"].waitForExistence(timeout: 10))
+        }
+        unlock(app, password: owner)
+        XCTAssertTrue(app.buttons["photos.albums"].waitForExistence(timeout: 15))
     }
 
     @MainActor func testRepeatedInProcessLockReopensEncryptedLibrary() throws {

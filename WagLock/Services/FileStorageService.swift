@@ -99,7 +99,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
 
         // 生成唯一文件名
         let fileName = generateUniqueFileName(originalName: originalFileName)
-        let fileURL = storageDirectory.appendingPathComponent(fileName)
+        let fileURL = try getFileURL(for: fileName)
 
         // 保存文件
         do {
@@ -126,7 +126,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
         try checkStorageSpace(requiredBytes: required)
 
         let fileName = generateUniqueFileName(originalName: originalFileName)
-        let destinationURL = storageDirectory.appendingPathComponent(fileName)
+        let destinationURL = try getFileURL(for: fileName)
 
         do {
             try encryptionService.encryptFile(inputURL: sourceURL, to: destinationURL, password: password)
@@ -143,7 +143,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
     /// - Returns: 加密的数据
     /// - Throws: FileStorageError
     func loadEncrypted(path: String) throws -> Data {
-        let fileURL = getFileURL(for: path)
+        let fileURL = try getFileURL(for: path)
 
         // 检查文件是否存在
         guard fileManager.fileExists(atPath: fileURL.path) else {
@@ -163,7 +163,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
     /// - Parameter path: 文件相对路径（文件名）
     /// - Throws: FileStorageError
     func deleteFile(path: String) throws {
-        let fileURL = getFileURL(for: path)
+        let fileURL = try getFileURL(for: path)
 
         // 检查文件是否存在
         guard fileManager.fileExists(atPath: fileURL.path) else {
@@ -182,7 +182,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
     /// - Parameter path: 文件相对路径（文件名）
     /// - Returns: 文件大小（字节）
     func getFileSize(path: String) -> Int64? {
-        let fileURL = getFileURL(for: path)
+        guard let fileURL = try? getFileURL(for: path) else { return nil }
 
         do {
             let attributes = try fileManager.attributesOfItem(atPath: fileURL.path)
@@ -196,7 +196,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
     /// - Parameter path: 文件相对路径（文件名）
     /// - Returns: 是否存在
     func fileExists(path: String) -> Bool {
-        let fileURL = getFileURL(for: path)
+        guard let fileURL = try? getFileURL(for: path) else { return false }
         return fileManager.fileExists(atPath: fileURL.path)
     }
 
@@ -353,11 +353,26 @@ nonisolated extension FileStorageService {
     }
 
     /// 获取存储文件的完整 URL
-    func getFileURL(for path: String) -> URL {
-        if path.hasPrefix("/") {
-            return URL(fileURLWithPath: path)
+    func getFileURL(for path: String) throws -> URL {
+        guard !path.isEmpty, !path.utf8.contains(0),
+              !path.split(separator: "/", omittingEmptySubsequences: false).contains(".."),
+              !path.split(separator: "/", omittingEmptySubsequences: false).contains(".") else {
+            throw FileStorageError.invalidPath
         }
-        return storageDirectory.appendingPathComponent(path)
+        let root = storageDirectory.standardizedFileURL
+        let rootAttributes = try fileManager.attributesOfItem(atPath: root.path)
+        guard rootAttributes[.type] as? FileAttributeType == .typeDirectory else { throw FileStorageError.invalidPath }
+        let canonicalRoot = root.resolvingSymlinksInPath().standardizedFileURL
+        if !path.hasPrefix("/"), path.contains("/") { throw FileStorageError.invalidPath }
+        let candidate = path.hasPrefix("/") ? URL(fileURLWithPath: path) : root.appendingPathComponent(path)
+        // Keep legitimate old absolute paths only when they identify this same flat root.
+        guard candidate.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL.path == canonicalRoot.path,
+              candidate.resolvingSymlinksInPath().deletingLastPathComponent().standardizedFileURL.path == canonicalRoot.path else {
+            throw FileStorageError.invalidPath
+        }
+        if let attributes = try? fileManager.attributesOfItem(atPath: candidate.path),
+           attributes[.type] as? FileAttributeType != .typeRegular { throw FileStorageError.invalidPath }
+        return candidate
     }
 
     /// 将加密文件解密到临时文件
@@ -366,11 +381,8 @@ nonisolated extension FileStorageService {
         password: String,
         preferredExtension: String
     ) throws -> URL {
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(
-            UUID().uuidString + sanitizedExtension(preferredExtension)
-        )
-
-        let sourceURL = getFileURL(for: path)
+        let sourceURL = try getFileURL(for: path)
+        let tempURL = try ProtectedTemporaryFiles.fileURL(preferredExtension: sanitizedExtension(preferredExtension))
         do {
             try encryptionService.decryptFile(
                 inputURL: sourceURL,
@@ -433,7 +445,7 @@ nonisolated extension FileStorageService {
         return try await withCheckedThrowingContinuation { continuation in
             decryptionQueue.addOperation {
                 do {
-                    let sourceURL = self.getFileURL(for: path)
+                    let sourceURL = try self.getFileURL(for: path)
 
                     // 只读取 4 字节魔数判断加密格式，避免把整个加密文件读入内存
                     let handle = try FileHandle(forReadingFrom: sourceURL)

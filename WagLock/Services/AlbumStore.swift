@@ -19,20 +19,26 @@ final class AlbumStore: ObservableObject {
     private var albumKeys: [UUID: SecureBytes] = [:]
     private var generation = UUID()
     private let biometrics: any BiometricSecretStoring
+    private let attemptStorage: any KeychainStorage
+    private let attemptNow: () -> Date
     private let crypto = EncryptionService.shared
 
-    init(biometrics: any BiometricSecretStoring = BiometricSecretStore.shared) {
+    init(biometrics: any BiometricSecretStoring = BiometricSecretStore.shared,
+         attemptStorage: (any KeychainStorage)? = nil, attemptNow: @escaping () -> Date = Date.init) {
         self.biometrics = biometrics
+        self.attemptStorage = attemptStorage ?? SystemKeychainStorage(service: AppConstants.bundleIdentifier + ".album-attempts")
+        self.attemptNow = attemptNow
     }
 
     /// Called once at process startup, before any live album import or preview exists.
     static func removeAbandonedTemporaryFiles() {
         let root = FileManager.default.temporaryDirectory
         let entries = (try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)) ?? []
-        for url in entries where url.lastPathComponent.hasPrefix("WagLockAlbumImport-")
-            || url.lastPathComponent.hasPrefix("WagLockAlbumImport-")
-            || url.lastPathComponent.hasPrefix("WagLockAlbumPreview-")
-            || url.lastPathComponent.hasPrefix("WagLockAlbumPreview-") {
+        for url in entries {
+            let prefixes = ["WagLockAlbumImport-", "WagLockAlbumPreview-"]
+            guard let prefix = prefixes.first(where: { url.lastPathComponent.hasPrefix($0) }),
+                  UUID(uuidString: String(url.lastPathComponent.dropFirst(prefix.count))) != nil,
+                  (try? FileManager.default.attributesOfItem(atPath: url.path)[.type] as? FileAttributeType) == .typeDirectory else { continue }
             try? FileManager.default.removeItem(at: url)
         }
     }
@@ -109,7 +115,7 @@ final class AlbumStore: ObservableObject {
         let factor = protection == .faceIDOnly ? try Self.randomSecret() : password
         var envelope = try JSONEncoder().encode(AlbumKeyMaterial(albumID: id, secret: secret))
         if protection != .inherited {
-            envelope = try crypto.encrypt(data: envelope, password: factor)
+            envelope = try PasswordEnvelope.seal(envelope, password: factor, context: "album:" + id.uuidString)
         }
         let wrappedKey = try crypto.encrypt(data: envelope, password: parentSecret)
         let catalog = try crypto.encrypt(data: JSONEncoder().encode([AlbumAsset]()), password: secret)
@@ -148,10 +154,16 @@ final class AlbumStore: ObservableObject {
         }
         guard token == generation else { throw CancellationError() }
         _ = try parentKey(for: album, albums: albums)
+        let limiter = PasswordAttemptLimiter(storage: attemptStorage, scope: album.id.uuidString, now: attemptNow)
+        let reservation: PasswordAttemptLimiter.Reservation?
+        if protection.requiresPassword && !useBiometrics {
+            guard factor != nil else { throw VaultAccessError.locked }
+            reservation = try limiter.reserve()
+        } else { reservation = nil }
         var envelope = try crypto.decrypt(encryptedData: album.wrappedKey, password: parentSecret)
         if protection != .inherited {
             guard let factor, protection != .faceIDOnly || useBiometrics else { throw VaultAccessError.locked }
-            do { envelope = try crypto.decrypt(encryptedData: envelope, password: factor) }
+            do { envelope = try PasswordEnvelope.open(envelope, password: factor, context: "album:" + album.id.uuidString) }
             catch { throw VaultAccessError.invalidPassword }
         }
         let material = try JSONDecoder().decode(AlbumKeyMaterial.self, from: envelope)
@@ -160,6 +172,7 @@ final class AlbumStore: ObservableObject {
         // Validate catalog before granting access; an invalid wrapper never creates an unlocked session.
         _ = try JSONDecoder().decode([AlbumAsset].self, from: crypto.decrypt(
             encryptedData: album.encryptedCatalog, password: secret))
+        if let reservation { try limiter.recordSuccess(reservation) }
         albumKeys[album.id]?.wipe()
         albumKeys[album.id] = SecureBytes(secret)
         revision += 1
@@ -190,7 +203,7 @@ final class AlbumStore: ObservableObject {
         let token = generation
         let factor = protection == .faceIDOnly ? try Self.randomSecret() : password
         var envelope = try JSONEncoder().encode(AlbumKeyMaterial(albumID: album.id, secret: secret))
-        if protection != .inherited { envelope = try crypto.encrypt(data: envelope, password: factor) }
+        if protection != .inherited { envelope = try PasswordEnvelope.seal(envelope, password: factor, context: "album:" + album.id.uuidString) }
         let wrapped = try crypto.encrypt(data: envelope, password: parentSecret)
         let account = UUID().uuidString
         if protection.usesBiometrics { try await biometrics.store(factor, account: account) }
@@ -298,13 +311,10 @@ final class AlbumStore: ObservableObject {
             throw VaultAccessError.invalidData
         }
         let token = generation
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("WagLockAlbumPreview-" + UUID().uuidString)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
-                                               attributes: [.protectionKey: FileProtectionType.complete])
+        let directory = try ProtectedTemporaryFiles.createDirectory()
         let suffix = asset.fileExtension.filter { $0.isLetter || $0.isNumber }
         let url = directory.appendingPathComponent("preview").appendingPathExtension(suffix)
-        let source = FileStorageService.shared.getFileURL(for: asset.encryptedPath)
+        let source = try FileStorageService.shared.getFileURL(for: asset.encryptedPath)
         do {
             try await Task.detached(priority: .userInitiated) {
                 try EncryptionService.shared.decryptFile(inputURL: source, to: url, password: secret)

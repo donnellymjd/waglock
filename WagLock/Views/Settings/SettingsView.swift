@@ -196,6 +196,10 @@ struct SettingsView: View {
                         securityRow("key", "Change password", "Verify your current password")
                     }.accessibilityIdentifier("settings.changePassword").wagLockCardRow()
                 }
+                if LibraryStoragePolicy.encryptedMetadata {
+                    securityRow("lock.rotation", "Auto-lock", "Immediately when you leave the app")
+                        .accessibilityIdentifier("settings.autoLock.immediate").wagLockCardRow()
+                } else {
                 NavigationLink {
                     List {
                         Section {
@@ -212,6 +216,7 @@ struct SettingsView: View {
                     }.wagLockList().navigationTitle("Auto-lock")
                 } label: { securityRow("lock.rotation", "Auto-lock", settings.autoLockTimeout.title) }
                     .accessibilityIdentifier("settings.autoLock").wagLockCardRow()
+                }
             }
             Section("OTHER WAYS IN") {
                 if guestModeManager.isOwnerMode && !LibraryStoragePolicy.encryptedMetadata {
@@ -226,9 +231,6 @@ struct SettingsView: View {
                     } label: { securityRow("eye.slash", "Guest Mode", "Hides content · Not a separate vault") }
                         .accessibilityIdentifier("settings.guest").wagLockCardRow()
                 }
-                NavigationLink { DisguiseSettingsView() } label: {
-                    securityRow("calculator", "Calculator login", "Optional numeric login")
-                }.accessibilityIdentifier("settings.calculator").wagLockCardRow()
             }
             Section {
                 WagLockInfoCard(title: "Keep your password safe", detail: "There is no password reset. Keep independent originals.")

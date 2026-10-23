@@ -41,6 +41,10 @@ final class AudioSessionController: NSObject, ObservableObject, AVAudioRecorderD
     }
 
     func startRecording() {
+        guard !LibraryStoragePolicy.encryptedMetadata else {
+            errorMessage = "Recording is unavailable in this release. You can import existing audio files."
+            return
+        }
         guard !hasRecording, !isRequestingPermission else { return }
         stopPlayback()
         isRequestingPermission = true

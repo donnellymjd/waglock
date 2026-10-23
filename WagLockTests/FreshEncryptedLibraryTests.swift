@@ -222,6 +222,38 @@ final class FreshEncryptedLibraryTests: XCTestCase {
             XCTAssertEqual(try MetadataDraftCodec.value(value).title, afterCommit ? "new" : "old")
         }
     }
+    func testBackgroundAndPasswordChangesRevokeMountedLibraryBeforeItsViewDisappears() async throws {
+        let credentials = KeychainService(service: "background-mount-" + UUID().uuidString, storage: InMemoryAttemptStorage())
+        try credentials.savePassword("PUBLIC background password")
+        let auth = AuthenticationViewModel(keychainService: credentials, manageInstallationState: false)
+        auth.password = "PUBLIC background password"; await auth.login()?.value
+        defer { auth.logout() }
+        let mounts = LibraryMountCoordinator(encryptedRoot: try root(), anchor: Anchor())
+        let request = LibraryMountCoordinator.Request(sessionID: auth.librarySessionID, scope: .legacyOwner)
+        await mounts.mount(request, dataPassword: auth.sessionPassword) { auth.isAuthenticated }
+        let context = try mounts.container(for: request).mainContext
+        let drafts = LibraryWriteCoordinator.draftManager(in: context)
+        XCTAssertTrue(drafts.saveDraft(title: "PUBLIC saved draft", content: "PUBLIC content"))
+        // Keep both the mount and memory projection alive: no SwiftUI disposal occurs.
+        auth.handleBackground(lockImmediately: true)
+        XCTAssertNil(mounts.active)
+        XCTAssertThrowsError(try LibraryWriteCoordinator.save(context))
+        XCTAssertFalse(drafts.saveDraft(title: "late", content: "late"))
+        XCTAssertThrowsError(try mounts.exportDrafts())
+        auth.password = "PUBLIC background password"; await auth.login()?.value
+        let fresh = LibraryMountCoordinator.Request(sessionID: auth.librarySessionID, scope: .legacyOwner)
+        await mounts.mount(fresh, dataPassword: auth.sessionPassword) { auth.isAuthenticated }
+        XCTAssertEqual(try mounts.exportDrafts().first?.title, "PUBLIC saved draft")
+        let previous = auth.librarySessionID
+        try auth.updatePassword(oldPassword: "PUBLIC background password", newPassword: "PUBLIC changed password")
+        XCTAssertNil(mounts.active, "Password replacement must synchronously close the previous mount too")
+        XCTAssertNotEqual(auth.librarySessionID, previous)
+        let changed = LibraryMountCoordinator.Request(sessionID: auth.librarySessionID, scope: .legacyOwner)
+        await mounts.mount(changed, dataPassword: auth.sessionPassword) { auth.isAuthenticated }
+        XCTAssertEqual(try mounts.exportDrafts().first?.title, "PUBLIC saved draft")
+        mounts.invalidate()
+    }
+
     func testEncryptedMountRevokesWritesDraftsAndExportOnInvalidation() async throws {
         let root = try root(), anchor = Anchor(), mounts = LibraryMountCoordinator(encryptedRoot: root, anchor: anchor)
         let request = LibraryMountCoordinator.Request(sessionID: UUID(), scope: .legacyOwner)

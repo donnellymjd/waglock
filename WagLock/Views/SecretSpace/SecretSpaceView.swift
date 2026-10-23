@@ -96,6 +96,8 @@ struct SecretSpaceView: View {
                 }
             }
             .wagLockList()
+            .accessibilityIdentifier("notes.list")
+            .accessibilityValue("\(notes.count) saved notes")
         }
     }
 

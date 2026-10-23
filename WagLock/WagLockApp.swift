@@ -12,6 +12,7 @@ import SwiftUI
 @main
 struct WagLockApp: App {
     init() {
+        ProtectedTemporaryFiles.removeAbandonedJobs()
         MediaImportService.removeAbandonedProviderCopies()
         ExportService.shared.cleanupAbandonedExports()
         PortableBackupSession.cleanupAbandonedJobs()
@@ -26,7 +27,7 @@ struct WagLockApp: App {
     @StateObject private var guestModeManager = GuestModeManager.shared
     @AppStorage(WagLockAppearance.preferenceKey) private var appearance = WagLockAppearance.system.rawValue
     @State private var showLaunchScreen = true
-    @State private var showPasswordLogin = false
+    @State private var screenCaptured = UIScreen.main.isCaptured
 
     // App 级 scenePhase 是所有 scene 的聚合状态。当前未开启 iPad 多窗口
     // （无 UIApplicationSupportsMultipleScenes），单 scene 下与窗口状态等价；
@@ -42,7 +43,17 @@ struct WagLockApp: App {
             ZStack {
                 // 根据认证状态显示不同界面
                 Group {
-                    if authViewModel.isAuthenticated
+                    if screenCaptured {
+                        VStack(spacing: 16) {
+                            Image(systemName: "eye.slash.fill").font(.largeTitle)
+                            Text("WagLock is locked").font(.title2.bold())
+                            Text("Stop screen recording or mirroring to continue.")
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding(32).frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(ColorTheme.primaryBackground)
+                        .accessibilityIdentifier("privacy.screenCapture")
+                    } else if authViewModel.isAuthenticated
                         && guestModeManager.currentMode != .unauthenticated
                     {
                         // 已认证且模式不为未认证状态 - 显示主应用
@@ -52,18 +63,8 @@ struct WagLockApp: App {
                             .environmentObject(guestModeManager)
                     } else {
                         // 未认证 - 显示认证界面
-                        let disguiseModeEnabled = UserDefaults.standard.bool(
-                            forKey: AppConstants.UserDefaultsKeys.disguiseModeEnabled)
-
-                        // 仅当伪装密码确实存在时才展示计算器，
-                        // 否则用户会被锁死在没有解锁路径的计算器界面
-                        if disguiseModeEnabled && KeychainService.shared.isDisguisePasswordSet() && !showPasswordLogin {
-                            // 伪装模式启用 - 显示计算器界面
-                            CalculatorView(onRequestPassword: { showPasswordLogin = true })
-                                .environmentObject(authViewModel)
-                                .environmentObject(guestModeManager)
-                        } else if authViewModel.isPasswordSet {
-                            // 已设置密码 - 显示登录界面
+                        // Calculator login is retired; stale preferences cannot change authentication.
+                        if authViewModel.isPasswordSet {
                             LoginView()
                                 .environmentObject(authViewModel)
                                 .environmentObject(guestModeManager)
@@ -78,6 +79,7 @@ struct WagLockApp: App {
                 .onAppear {
                     // 应用启动时检查密码状态
                     authViewModel.checkPasswordStatus()
+                    if screenCaptured { revokeCapturedSession() }
                 }
 
                 // 启动页
@@ -105,15 +107,20 @@ struct WagLockApp: App {
                     showLaunchScreen = false
                 }
             }
-            .onChange(of: authViewModel.isAuthenticated) { _, authenticated in
-                if !authenticated { showPasswordLogin = false }
+            .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in
+                screenCaptured = UIScreen.main.isCaptured
+                if screenCaptured { revokeCapturedSession() }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 switch newPhase {
                 case .background:
-                    authViewModel.suspendAlbumAccess()
                     lastBackgroundedAt = Date()
+                    // Fresh 1.0 libraries always drop their session keys on background.
+                    // New recording is disabled there; preserve the legacy Dev recording policy.
+                    authViewModel.handleBackground(lockImmediately: LibraryStoragePolicy.encryptedMetadata)
                 case .active:
+                    screenCaptured = UIScreen.main.isCaptured
+                    if screenCaptured { revokeCapturedSession() }
                     ExportService.shared.retryCleanup()
                     PortableBackupSession.retryCleanup()
                     let returnedFromBackground = lastBackgroundedAt != nil
@@ -125,6 +132,11 @@ struct WagLockApp: App {
                 }
             }
         }
+    }
+
+    private func revokeCapturedSession() {
+        authViewModel.handleBackground(lockImmediately: true)
+        AudioSessionController.shared.stopPlayback()
     }
 
     // MARK: - Auto Lock

@@ -90,6 +90,29 @@ final class AuthenticationSessionLifecycleTests: XCTestCase {
         XCTAssertEqual(auth.sessionPassword, password)
     }
 
+    func testImmediateBackgroundRevokesKeysAndCannotResumeWithoutAnotherUnlock() async throws {
+        let service = try keychain()
+        let auth = AuthenticationViewModel(keychainService: service, manageInstallationState: false)
+        defer { auth.logout(); service.clearAllKeychainData() }
+        auth.password = password
+        await auth.login()?.value
+        XCTAssertTrue(auth.isAuthenticated)
+        let session = auth.librarySessionID
+        let bytes = try XCTUnwrap(auth.sessionPasswordData)
+        let byteCount = try XCTUnwrap(bytes.string).utf8.count
+        auth.handleBackground(lockImmediately: true)
+        XCTAssertFalse(auth.isAuthenticated)
+        XCTAssertNil(auth.sessionPassword)
+        XCTAssertNotEqual(session, auth.librarySessionID)
+        XCTAssertEqual(bytes.string, String(repeating: "\0", count: byteCount))
+        auth.resumeAlbumAccess()
+        XCTAssertFalse(auth.isAuthenticated)
+        XCTAssertTrue(service.verifyPassword(password))
+        auth.password = password
+        await auth.login()?.value
+        XCTAssertTrue(auth.isAuthenticated)
+    }
+
     func testBackgroundInvalidatesPendingUnlockButPreservesCredentials() async throws {
         let service = try keychain()
         let gate = Gate()
@@ -124,7 +147,7 @@ final class AuthenticationSessionLifecycleTests: XCTestCase {
         XCTAssertFalse(service.isPasswordSet())
     }
 
-    func testCalculatorNotificationWaitsForVerifiedDataKey() async throws {
+    func testRetiredCalculatorNotificationCannotStartAuthenticationButNormalLoginWaitsForKey() async throws {
         let service = try keychain()
         let gate = Gate()
         let auth = AuthenticationViewModel(keychainService: service, manageInstallationState: false,
@@ -132,12 +155,17 @@ final class AuthenticationSessionLifecycleTests: XCTestCase {
         defer { auth.logout(); service.clearAllKeychainData() }
         NotificationCenter.default.post(name: .unlockFromDisguise, object: nil,
                                         userInfo: ["mode": "owner", "password": password])
+        await Task.yield()
+        XCTAssertFalse(auth.isProcessing)
+        XCTAssertFalse(auth.isAuthenticated)
+        XCTAssertNil(auth.sessionPassword)
+        auth.password = password
+        let task = auth.login()
         try await gate.waitUntilRequested()
         XCTAssertFalse(auth.isAuthenticated)
         XCTAssertNil(auth.sessionPassword)
         gate.resume(password)
-        let deadline = Date().addingTimeInterval(5)
-        while !auth.isAuthenticated && Date() < deadline { try await Task.sleep(for: .milliseconds(1)) }
+        await task?.value
         XCTAssertTrue(auth.isAuthenticated)
         XCTAssertTrue(GuestModeManager.shared.isOwnerMode)
         XCTAssertEqual(auth.sessionPassword, password)

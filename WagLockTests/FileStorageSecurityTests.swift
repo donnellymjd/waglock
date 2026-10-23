@@ -23,7 +23,7 @@ struct FileStorageSecurityTests {
             let path = try storage.saveEncrypted(data: ciphertext, originalFileName: name)
             #expect(UUID(uuidString: String(path.dropLast(AppConstants.encryptedFileExtension.count))) != nil)
             #expect(!path.contains(name))
-            #expect(storage.getFileURL(for: path).deletingLastPathComponent().path == directory.path)
+            #expect(try storage.getFileURL(for: path).deletingLastPathComponent().path == directory.path)
             #expect(try EncryptionService.shared.decrypt(encryptedData: storage.loadEncrypted(path: path), password: "fixture-password") == original)
         }
         #expect(storage.getAllEncryptedFiles().count == 3)
@@ -91,7 +91,7 @@ struct FileStorageSecurityTests {
         defer { try? FileManager.default.removeItem(at: recovered) }
         #expect(try Data(contentsOf: recovered) == original)
         #if !targetEnvironment(simulator)
-        let protection = try FileManager.default.attributesOfItem(atPath: storage.getFileURL(for: path).path)[.protectionKey] as? FileProtectionType
+        let protection = try FileManager.default.attributesOfItem(atPath: try storage.getFileURL(for: path).path)[.protectionKey] as? FileProtectionType
         #expect(protection == .complete)
         #endif
     }
@@ -107,5 +107,33 @@ struct FileStorageSecurityTests {
         #expect(try storage.loadEncrypted(path: legacyName) == data)
         #expect(storage.getAllEncryptedFiles() == [legacyName])
         #expect(FileManager.default.fileExists(atPath: directory.appendingPathComponent(legacyName).path))
+    }
+}
+
+extension FileStorageSecurityTests {
+    @Test func rejectsForeignTraversalAndSymlinkPathsWithoutChangingFiles() throws {
+        let parent = try temporaryDirectory(); defer { try? FileManager.default.removeItem(at: parent) }
+        let root = parent.appendingPathComponent("owned")
+        let storage = FileStorageService(directory: root, availableCapacity: { _ in Int64.max })
+        let outside = parent.appendingPathComponent("private.txt")
+        try Data("PUBLIC outside marker".utf8).write(to: outside)
+        let link = root.appendingPathComponent("link")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: outside)
+        for path in ["../private.txt", outside.path, "subdir/../../private.txt", "./file", "link", "", "bad\0path"] {
+            #expect(throws: (any Error).self) { try storage.getFileURL(for: path) }
+            #expect(throws: (any Error).self) { try storage.loadEncrypted(path: path) }
+            #expect(throws: (any Error).self) { try storage.deleteFile(path: path) }
+            #expect(!storage.fileExists(path: path))
+            #expect(storage.getFileSize(path: path) == nil)
+        }
+        #expect(try Data(contentsOf: outside) == Data("PUBLIC outside marker".utf8))
+        let valid = root.appendingPathComponent("old-name-café.enc")
+        try Data([1]).write(to: valid)
+        #expect(try storage.loadEncrypted(path: valid.lastPathComponent) == Data([1]))
+        #expect(try storage.loadEncrypted(path: valid.path) == Data([1]))
+        try FileManager.default.removeItem(at: root)
+        try FileManager.default.createSymbolicLink(at: root, withDestinationURL: parent)
+        #expect(throws: (any Error).self) { try storage.getFileURL(for: "private.txt") }
+        #expect(try Data(contentsOf: outside) == Data("PUBLIC outside marker".utf8))
     }
 }

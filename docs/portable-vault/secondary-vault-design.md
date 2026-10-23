@@ -1,6 +1,6 @@
 # Secondary passcode / independent alternative vault
 
-Owner priority: **2026-10-18**, [D2S-115](https://linear.app/d2sci/issue/D2S-115/design-and-implement-decoy-vault-guest-password-isolation), tied to D2S-111/116 and audit A01/A03/A08/A11. **Status: requirements accepted; architecture proposed; not implemented in build 27.** Linear's existing High-priority issue was updated with this scope. The original source snapshot remains unchanged.
+Owner priority: **2026-10-18**, [D2S-115](https://linear.app/d2sci/issue/D2S-115/design-and-implement-decoy-vault-guest-password-isolation), tied to D2S-111/116 and audit A01/A03/A08/A11. **Current status (October23): explicitly required for1.0, D2S-115 Urgent; independent production Guest Mode remains unimplemented.** Linear's existing High-priority issue was updated with this scope. The original source snapshot remains unchanged.
 
 ## Requested experience
 
@@ -68,3 +68,11 @@ The owner authorized step 1: an isolated two-vault prototype with synthetic fixt
 ## Integration preparation — 2026-10-21
 
 Build 29 adds the [authenticated library boundary and legacy transition rehearsal](authenticated-library-boundary.md). The owner database is mounted only after owner authentication; presentation-only Guest Mode receives an empty in-memory schema. Pending authentication/mount results are generation-checked across logout/background/domain changes. A test-only encrypted metadata snapshot preserves all current legacy fields and the synthetic legacy data key without touching originals. The WAL/read-only snapshot finding, mutable-index/journaling gaps and Face ID routing decision remain explicit gates. This is not the shipped independent alternative vault; D2S-115 remains In Progress.
+
+## October23 launch scope and pre-release compatibility
+
+The owner explicitly reinstates Guest Mode for1.0 and confirms that current test vaults are disposable and there are no external users. Do not spend the launch cycle building an installed-user migration system for a nonexistent user base. Preserve existing test material when straightforward; do not silently erase or fall back to an empty replacement when a store fails authentication. After1.0, released-user compatibility, recoverable upgrades and migration evidence are mandatory.
+
+The fresh encrypted metadata repository and atomic credential boundary now exist in production, so the old global plaintext-index blocker is removed for the public identity. Integration still requires explicit per-vault media/import/album/document/export/biometric contexts: the October23 inventory finds26 direct FileStorageService.shared references,46 owner/content predicates, and additional shared caches/export services. A global preference flip or a mutable shared storage root would let late work target another vault and is not an acceptable shortcut.
+
+Immediate implementation sequence: finish and physically check the security-hardening batch; introduce immutable selected-vault service handles and independent modern guest credentials; mount only the selected encrypted index; thread those handles through the identified operations; then enable ordinary passcode routing and perform populated two-vault isolation/recovery tests. Both vaults must retain independent normal use; do not substitute the inherited ephemeral empty view.

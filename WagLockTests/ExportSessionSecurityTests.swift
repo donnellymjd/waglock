@@ -77,7 +77,7 @@ final class ExportSessionSecurityTests: XCTestCase {
         let good = try item("valid")
         let retained = try await export([good])
         let corrupt = try item("corrupt")
-        try Data("invalid ciphertext".utf8).write(to: storage.getFileURL(for: corrupt.encryptedPath))
+        try Data("invalid ciphertext".utf8).write(to: try storage.getFileURL(for: corrupt.encryptedPath))
         do { _ = try await export([good, corrupt]); XCTFail("Expected corruption failure") }
         catch { XCTAssertTrue(error is ExportError) }
         XCTAssertEqual(outputs.count, 1)
@@ -103,7 +103,7 @@ final class ExportSessionSecurityTests: XCTestCase {
         let suspect = MediaItem(fileName: "foreign", fileExtension: ".txt", fileSize: 17, type: .document, encryptedPath: foreign.path)
         do { _ = try await export([suspect]); XCTFail("Foreign source accepted") } catch { }
         let symlink = storage.getStorageDirectory().appendingPathComponent("linked.enc")
-        try FileManager.default.createSymbolicLink(at: symlink, withDestinationURL: storage.getFileURL(for: valid.encryptedPath))
+        try FileManager.default.createSymbolicLink(at: symlink, withDestinationURL: try storage.getFileURL(for: valid.encryptedPath))
         suspect.encryptedPath = "linked.enc"
         do { _ = try await export([suspect]); XCTFail("Symlink accepted") } catch { }
         XCTAssertTrue(outputs.isEmpty)
@@ -271,7 +271,7 @@ final class ExportSessionSecurityTests: XCTestCase {
 
     func testLegacyAbsoluteSourceInsideOwnerRootRemainsReadable() async throws {
         let media = try item("legacy")
-        media.encryptedPath = storage.getFileURL(for: media.encryptedPath).path
+        media.encryptedPath = try storage.getFileURL(for: media.encryptedPath).path
         let urls = try await export([media])
         XCTAssertEqual(try Data(contentsOf: urls[0]), Data("synthetic original".utf8))
     }

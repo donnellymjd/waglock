@@ -56,7 +56,7 @@ final class PortableExportSnapshotTests: XCTestCase {
                 db = container
                 mounts = LibraryMountCoordinator { _ in container }
             }
-            albums = AlbumStore(biometrics: biometric)
+            albums = AlbumStore(biometrics: biometric, attemptStorage: InMemoryAttemptStorage())
             storage = FileStorageService(directory: root, availableCapacity: { _ in Int64.max })
             authority.beginSession(request.sessionID)
             albums.beginSession(vaultSecret: "synthetic-vault-key")

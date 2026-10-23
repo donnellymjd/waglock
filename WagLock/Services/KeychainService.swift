@@ -54,6 +54,10 @@ class KeychainService: LibraryIdentityAnchor {
         self.makeDataPassword = makeDataPassword ?? (LibraryStoragePolicy.encryptedMetadata ? { try FreshEncryptedLibrary.randomSecret() } : nil)
     }
 
+    func passwordAttemptLimiter(scope: String = "vault", now: @escaping () -> Date = Date.init) -> PasswordAttemptLimiter {
+        PasswordAttemptLimiter(storage: storage, scope: scope, now: now)
+    }
+
     // MARK: - Constants
 
     private let service: String
@@ -185,16 +189,8 @@ class KeychainService: LibraryIdentityAnchor {
         try storage.write(account: ownerAccount, data: record, createOnly: false)
         removeLegacyOwnerCredentials()
 
-        // 🎭 自动同步计算器登录模式密码序列（如果计算器登录模式已启用）
-        let disguiseModeEnabled = UserDefaults.standard.bool(
-            forKey: AppConstants.UserDefaultsKeys.disguiseModeEnabled
-        )
-        if disguiseModeEnabled {
-            do {
-                try saveDisguisePassword(newPassword)
-            } catch {
-            }
-        }
+        // Never retain a second, device-derived copy of the login password.
+        try? retireCalculatorCredentials()
 
         return dataPassword
     }
@@ -211,7 +207,7 @@ class KeychainService: LibraryIdentityAnchor {
 
     private func readDataPassword(using loginPassword: String) throws -> String {
         if let record = try optionalItem(account: ownerAccount) {
-            let plaintext = try encryptionService.decrypt(encryptedData: record, password: loginPassword)
+            let plaintext = try PasswordEnvelope.open(record, password: loginPassword, context: "owner:" + service)
             let credentials = try JSONDecoder().decode(OwnerCredentials.self, from: plaintext)
             guard credentials.version == 1, credentials.service == service,
                   !credentials.dataPassword.isEmpty else { throw KeychainError.invalidData }
@@ -251,7 +247,7 @@ class KeychainService: LibraryIdentityAnchor {
 
     private func encodeOwnerCredentials(_ secret: String, using password: String) throws -> Data {
         let payload = OwnerCredentials(version: 1, service: service, dataPassword: secret)
-        return try encryptionService.encrypt(data: JSONEncoder().encode(payload), password: password)
+        return try PasswordEnvelope.seal(JSONEncoder().encode(payload), password: password, context: "owner:" + service)
     }
 
     private func removeLegacyOwnerCredentials() {
@@ -393,111 +389,18 @@ extension KeychainService {
     }
 }
 
-// MARK: - Disguise Mode Password Management
+// MARK: - Retired Calculator Login
 
 extension KeychainService {
-
-    /// 保存计算器登录模式密码（加密存储）
-    /// - Parameter password: 计算器登录密码（仅数字和小数点）
-    /// - Throws: KeychainError
-    func saveDisguisePassword(_ password: String) throws {
-        // 1. 验证计算器登录密码格式（仅数字和小数点）
-        let allowedCharacters = CharacterSet(charactersIn: "0123456789.")
-        let passwordCharacters = CharacterSet(charactersIn: password)
-        guard passwordCharacters.isSubset(of: allowedCharacters), password.count >= 4 else {
-            throw KeychainError.invalidData
+    /// Remove only obsolete calculator material. Main keys, identity and user data are untouched.
+    func retireCalculatorCredentials(defaults: UserDefaults = .standard) throws {
+        defaults.set(false, forKey: AppConstants.UserDefaultsKeys.disguiseModeEnabled)
+        defaults.removeObject(forKey: AppConstants.UserDefaultsKeys.disguisePasswordSequence)
+        var failure: Error?
+        for account in [disguisePasswordAccount, isDisguiseSetAccount] {
+            do { try storage.delete(account: account) } catch { if failure == nil { failure = error } }
         }
-
-        // 2. 使用设备唯一标识生成加密密钥
-        let deviceKey =
-            "ZNS_DISGUISE_\(UIDevice.current.identifierForVendor?.uuidString ?? "DEFAULT")"
-
-        // 3. 加密计算器登录密码
-        let passwordData = Data(password.utf8)
-        let encryptedData = try encryptionService.encrypt(data: passwordData, password: deviceKey)
-
-        // 4. 存储到 Keychain
-        try saveToKeychain(account: disguisePasswordAccount, data: encryptedData)
-        try saveToKeychain(account: isDisguiseSetAccount, data: Data([1]))
-
-    }
-
-    /// 读取计算器登录模式密码
-    /// - Returns: 计算器登录密码，如果未设置返回 nil
-    func loadDisguisePassword() -> String? {
-        do {
-            // 1. 从 Keychain 读取加密数据
-            let encryptedData = try readFromKeychain(account: disguisePasswordAccount)
-
-            // 2. 使用设备唯一标识解密
-            let deviceKey =
-                "ZNS_DISGUISE_\(UIDevice.current.identifierForVendor?.uuidString ?? "DEFAULT")"
-            let decryptedData = try encryptionService.decrypt(
-                encryptedData: encryptedData,
-                password: deviceKey
-            )
-
-            // 3. 转换为字符串
-            guard let password = String(data: decryptedData, encoding: .utf8) else {
-                return nil
-            }
-
-            return password
-        } catch KeychainError.itemNotFound {
-            // 计算器登录密码未设置，返回 nil
-            return nil
-        } catch {
-            return nil
-        }
-    }
-
-    /// 检查是否已设置伪装密码
-    /// - Returns: 是否已设置伪装密码
-    func isDisguisePasswordSet() -> Bool {
-        do {
-            let data = try readFromKeychain(account: isDisguiseSetAccount)
-            return data.first == 1
-        } catch {
-            return false
-        }
-    }
-
-    /// 删除伪装密码
-    /// - Throws: KeychainError
-    func deleteDisguisePassword() throws {
-        try deleteFromKeychain(account: disguisePasswordAccount)
-        try deleteFromKeychain(account: isDisguiseSetAccount)
-    }
-
-    /// 迁移旧的 UserDefaults 伪装密码到 Keychain
-    /// - Returns: 是否成功迁移
-    @discardableResult
-    func migrateDisguisePasswordFromUserDefaults() -> Bool {
-        // 检查是否已经设置了 Keychain 密码
-        if isDisguisePasswordSet() {
-            return false
-        }
-
-        // 尝试从 UserDefaults 读取旧密码
-        if let oldPassword = UserDefaults.standard.string(
-            forKey: AppConstants.UserDefaultsKeys.disguisePasswordSequence
-        ), !oldPassword.isEmpty {
-            do {
-                // 保存到 Keychain
-                try saveDisguisePassword(oldPassword)
-
-                // 从 UserDefaults 删除（安全清理）
-                UserDefaults.standard.removeObject(
-                    forKey: AppConstants.UserDefaultsKeys.disguisePasswordSequence
-                )
-
-                return true
-            } catch {
-                return false
-            }
-        }
-
-        return false
+        if let failure { throw failure }
     }
 }
 

@@ -11,17 +11,9 @@ import SwiftUI
 
 class CalculatorViewModel: ObservableObject {
     @Published var state = CalculatorState()
-    @Published var shouldUnlock: Bool = false
+    @Published private(set) var shouldUnlock: Bool = false
 
     private let maxHistoryLength = 20
-    private let keychainService: KeychainService
-    private let notificationCenter: NotificationCenter
-
-    init(keychainService: KeychainService = .shared, notificationCenter: NotificationCenter = .default) {
-        self.keychainService = keychainService
-        self.notificationCenter = notificationCenter
-    }
-
     // Avoid the default-MainActor synthesized-deinit back-deployment crash on
     // older iOS runtimes (swiftlang/swift#88036). No actor-bound cleanup is needed.
     nonisolated deinit { }
@@ -74,9 +66,6 @@ class CalculatorViewModel: ObservableObject {
 
     /// 等号按下
     func equalsPressed() {
-        // 先检查密码序列
-        checkPasswordSequence()
-
         // 再执行计算
         calculateResult()
 
@@ -142,47 +131,7 @@ class CalculatorViewModel: ObservableObject {
         }
     }
 
-    /// 检查密码序列
-    private func checkPasswordSequence() {
-        // 拼接输入历史（仅包含数字和小数点）
-        let passwordInput = state.inputHistory.joined()
-
-        // 检查访客密码是否已设置
-        let hasGuestPassword = keychainService.isGuestPasswordSet()
-
-        // 计算器密码与主密码同步，直接验证哈希；旧副本依赖的 vendor ID
-        // 在开发包切换至 App Store 包时可能变化，不能作为解锁依据。
-        if keychainService.verifyPassword(passwordInput) {
-            shouldUnlock = true
-            state.inputHistory.removeAll()
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                // 通知解锁到主人模式，传递密码用于后续验证
-                self.notificationCenter.post(
-                    name: .unlockFromDisguise,
-                    object: nil,
-                    userInfo: ["mode": "owner", "password": passwordInput]
-                )
-            }
-        }
-        // 检查是否匹配访客密码（通过KeychainService验证）
-        else if hasGuestPassword && keychainService.verifyGuestPassword(passwordInput) {
-            shouldUnlock = true
-            state.inputHistory.removeAll()
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                // 通知解锁到访客模式，传递密码用于后续验证
-                self.notificationCenter.post(
-                    name: .unlockFromDisguise,
-                    object: nil,
-                    userInfo: ["mode": "guest", "password": passwordInput]
-                )
-            }
-        } else {
-            // 密码不匹配，清空历史
-            state.inputHistory.removeAll()
-        }
-    }
+    // Arithmetic has no credential access or unlock side effects.
 }
 
 // MARK: - Notification Name

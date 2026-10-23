@@ -7,6 +7,22 @@ import Foundation
 @MainActor
 final class LibraryMountCoordinator: ObservableObject {
     nonisolated deinit { }
+    private final class WeakMount {
+        nonisolated deinit { }
+        weak var value: LibraryMountCoordinator?
+        init(_ value: LibraryMountCoordinator) { self.value = value }
+    }
+    private static var sessions: [ObjectIdentifier: WeakMount] = [:]
+    private var registeredSessionID: UUID?
+
+    /// Revoke keys synchronously; SwiftUI screen disposal may wait until foreground.
+    static func invalidateSession(_ sessionID: UUID) {
+        sessions = sessions.filter { $0.value.value != nil }
+        for entry in Array(sessions.values) {
+            if let mount = entry.value, mount.registeredSessionID == sessionID { mount.invalidate() }
+        }
+    }
+
     enum Scope: Hashable {
         case legacyOwner
         case ephemeralGuest
@@ -57,6 +73,8 @@ final class LibraryMountCoordinator: ObservableObject {
         guard isAuthorized(), !Task.isCancelled else { return }
         if active?.request == request { return }
         invalidate()
+        registeredSessionID = request.sessionID
+        Self.sessions[ObjectIdentifier(self)] = WeakMount(self)
         let token = generation
         isLoading = true
         do {
@@ -107,6 +125,8 @@ final class LibraryMountCoordinator: ObservableObject {
     }
 
     func invalidate() {
+        registeredSessionID = nil
+        Self.sessions.removeValue(forKey: ObjectIdentifier(self))
         if let writeLease { LibraryWriteCoordinator.revoke(writeLease) }; writeLease = nil
         encryptedRepository?.revoke(); encryptedRepository = nil
         generation = UUID()

@@ -2,7 +2,7 @@ import XCTest
 
 final class PasswordSetupUITests: XCTestCase {
     @MainActor
-    func testFreshNumericSetupAndCalculatorPasswordFallback() throws {
+    func testNumericSetupHasNoRetiredCalculatorEntry() throws {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-autoLockTimeout", "-1"]
@@ -34,23 +34,11 @@ final class PasswordSetupUITests: XCTestCase {
         let settings = app.tabBars.buttons["Settings"]
         XCTAssertTrue(settings.waitForExistence(timeout: 15))
         settings.tap()
-        let calculator = app.buttons["Calculator Login Mode"]
-        for _ in 0..<8 {
-            if calculator.exists && calculator.isHittable { break }
-            app.swipeUp()
-        }
-        calculator.tap()
-        let toggle = app.switches["Enable Calculator Login Mode"]
-        if toggle.value as? String != "1" { toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap() }
-        XCTAssertEqual(toggle.value as? String, "1")
-        XCUIDevice.shared.press(.home)
-        app.activate()
+        app.buttons["settings.security"].tap()
+        XCTAssertFalse(app.buttons["Calculator Login Mode"].exists)
+        XCTAssertFalse(app.switches["Enable Calculator Login Mode"].exists)
         app.terminate()
         app.launch()
-        let display = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "0")).firstMatch
-        XCTAssertTrue(display.waitForExistence(timeout: 60))
-        display.press(forDuration: 1.2)
-        app.buttons["Use Password"].tap()
         let password = app.secureTextFields["Enter password"]
         XCTAssertTrue(password.waitForExistence(timeout: 5))
         app.buttons["Full keyboard"].tap()

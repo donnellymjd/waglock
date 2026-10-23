@@ -134,7 +134,7 @@ final class AudioServiceTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: tempDir) }
 
         let shareURL = tempDir.appendingPathComponent(item.fullFileName)
-        let sourceURL = FileStorageService.shared.getFileURL(for: item.encryptedPath)
+        let sourceURL = try FileStorageService.shared.getFileURL(for: item.encryptedPath)
         try EncryptionService.shared.decryptFile(inputURL: sourceURL, to: shareURL, password: "audio-export-test-password")
 
         XCTAssertTrue(FileManager.default.fileExists(atPath: shareURL.path))

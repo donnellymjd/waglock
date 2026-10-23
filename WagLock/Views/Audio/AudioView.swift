@@ -97,7 +97,7 @@ struct AudioView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            if guest.isOwnerMode { recordingPanel }
+            if guest.isOwnerMode && !LibraryStoragePolicy.encryptedMetadata { recordingPanel }
         }
         .overlay {
             if isSaving || isSharing {
@@ -407,8 +407,13 @@ struct AudioView: View {
         let fileExtension = item.fileExtension
         let name = item.fileName.hasSuffix(fileExtension) ? item.fileName : item.fullFileName
         shareTask = Task {
-            let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(
-                "shared_audio_\(UUID().uuidString)", isDirectory: true)
+            let tempDir: URL
+            do { tempDir = try ProtectedTemporaryFiles.createDirectory() }
+            catch {
+                isSharing = false
+                errorMessage = "Unable to prepare this share. Try again."
+                return
+            }
             var presented = false
             defer {
                 if !presented { try? FileManager.default.removeItem(at: tempDir) }
@@ -425,7 +430,11 @@ struct AudioView: View {
                 try Task.checkCancellation()
                 guard canAccess, shareRequestID == requestID else { return }
                 try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-                let shareURL = tempDir.appendingPathComponent(name)
+                let sanitized = String(name.map { c -> Character in
+                    c == "/" || c == "\\" || c == ":" || c.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) ? "_" : c
+                })
+                let safeName = sanitized.isEmpty || sanitized == "." || sanitized == ".." ? "audio" : sanitized
+                let shareURL = tempDir.appendingPathComponent(safeName)
                 try FileManager.default.moveItem(at: decryptedURL, to: shareURL)
                 try FileManager.default.setAttributes(
                     [.protectionKey: FileProtectionType.complete],

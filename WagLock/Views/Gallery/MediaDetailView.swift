@@ -680,11 +680,8 @@ struct MediaDetailView: View {
             return
         }
 
-        let tempDir = FileManager.default.temporaryDirectory
-        let fileName = UUID().uuidString + mediaItem.fileExtension
-        let tempURL = tempDir.appendingPathComponent(fileName)
-
         do {
+            let tempURL = try ProtectedTemporaryFiles.fileURL(preferredExtension: mediaItem.fileExtension)
             // 明文文档临时文件使用最高文件保护级别，防止锁屏后被读取
             try data.write(to: tempURL, options: [.atomic, .completeFileProtection])
             await MainActor.run {

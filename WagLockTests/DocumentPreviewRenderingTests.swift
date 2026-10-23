@@ -17,7 +17,10 @@ final class DocumentPreviewRenderingTests: XCTestCase {
 
     private func exercise(usePager: Bool) async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("pdf-resume-" + UUID().uuidString)
-        let storage = FileStorageService(directory: root.appendingPathComponent("media"), availableCapacity: { _ in 1_000_000_000 })
+        // Rendering uses the production storage reader: fixtures must be inside its owned root.
+        // Cleanup removes only the ciphertext created by this test, never other media.
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let storage = FileStorageService.shared
         // Keep the isolated temporary store until process teardown closes SQLite handles.
         let password = "disposable-pdf-password"
         let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 240, height: 320))
@@ -28,12 +31,13 @@ final class DocumentPreviewRenderingTests: XCTestCase {
         let source = root.appendingPathComponent("source.pdf")
         try bytes.write(to: source)
         let encrypted = try storage.saveEncryptedFile(from: source, password: password)
+        defer { try? storage.deleteFile(path: encrypted) }
         let schema = Schema([MediaItem.self, SecretNote.self, VaultAlbum.self])
         var container: ModelContainer? = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, url: root.appendingPathComponent("fixture.store"))])
         var context: ModelContext? = ModelContext(try XCTUnwrap(container))
         context?.autosaveEnabled = false
         let item = MediaItem(fileName: "synthetic-pdf", fileExtension: ".pdf", fileSize: Int64(bytes.count), type: .document,
-                             encryptedPath: storage.getFileURL(for: encrypted).path)
+                             encryptedPath: try storage.getFileURL(for: encrypted).path)
         context?.insert(item)
         try context?.save()
         let credentials = KeychainService(service: "pdf-render-" + UUID().uuidString)
