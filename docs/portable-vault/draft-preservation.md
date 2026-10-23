@@ -25,3 +25,5 @@ Preferences/settings, active credentials/biometric registration, coordinated sou
 - Full unit regression: **247 passed** (136 XCTest + 111 Swift Testing). Signed build 41 compiled successfully. Tests use isolated preferences and injected in-memory Keychain storage; they do not read or mutate owner data.
 - Existing simulator note UI regression passed: explicit Save clears its draft; Back preserves the latest edit.
 - Physical installation/acceptance is separate. The metadata index/draft stage remains disconnected from phone mounting.
+
+Build 41 subsequently installed and launched on the owner iPhone. Device inventory confirms version 1.3.8/build 41 under the existing identity. Physical workflow acceptance remains pending; installation does not validate the source-conflict fix on owner data. No tools inspected owner drafts/media.
