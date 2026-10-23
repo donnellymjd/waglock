@@ -200,3 +200,6 @@ Owner requested a standard interface in place of the Figma card layout. The view
 Phone acceptance: open disposable landscape and portrait videos, tap to show controls, play/pause/scrub and rotate the phone. Check Info and share/cancel. Background/lock, return/unlock and reopen a video; sound should stop while backgrounded and a fresh open should work normally. Do not delete non-disposable content. Owner acceptance remains pending.
 
 Build44 installation succeeded and the installed-app query confirms 1.3.8 (44). Remote launch was denied because the phone is locked; unlock/open WagLock normally. The additional tap-to-show native Play/Pause/Replay UI check passed.
+
+
+**Owner follow-up (2026-10-23):** “otherwise everything else works.” Record the normal application checks associated with build43 as passed, with the video-viewer design preference addressed by build44. This does not establish acceptance of the revised build44 viewer or independently confirm the separate complete Mac backup-recovery check. Build44 viewer acceptance remains pending.
