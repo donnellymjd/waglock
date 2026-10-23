@@ -7,6 +7,15 @@ final class DocumentPreviewService: ObservableObject {
     static let shared = DocumentPreviewService()
     @Published private(set) var revision = UUID()
     private var activeSession: UUID?
+    private let noteFlushRequests = PassthroughSubject<UUID, Never>()
+    var pendingNoteFlushes: AnyPublisher<UUID, Never> { noteFlushRequests.eraseToAnyPublisher() }
+
+    /// Finish the current editor's synchronous write while its owner lease is
+    /// still valid. Revocation follows immediately; no work may resume afterward.
+    func flushNotesBeforeSuspending(_ id: UUID) {
+        guard activeSession == id else { return }
+        noteFlushRequests.send(id)
+    }
 
     // Avoid the isolated-deinit back-deployment path on older iOS runtimes.
     nonisolated deinit {}

@@ -15,6 +15,8 @@ struct SecretSpaceView: View {
     @Query(sort: \SecretNote.modifiedAt, order: .reverse) private var notes: [SecretNote]
     @EnvironmentObject private var auth: AuthenticationViewModel
     @EnvironmentObject private var guestModeManager: GuestModeManager
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var draft: SecretNoteDraft?
 
     private var draftManager: SecretNoteDraftManager { LibraryWriteCoordinator.draftManager(in: modelContext) }
 
@@ -22,7 +24,7 @@ struct SecretSpaceView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 WagLockSubtitle(text: "A little room to think")
-                notesContent
+                notesContent.onAppear(perform: refreshDraft)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(ColorTheme.primaryBackground.ignoresSafeArea())
@@ -40,14 +42,31 @@ struct SecretSpaceView: View {
                 }
             }
         }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { refreshDraft() } }
+    }
+
+    private func refreshDraft() {
+        guard auth.isAuthenticated, guestModeManager.isOwnerMode else { draft = nil; return }
+        draft = draftManager.loadDraft()
     }
 
     @ViewBuilder
     private var notesContent: some View {
-        if guestModeManager.isGuestMode || notes.isEmpty {
+        if guestModeManager.isGuestMode || (notes.isEmpty && draft == nil) {
             emptyState
         } else {
             List {
+                if let draft {
+                    Section("Unfinished note") {
+                        NavigationLink { createNoteEditor() } label: {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Label("Resume draft", systemImage: "square.and.pencil").font(.headline)
+                                Text(draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Untitled note" : draft.title)
+                                    .foregroundStyle(ColorTheme.secondaryText).lineLimit(1)
+                            }
+                        }.accessibilityIdentifier("notes.resumeDraft").wagLockCardRow()
+                    }
+                }
                 if !pinnedNotes.isEmpty {
                     Section(String(localized: "secretSpace.section.pinned")) {
                         ForEach(pinnedNotes) { note in
@@ -185,7 +204,7 @@ struct SecretSpaceView: View {
 
         do {
             try LibraryWriteCoordinator.save(modelContext)
-            if clearDraft { draftManager.clearDraft() }
+            if clearDraft { draftManager.clearDraft(); refreshDraft() }
             return true
         } catch {
             modelContext.rollback()

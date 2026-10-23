@@ -45,15 +45,19 @@ struct NoteEditorView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Changes are saved automatically").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
+                Text(isNewNote ? "Drafts are saved automatically" : "Changes are saved automatically").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
                 Text("Title").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
-                TextField(String(localized: "note.title.placeholder"), text: $title)
+                TextField(String(localized: "note.title.placeholder"), text: Binding(get: { title }, set: { value in
+                    title = value; scheduleAutoSave(title: value, content: content)
+                }))
                     .font(.body).textInputAutocapitalization(.sentences)
                     .focused($focusedField, equals: .title).padding(16)
                     .background(ColorTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 14))
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(ColorTheme.border))
                     .accessibilityIdentifier("note.title")
-                TextEditor(text: $content)
+                TextEditor(text: Binding(get: { content }, set: { value in
+                    content = value; scheduleAutoSave(title: title, content: value)
+                }))
                     .font(.body).lineSpacing(6).focused($focusedField, equals: .content)
                     .scrollContentBackground(.hidden).padding(12).frame(minHeight: 320)
                     .background(ColorTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 16))
@@ -87,8 +91,6 @@ struct NoteEditorView: View {
             savedExplicitly = false
             focusedField = .content
         }
-        .onChange(of: title) { _ in scheduleAutoSave() }
-        .onChange(of: content) { _ in scheduleAutoSave() }
         .onChange(of: scenePhase) { _, phase in if phase != .active { autosave.flush() } }
         .onDisappear {
             if savedExplicitly { autosave.cancel() } else { autosave.flush() }
@@ -135,9 +137,8 @@ struct NoteEditorView: View {
 
     }
 
-    private func scheduleAutoSave() {
+    private func scheduleAutoSave(title: String, content: String) {
         guard let sessionID else { return }
-        let title = title, content = content
         autosave.schedule(session: sessionID, authorize: maySave) {
             onAutoSave(title, content)
         }

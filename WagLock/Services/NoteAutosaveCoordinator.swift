@@ -21,11 +21,16 @@ final class NoteAutosaveCoordinator: ObservableObject {
     private var task: Task<Void, Never>?
     private var generation = UUID()
     private var observation: AnyCancellable?
+    private var suspensionObservation: AnyCancellable?
 
     init(authority: DocumentPreviewService? = nil, delay: Delay? = nil) {
         let authority = authority ?? .shared
         self.authority = authority
         self.delay = delay ?? { try await Task.sleep(for: .seconds(1)) }
+        suspensionObservation = authority.pendingNoteFlushes.sink { [weak self] session in
+            guard self?.pending?.session == session else { return }
+            self?.flush()
+        }
         observation = authority.$revision.dropFirst().sink { [weak self] _ in self?.cancel() }
     }
 

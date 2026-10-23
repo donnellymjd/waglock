@@ -411,6 +411,7 @@ final class AuthenticationViewModel: ObservableObject {
     }
 
     func suspendAlbumAccess() {
+        documentPreviews.flushNotesBeforeSuspending(librarySessionID)
         exports.endSession(matching: librarySessionID)
         documentPreviews.endSession(matching: librarySessionID)
         authenticationGeneration = UUID()

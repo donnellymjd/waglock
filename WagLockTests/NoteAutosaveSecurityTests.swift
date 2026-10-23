@@ -119,6 +119,33 @@ final class NoteAutosaveSecurityTests: XCTestCase {
         XCTAssertNil(autosave.error)
     }
 
+    func testBackgroundFlushesLatestPendingEditBeforeRevokingItsOwnerAuthority() async throws {
+        let authority = DocumentPreviewService(), gate = Gate()
+        let credentials = KeychainService(service: "note-background-" + UUID().uuidString)
+        try credentials.savePassword("PUBLIC-background-note-password")
+        let auth = AuthenticationViewModel(keychainService: credentials, manageInstallationState: false,
+                                           documentPreviewService: authority)
+        defer { auth.logout(); credentials.clearAllKeychainData() }
+        auth.password = "PUBLIC-background-note-password"
+        await (try XCTUnwrap(auth.login())).value
+        let session = auth.librarySessionID
+        let autosave = NoteAutosaveCoordinator(authority: authority, delay: { await gate.pause() })
+        var persisted: [String] = []
+        let timer = try XCTUnwrap(autosave.schedule(session: session, authorize: {
+            auth.isAuthenticated && auth.librarySessionID == session && GuestModeManager.shared.isOwnerMode
+        }) { persisted.append("latest PUBLIC edit"); return true })
+        try await gate.waitForCount(1)
+        authority.flushNotesBeforeSuspending(UUID())
+        XCTAssertTrue(persisted.isEmpty, "An unrelated session cannot flush this editor")
+        auth.suspendAlbumAccess()
+        XCTAssertEqual(persisted, ["latest PUBLIC edit"], "Background must flush before revoking the editor")
+        XCTAssertFalse(authority.permits(session, revision: authority.revision))
+        XCTAssertFalse(autosave.saveNow(session: session, authorize: { true }) { persisted.append("after suspension"); return true })
+        auth.resumeAlbumAccess()
+        await gate.release(0); await timer.value
+        XCTAssertEqual(persisted, ["latest PUBLIC edit"], "Cancelled timers cannot write on resume")
+    }
+
     func testRealAuthenticationBackgroundLogoutGuestAndNewOwnerSessionBoundaries() async throws {
         let authority = DocumentPreviewService()
         let credentials = KeychainService(service: "note-auth-" + UUID().uuidString)

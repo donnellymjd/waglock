@@ -5,13 +5,13 @@ final class EncryptedReleaseUITests: XCTestCase {
     private let owner = "PUBLIC-release-ui-owner-password"
     private let changed = "PUBLIC-release-ui-changed-password"
 
-    @MainActor private func launch() throws -> XCUIApplication {
+    @MainActor private func launch(autoLock: Int = -1) throws -> XCUIApplication {
         guard ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"]?.hasPrefix("WagLock Encrypted Release QA") == true else {
             throw XCTSkip("Requires the isolated encrypted-release QA simulator and separately installed release app")
         }
         continueAfterFailure = false
         let app = XCUIApplication(bundleIdentifier: "com.d2sci.waglock")
-        app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-waglock.passwordKeyboard", "fullKeyboard", "-autoLockTimeout", "-1"]
+        app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-waglock.passwordKeyboard", "fullKeyboard", "-autoLockTimeout", String(autoLock)]
         app.launch()
         let setup = app.secureTextFields["setup.password"]
         if setup.waitForExistence(timeout: 8) {
@@ -132,6 +132,47 @@ final class EncryptedReleaseUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Travel plans"].firstMatch.waitForExistence(timeout: 10))
     }
+    @MainActor func testUnfinishedDraftIsVisibleAfterBackgroundLockAndColdRelaunch() throws {
+        let app = try launch(autoLock: 0)
+        app.buttons["Notes"].firstMatch.tap(); app.navigationBars.buttons["New"].tap()
+        let title = app.textFields["note.title"], body = app.textViews["note.content"]
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        replace(title, with: "PUBLIC background draft")
+        replace(body, with: "The latest PUBLIC edit survives leaving without Done.")
+        XCUIDevice.shared.press(.home); app.activate()
+        unlock(app, password: owner)
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
+        let resume = app.buttons["notes.resumeDraft"]
+        XCTAssertTrue(resume.waitForExistence(timeout: 10), app.debugDescription)
+        resume.tap()
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        XCTAssertEqual(title.value as? String, "PUBLIC background draft")
+        XCTAssertEqual(body.value as? String, "The latest PUBLIC edit survives leaving without Done.")
+        // No Done or Back before process death: the previous background flush is durable.
+        app.terminate(); app.launch(); unlock(app, password: owner)
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
+        XCTAssertTrue(resume.waitForExistence(timeout: 10)); resume.tap()
+        XCTAssertTrue(body.waitForExistence(timeout: 5))
+        XCTAssertEqual(body.value as? String, "The latest PUBLIC edit survives leaving without Done.")
+        replace(body, with: "PUBLIC latest retry after a second background.")
+        XCUIDevice.shared.press(.home); app.activate(); unlock(app, password: owner)
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
+        XCTAssertTrue(resume.waitForExistence(timeout: 10)); resume.tap()
+        XCTAssertTrue(body.waitForExistence(timeout: 5))
+        XCTAssertEqual(body.value as? String, "PUBLIC latest retry after a second background.")
+        app.navigationBars.buttons["Done"].tap()
+        XCTAssertTrue(app.staticTexts["PUBLIC background draft"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(resume.exists, "Explicit save replaces the draft with a saved note")
+        app.staticTexts["PUBLIC background draft"].firstMatch.tap()
+        XCTAssertTrue(body.waitForExistence(timeout: 5))
+        replace(body, with: "PUBLIC existing note edit also survives background.")
+        XCUIDevice.shared.press(.home); app.activate(); unlock(app, password: owner)
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
+        app.staticTexts["PUBLIC background draft"].firstMatch.tap()
+        XCTAssertTrue(body.waitForExistence(timeout: 5))
+        XCTAssertEqual(body.value as? String, "PUBLIC existing note edit also survives background.")
+    }
+
     @MainActor func testRepeatedInProcessLockReopensEncryptedLibrary() throws {
         let app = try launch()
         for _ in 0..<3 {
