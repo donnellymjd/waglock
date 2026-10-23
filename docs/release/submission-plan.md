@@ -120,3 +120,12 @@ Final build50 engineering verification:283 unit/security tests pass, including t
 Build50 is installed over the existing release identity, preserving its library/credentials. Owner repetition is requested; do not mark the intermittent phone issue accepted until that reply. Source freeze: candidate-1.0-build50.
 
 Build50 physical follow-up: owner reports a new/backgrounded item appeared as a regular saved note without Done/Save note; another stayed a draft. The owner cannot reproduce it on a subsequent disposable retry. Keep this intermittent classification report open, separate from the verified delayed-write cancellation fix. Added UI coverage checks actual saved-note counts/content, draft A/B, keyboard Return, both auto-lock settings and cold reopen. No speculative production change or library conversion is made. Full physical acceptance remains incomplete.
+
+
+## October23 final package and owner acceptance
+
+Owner confirms the complete build50 phone checklist passed, including independent Mac backup recovery. The intermittent note-classification report remains tracked without a claimed fix. Current build50 archive succeeds using cached development signing and passes identity/encryption/notices/privacy/signature checks. Exact application source is unchanged from candidate-1.0-build50. Matching tagged source tarball and hash are prepared. Both current iPhone/iPad screenshot workflows pass; eight unedited images have verified dimensions/hashes in [build50 screenshots](screenshots/build50/README.md). Ready-to-copy store text and factual encryption brief are in [app-store](app-store/README.md).
+
+A local App Store export fails with exit70: no iOS App Store provisioning profile for com.d2sci.waglock. This Mac has one usable Apple Development identity, no local distribution identity and no configured App Store Connect API key. No provisioning updates, remote identifier registration, declaration, upload or submission occurred. Account signing/provisioning and final privacy/encryption/territory/publisher entries remain required. [Machine-readable handoff](evidence/build-50/submission-preparation.json).
+
+The first attempt to save this handoff was not executed because automatic approval review reached a usage limit; this was a review-service failure, not a safety finding. After the limit reset, the owner requested continuation and the normal approval path succeeded. No approval bypass was used.

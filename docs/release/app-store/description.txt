@@ -1,0 +1,7 @@
+Keep your personal photos, videos, files and notes in a local encrypted library with its own password. Organize nested albums with additional passwords and optional Face ID protection.
+
+WagLock works without a WagLock account. Import from Photos or Files, browse your media, and choose when to share a decrypted copy. Create an optional encrypted backup and save it through the iOS Files interface, including cloud providers you have configured. Open-source recovery instructions help you open supported backups on your computer.
+
+All local features are free. There are no VIP unlocks or subscriptions. Keep your passwords and recovery material safe: we cannot reset them or retrieve your library for you.
+
+WagLock is an independent modified fork of SealedPocket / ZeroNet Space. It is not the official version and does not imply upstream endorsement. Source code, license notices and recovery instructions are available at https://github.com/donnellymjd/waglock.

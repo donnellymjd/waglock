@@ -18,3 +18,6 @@ python3 ~/repos/WagLock/tools/backup_recovery.py \
 Substitute the actual saved filename. Keep all originals and the old app. This validates explicit portable export, not raw native-folder recovery, automatic iOS restore or an in-app restore wizard. Report “passed” or the failing step; acceptance is pending until the owner responds.
 
 Build47 specific acceptance: the owner confirms the same password opens the app and two lock/unlock cycles pass after the verified Apple-directory alias correction. Complete the remaining media/notes/album/FaceID/backup checks above before release.
+
+
+October23 final build50 acceptance: the owner confirms **all checks passed**: disposable photo/video import/open, note and protected album, main-password change and relaunch, Face ID/background locking, and fresh encrypted backup recovery on the Mac. No private content/passwords were supplied or inspected. The earlier intermittent draft-classification report cannot currently be reproduced and remains tracked; this does not claim a new root cause or an independent audit. The requested owner checklist is complete; Apple distribution/compliance steps are separate.

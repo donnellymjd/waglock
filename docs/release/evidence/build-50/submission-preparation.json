@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-23",
+  "version": "1.0",
+  "build": "50",
+  "bundle": "com.d2sci.waglock",
+  "applicationSourceTag": "candidate-1.0-build50",
+  "applicationSourceCommit": "673761cbb776fb15bea6cdfeedb09f4c8f1c88e9",
+  "ownerPhysicalChecklist": "passed, including independent Mac backup recovery",
+  "intermittentNoteClassification": "reported; not currently reproducible; remains tracked",
+  "archive": "/private/tmp/WagLock-1.0-build50-candidate.xcarchive",
+  "archiveResult": "succeeded",
+  "archiveSigning": "Apple Development; distribution re-sign/export still required",
+  "distributionExport": {
+    "result": "failed",
+    "exitCode": 70,
+    "reason": "No iOS App Store provisioning profile for com.d2sci.waglock",
+    "provisioningUpdatesRequested": false,
+    "uploaded": false
+  },
+  "sourceArchive": "/private/tmp/WagLock-1.0-build50-source.tar.gz",
+  "sourceArchiveSHA256": "bb7faea8259dbdeb74adce219e43cbb51319effe4e5a120a6b46beb0aa408502",
+  "remoteRegistrationPerformed": false,
+  "submitted": false
+}

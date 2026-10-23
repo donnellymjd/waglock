@@ -1,6 +1,6 @@
 # WagLock first-release listing draft
 
-**Not submitted.** Validate against the final release archive and the [readiness gates](submission-plan.md). Do not copy draft qualifications into a public product description or advertise unfinished functionality. Actual release screenshots are prepared under [build47 captures](screenshots/build47/README.md); private Apple account contact fields and final acceptance remain pending.
+**Not submitted.** Validate against the final release archive and the [readiness gates](submission-plan.md). Do not copy draft qualifications into a public product description or advertise unfinished functionality. Actual release screenshots are prepared under [build50 captures](screenshots/build50/README.md); private Apple account fields and distribution/compliance steps remain pending.
 
 ## Proposed fields
 
@@ -41,7 +41,7 @@ Do not claim independently audited, military-grade, forensic deniability, comple
 5. Create an encrypted backup with a separately selected export password. Save through Files or cancel the picker. Include final independently verified recovery instructions and documented coverage/resource limits with the submitted version. A system destination accepting a file is not a remote-upload guarantee.
 6. Settings provides source, notices, privacy and support information. No purchases, subscriptions, advertising SDK or backend login is required for the inspected candidate.
 
-The walkthrough applies to the build45 fresh encrypted candidate. Before submission, verify it against the final distribution archive and add private App Review contact fields and any required sample video/hardware explanation. Contact details must come from the account holder, not a fabricated address or a Git commit identity.
+The walkthrough applies to the build50 fresh encrypted candidate, which passed the owner’s final phone checklist. Before submission, verify it against the final distribution archive and add private App Review contact fields and any required sample video/hardware explanation. Contact details must come from the account holder, not a fabricated address or a Git commit identity.
 
 ## Screenshot plan
 
@@ -57,3 +57,6 @@ Use synthetic, non-sensitive originals with verified rights. Capture the actual 
 - Copyright/publisher, territory selection and age/content questionnaire answers require account-holder confirmation. No legal name or rating is invented here.
 
 Follow the [submission runbook](submission-runbook.md) after the gates are cleared.
+
+
+Ready-to-copy listing files are in [app-store](app-store/metadata.json), including the description, review walkthrough and release notes. They contain no private review contact fields and have not been filed.

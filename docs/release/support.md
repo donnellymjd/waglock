@@ -1,6 +1,6 @@
 # WagLock support
 
-WagLock is in development. A separate WagLock1.0 build47 fresh encrypted candidate is installed for owner acceptance. Existing WagLock Dev libraries are not migrated. An App Store release has not been submitted.
+WagLock is in development. A separate WagLock1.0 build50 fresh encrypted candidate passed the owner’s disposable-media, password/Face ID, album and independent backup-recovery checklist. An intermittent note-classification report remains tracked. Existing WagLock Dev libraries are not migrated. An App Store release has not been submitted.
 
 For a bug or question, [open a GitHub issue](https://github.com/donnellymjd/waglock/issues). Include the app version/build, iOS version, a short description and reproduction steps using disposable samples. GitHub issues are public. Do not attach private photos, files, encrypted backups, passwords, recovery keys or unredacted logs. We will not ask you to publish these.
 
