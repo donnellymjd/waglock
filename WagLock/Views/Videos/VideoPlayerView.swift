@@ -509,7 +509,7 @@ struct VideoPlayerView: View {
         // 避免 save 失败时留下指向已删除文件的记录，也让播放器保持可用
         modelContext.delete(sourceVideo)
         do {
-            try modelContext.save()
+            try LibraryWriteCoordinator.save(modelContext)
         } catch {
             modelContext.rollback()
             deleteErrorMessage = String(

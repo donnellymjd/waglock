@@ -355,7 +355,7 @@ struct AudioView: View {
         }
         modelContext.insert(item)
         do {
-            try modelContext.save()
+            try LibraryWriteCoordinator.save(modelContext)
         } catch {
             modelContext.rollback()
             try? FileStorageService.shared.deleteFile(path: item.encryptedPath)
@@ -475,7 +475,7 @@ struct AudioView: View {
         }
         item.fileName = name
         item.touch()
-        do { try modelContext.save() }
+        do { try LibraryWriteCoordinator.save(modelContext) }
         catch { modelContext.rollback(); errorMessage = String(localized: "audio.error.save") }
     }
 
@@ -484,7 +484,7 @@ struct AudioView: View {
         let path = item.encryptedPath
         let itemID = item.id
         modelContext.delete(item)
-        do { try modelContext.save() }
+        do { try LibraryWriteCoordinator.save(modelContext) }
         catch {
             modelContext.rollback()
             errorMessage = String(localized: "audio.error.save")

@@ -123,12 +123,12 @@ final class AlbumStore: ObservableObject {
                                    protection: protection, wrappedKey: wrappedKey, encryptedCatalog: catalog,
                                    biometricAccount: protection.usesBiometrics ? biometricAccount : nil)
             context.insert(album)
-            do { try context.save() } catch { context.delete(album); throw error }
+            do { try LibraryWriteCoordinator.save(context) } catch { context.delete(album); throw error }
             albumKeys[id] = SecureBytes(secret)
             revision += 1
             return album
         } catch {
-            if protection.usesBiometrics { biometrics.remove(account: biometricAccount) }
+            if protection.usesBiometrics, LibraryWriteCoordinator.mayDiscardUncommittedResources(in: context) { biometrics.remove(account: biometricAccount) }
             throw error
         }
     }
@@ -201,7 +201,7 @@ final class AlbumStore: ObservableObject {
             album.wrappedKey = wrapped
             album.protectionRawValue = protection.rawValue
             album.biometricAccount = protection.usesBiometrics ? account : nil
-            do { try context.save() } catch {
+            do { try LibraryWriteCoordinator.save(context) } catch {
                 album.wrappedKey = previous.0
                 album.protectionRawValue = previous.1
                 album.biometricAccount = previous.2
@@ -210,7 +210,7 @@ final class AlbumStore: ObservableObject {
             if let old = previous.2 { biometrics.remove(account: old) }
             lock(album, albums: albums)
         } catch {
-            if protection.usesBiometrics { biometrics.remove(account: account) }
+            if protection.usesBiometrics, LibraryWriteCoordinator.mayDiscardUncommittedResources(in: context) { biometrics.remove(account: account) }
             throw error
         }
     }
@@ -280,11 +280,13 @@ final class AlbumStore: ObservableObject {
             let encrypted = try crypto.encrypt(data: JSONEncoder().encode(catalog), password: secret)
             let previous = album.encryptedCatalog
             album.encryptedCatalog = encrypted
-            do { try context.save() } catch { album.encryptedCatalog = previous; throw error }
+            do { try LibraryWriteCoordinator.save(context) } catch { album.encryptedCatalog = previous; throw error }
             revision += 1
             return asset
         } catch {
-            try? FileStorageService.shared.deleteFile(path: path)
+            if LibraryWriteCoordinator.mayDiscardUncommittedResources(in: context) {
+                try? FileStorageService.shared.deleteFile(path: path)
+            }
             throw error
         }
     }
@@ -339,7 +341,7 @@ final class AlbumStore: ObservableObject {
         _ = try key(for: album, albums: albums)
         // Destination is committed and verified before the original record or ciphertext is removed.
         context.delete(media)
-        do { try context.save() } catch { context.rollback(); throw error }
+        do { try LibraryWriteCoordinator.save(context) } catch { context.rollback(); throw error }
         try? FileStorageService.shared.deleteFile(path: sourcePath)
         MediaLoaderService.shared.clearCache(forPath: sourcePath)
         ThumbnailImageLoader.shared.clearAll()
@@ -361,7 +363,7 @@ final class AlbumStore: ObservableObject {
         let removed = catalog.remove(at: index)
         let previous = album.encryptedCatalog
         album.encryptedCatalog = try crypto.encrypt(data: JSONEncoder().encode(catalog), password: secret)
-        do { try context.save() } catch { album.encryptedCatalog = previous; throw error }
+        do { try LibraryWriteCoordinator.save(context) } catch { album.encryptedCatalog = previous; throw error }
         try? FileStorageService.shared.deleteFile(path: removed.encryptedPath)
         revision += 1
     }
@@ -372,7 +374,7 @@ final class AlbumStore: ObservableObject {
         guard !name.isEmpty, name.count <= 100 else { throw VaultAccessError.invalidAlbum }
         let previous = album.name
         album.name = name
-        do { try context.save() } catch { album.name = previous; throw error }
+        do { try LibraryWriteCoordinator.save(context) } catch { album.name = previous; throw error }
         revision += 1
     }
 
@@ -383,7 +385,7 @@ final class AlbumStore: ObservableObject {
         let account = album.biometricAccount
         lock(album, albums: albums)
         context.delete(album)
-        do { try context.save() } catch { context.rollback(); throw error }
+        do { try LibraryWriteCoordinator.save(context) } catch { context.rollback(); throw error }
         if let account { biometrics.remove(account: account) }
     }
 }

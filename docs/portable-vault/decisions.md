@@ -154,3 +154,8 @@ Versioned adapters now preserve all three current SwiftData models into an unuse
 ## ADR-025 — Narrow first App Store submission, manual release
 
 **Status: owner direction accepted 2026-10-22; readiness gates open.** Prepare a small initial store version while developing later improvements separately. First close inherited distribution/licensing, native sensitive-metadata protection, complete supported recovery and exact-release privacy/crypto/source validation. Shared albums, Trash, independent alternative vaults, encrypted search, self-destruct and unlock-camera capture remain later work. Prepare a separate opt-in `com.d2sci.waglock` store identity without changing the installed development identity or claiming a data transfer. Select manual release when an accepted candidate is submitted; no automatic publication or guaranteed review time. [Scope, evidence and gates](../release/submission-plan.md). No live storage migration or rights clearance follows from this scheduling decision.
+
+
+### ADR-024 implementation follow-up — session-bound save gateway
+
+Build 43 routes all explicit app model saves through a revocable mount lease and disables managed main-context autosave. Uncertain saves preserve potentially referenced ciphertext and biometric keys. An explicit-root model-only encrypted repository exercises this same boundary with durable-before-projection commits and reconciliation on uncertain outcomes. It remains unmounted and cannot read the complete staging scope. No live migration, root-key provisioning or source retirement is approved. [Contract, resource bounds and activation gates](library-write-boundary.md).

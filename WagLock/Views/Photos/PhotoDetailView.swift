@@ -197,7 +197,7 @@ struct PhotoDetailView: View {
         // 失败时留在页面上提示，而不是无声地 dismiss
         modelContext.delete(photoToDelete)
         do {
-            try modelContext.save()
+            try LibraryWriteCoordinator.save(modelContext)
         } catch {
             modelContext.rollback()
             isDeleting = false

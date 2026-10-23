@@ -38,7 +38,18 @@ enum MetadataModelCodec {
 
     /// Caller must quiesce all writers. This does not establish a live WAL snapshot.
     static func capture(_ context: ModelContext, authorized: () -> Bool) throws -> [EncryptedMetadataStore.Record] {
-        try check(context, authorized: authorized)
+        try capture(context, allowPending: false, authorized: authorized)
+    }
+
+    /// Commit adapter only. Never use this to claim a clean source migration snapshot.
+    static func capturePending(_ context: ModelContext, authorized: () -> Bool) throws -> [EncryptedMetadataStore.Record] {
+        guard !context.autosaveEnabled,
+              context.container.configurations.allSatisfy(\.isStoredInMemoryOnly) else { throw Failure.invalidRecord }
+        context.processPendingChanges()
+        return try capture(context, allowPending: true, authorized: authorized)
+    }
+    private static func capture(_ context: ModelContext, allowPending: Bool, authorized: () -> Bool) throws -> [EncryptedMetadataStore.Record] {
+        try check(context, allowPending: allowPending, authorized: authorized)
         let counts = [try context.fetchCount(FetchDescriptor<MediaItem>()),
                       try context.fetchCount(FetchDescriptor<SecretNote>()),
                       try context.fetchCount(FetchDescriptor<VaultAlbum>())]
@@ -55,10 +66,23 @@ enum MetadataModelCodec {
                   payload.count <= maximumSnapshotBytes - bytes else { throw Failure.tooLarge }
             bytes += payload.count; records.append(.init(kind: kind, id: id, payload: payload))
         }
-        try context.enumerate(FetchDescriptor<MediaItem>(), batchSize: 128) { item in try append(Media(item), kind: "media", id: item.id) }
-        try context.enumerate(FetchDescriptor<SecretNote>(), batchSize: 128) { item in try append(Note(item), kind: "note", id: item.id) }
-        try context.enumerate(FetchDescriptor<VaultAlbum>(), batchSize: 128) { item in try append(Album(item), kind: "album", id: item.id) }
-        try check(context, authorized: authorized)
+        if allowPending {
+            // SwiftData enumeration reads persisted rows; commit snapshots must
+            // explicitly include unsaved inserts/deletes before any durable write.
+            func pending<T: PersistentModel>(_ type: T.Type) throws -> [T] {
+                var descriptor = FetchDescriptor<T>(); descriptor.includePendingChanges = true
+                descriptor.fetchLimit = maximumRecords + 1
+                return try context.fetch(descriptor)
+            }
+            for item in try pending(MediaItem.self) { try append(Media(item), kind: "media", id: item.id) }
+            for item in try pending(SecretNote.self) { try append(Note(item), kind: "note", id: item.id) }
+            for item in try pending(VaultAlbum.self) { try append(Album(item), kind: "album", id: item.id) }
+        } else {
+            try context.enumerate(FetchDescriptor<MediaItem>(), batchSize: 128) { item in try append(Media(item), kind: "media", id: item.id) }
+            try context.enumerate(FetchDescriptor<SecretNote>(), batchSize: 128) { item in try append(Note(item), kind: "note", id: item.id) }
+            try context.enumerate(FetchDescriptor<VaultAlbum>(), batchSize: 128) { item in try append(Album(item), kind: "album", id: item.id) }
+        }
+        try check(context, allowPending: allowPending, authorized: authorized)
         guard Set(records.map { $0.kind + ":" + $0.id.uuidString }).count == records.count else { throw Failure.invalidRecord }
         return records.sorted { ($0.kind, $0.id.uuidString) < ($1.kind, $1.id.uuidString) }
     }
@@ -116,10 +140,10 @@ enum MetadataModelCodec {
     private static func encode<T: Encodable>(_ value: T) throws -> Data {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]; return try encoder.encode(value)
     }
-    private static func check(_ context: ModelContext, authorized: () -> Bool) throws {
+    private static func check(_ context: ModelContext, allowPending: Bool, authorized: () -> Bool) throws {
         guard authorized() else { throw Failure.unauthorized }
         try Task.checkCancellation()
-        guard !context.hasChanges else { throw Failure.dirtyContext }
+        guard allowPending || !context.hasChanges else { throw Failure.dirtyContext }
         let fields: [String: Set<String>] = [
             "MediaItem": ["id", "fileName", "fileExtension", "fileSize", "typeRawValue", "encryptedPath", "thumbnailData", "createdAt", "modifiedAt", "width", "height", "duration"],
             "SecretNote": ["id", "title", "content", "createdAt", "modifiedAt", "isFavorite", "tags"],

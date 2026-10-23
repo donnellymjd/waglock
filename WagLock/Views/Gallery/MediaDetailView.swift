@@ -619,7 +619,7 @@ struct MediaDetailView: View {
                 guard isCurrentSession, !Task.isCancelled else { return }
                 let encryptedPath = mediaItem.encryptedPath
                 modelContext.delete(sourceItem)
-                try modelContext.save()
+                try LibraryWriteCoordinator.save(modelContext)
 
                 do {
                     try storageService.deleteFile(path: encryptedPath)

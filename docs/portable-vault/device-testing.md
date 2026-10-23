@@ -184,3 +184,10 @@ Signed WagLock Dev 1.3.8 (41) compiles with unchanged `com.d2sci.vaultito.dev`, 
 **Build 41 installed:** after the owner reconnected/unlocked the phone, installation and foreground launch succeeded without uninstall/reset. Filtered device app inventory confirms WagLock Dev 1.3.8/build 41, `com.d2sci.vaultito.dev`. No media/passwords were read or exported. Physical note Save/Back, existing media and unlock acceptance is pending. Logs: `/private/tmp/waglock-build41-install.log`, `/private/tmp/waglock-build41-launch.log`, `/private/tmp/waglock-build41-app-info.log`. The preceding disconnected status is historical preparation evidence.
 
 **Build 41 owner acceptance:** owner replied “passed” to disposable note edit → Back → reopen → Done/save, existing sample access, and password/Face ID unlock after backgrounding. This validates the requested phone workflows, not legacy-conflict reproduction, complete backup recovery or live metadata migration.
+
+
+## Build 43 — session-bound library writes (2026-10-23)
+
+Installed and launched as an update to the same development identity; installed metadata confirms WagLock Dev 1.3.8 (43). No uninstall, reset or native metadata conversion. Full regression passed 260 tests plus three application UI workflows. See [write-boundary changes and limits](library-write-boundary.md).
+
+Using disposable samples, import/open a photo and video, edit a note and confirm Done/Back/reopen behavior, create a nested password album and relock/reopen it, then background/lock and check password/Face ID and fresh sharing. Check edits persist after app relaunch. Separately finish the outstanding backup check: choose an export filename, recover into a new Mac folder with the correct outer/album credentials and open a few readable recovered files. Do not send passwords or private content. Owner acceptance remains pending; successful phone checks will not alone resolve native metadata encryption, recovery coverage or first-submission gates.

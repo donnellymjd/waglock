@@ -59,10 +59,10 @@ class ImportViewModel: ObservableObject {
     private var currentImportTask: Task<Void, Never>?
     private var importGeneration = UUID()
     private let storage: FileStorageService
-    private let saveContext: (ModelContext) throws -> Void
+    private let saveContext: @MainActor (ModelContext) throws -> Void
 
     init(storage: FileStorageService = .shared,
-         saveContext: @escaping (ModelContext) throws -> Void = { try $0.save() }) {
+         saveContext: @escaping @MainActor (ModelContext) throws -> Void = { try LibraryWriteCoordinator.save($0) }) {
         self.storage = storage
         importService = MediaImportService(storage: storage)
         self.saveContext = saveContext
@@ -232,6 +232,7 @@ class ImportViewModel: ObservableObject {
     }
 
     private func removeUncommittedFiles(_ paths: [String], context: ModelContext) {
+        guard LibraryWriteCoordinator.mayDiscardUncommittedResources(in: context) else { return }
         // A fresh context sees committed state, not this import's rolled-back inserts.
         // Preserve files on an uncertain save outcome or failed verification query.
         let committedContext = ModelContext(context.container)

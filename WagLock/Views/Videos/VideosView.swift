@@ -125,7 +125,7 @@ struct VideosView: View {
 
         if removedCount > 0 {
             do {
-                try modelContext.save()
+                try LibraryWriteCoordinator.save(modelContext)
             } catch {
             }
         }
@@ -180,7 +180,7 @@ struct VideosView: View {
         // 避免 save 失败时留下指向已删除文件的记录
         modelContext.delete(video)
         do {
-            try modelContext.save()
+            try LibraryWriteCoordinator.save(modelContext)
         } catch {
             modelContext.rollback()
             deleteErrorMessage = String(

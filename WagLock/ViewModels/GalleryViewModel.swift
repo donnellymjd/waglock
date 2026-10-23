@@ -73,7 +73,7 @@ class GalleryViewModel: ObservableObject {
 
     /// 确认删除
     func confirmDelete() {
-        guard let item = mediaItemToDelete else { return }
+        guard let item = mediaItemToDelete, let context = modelContext else { return }
 
         Task {
             let encryptedPath = item.encryptedPath
@@ -82,8 +82,8 @@ class GalleryViewModel: ObservableObject {
             do {
                 // 先提交数据库删除，成功后再删文件，
                 // 避免 save 失败时留下指向已删除文件的记录
-                modelContext?.delete(item)
-                try modelContext?.save()
+                context.delete(item)
+                try LibraryWriteCoordinator.save(context)
 
                 do {
                     try storageService.deleteFile(path: encryptedPath)
@@ -128,16 +128,17 @@ class GalleryViewModel: ObservableObject {
 
     /// 批量删除
     func deleteMultipleItems(_ items: [MediaItem]) {
+        guard let context = modelContext else { return }
         Task {
             // 先提交数据库删除，成功后再删文件，
             // 避免 save 失败时留下指向已删除文件的记录
             let encryptedPaths = items.map { $0.encryptedPath }
             for item in items {
-                modelContext?.delete(item)
+                context.delete(item)
             }
 
             do {
-                try modelContext?.save()
+                try LibraryWriteCoordinator.save(context)
             } catch {
                 modelContext?.rollback()
                 errorMessage = String(

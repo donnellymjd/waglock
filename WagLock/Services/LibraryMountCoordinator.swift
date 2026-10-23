@@ -6,6 +6,7 @@ import Foundation
 /// Only the authenticated owner may open the unchanged legacy persistent schema.
 @MainActor
 final class LibraryMountCoordinator: ObservableObject {
+    nonisolated deinit { }
     enum Scope: Hashable {
         case legacyOwner
         case ephemeralGuest
@@ -30,13 +31,14 @@ final class LibraryMountCoordinator: ObservableObject {
     @Published private(set) var failed = false
     private var generation = UUID()
     private let factory: Factory
+    private var writeLease: LibraryWriteCoordinator.Lease?
 
     init(factory: @escaping Factory = LibraryMountCoordinator.openLegacyContainer) {
         self.factory = factory
     }
 
     /// Recheck authorization after suspension; a completed open never authorizes a session.
-    func mount(_ request: Request, isAuthorized: () -> Bool) async {
+    func mount(_ request: Request, isAuthorized: @escaping () -> Bool) async {
         guard isAuthorized(), !Task.isCancelled else { return }
         if active?.request == request { return }
         invalidate()
@@ -49,7 +51,14 @@ final class LibraryMountCoordinator: ObservableObject {
                 invalidate()
                 return
             }
-            active = Mount(request: request, container: container)
+            let mounted = Mount(request: request, container: container)
+            let mountedID = mounted.id
+            writeLease = try LibraryWriteCoordinator.bindLegacy(container) { [weak self] in
+                guard let self else { return false }
+                return self.generation == token && self.active?.id == mountedID
+                    && request.scope == .legacyOwner && isAuthorized()
+            }
+            active = mounted
             isLoading = false
         } catch {
             guard token == generation else { return }
@@ -69,6 +78,7 @@ final class LibraryMountCoordinator: ObservableObject {
     }
 
     func invalidate() {
+        if let writeLease { LibraryWriteCoordinator.revoke(writeLease) }; writeLease = nil
         generation = UUID()
         active = nil
         isLoading = false

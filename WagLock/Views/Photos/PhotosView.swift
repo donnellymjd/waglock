@@ -208,7 +208,7 @@ struct PhotosView: View {
 
         if removedCount > 0 {
             do {
-                try modelContext.save()
+                try LibraryWriteCoordinator.save(modelContext)
             } catch {
             }
         }
@@ -420,7 +420,7 @@ struct PhotosView: View {
         // 避免 save 失败时留下指向已删除文件的记录
         modelContext.delete(photo)
         do {
-            try modelContext.save()
+            try LibraryWriteCoordinator.save(modelContext)
         } catch {
             modelContext.rollback()
             deleteErrorMessage = String(
@@ -448,7 +448,7 @@ struct PhotosView: View {
             modelContext.delete(item)
         }
         do {
-            try modelContext.save()
+            try LibraryWriteCoordinator.save(modelContext)
         } catch {
             modelContext.rollback()
             deleteErrorMessage = String(

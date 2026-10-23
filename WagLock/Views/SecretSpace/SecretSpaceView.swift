@@ -156,7 +156,7 @@ struct SecretSpaceView: View {
     /// 保存失败时回滚，保证 UI（@Query）与持久化状态一致
     private func saveOrRollback() {
         do {
-            try modelContext.save()
+            try LibraryWriteCoordinator.save(modelContext)
         } catch {
             modelContext.rollback()
         }
@@ -184,7 +184,7 @@ struct SecretSpaceView: View {
         }
 
         do {
-            try modelContext.save()
+            try LibraryWriteCoordinator.save(modelContext)
             if clearDraft { draftManager.clearDraft() }
             return true
         } catch {
@@ -238,7 +238,7 @@ private struct NoteRow: View {
             Button {
                 note.isFavorite.toggle()
                 do {
-                    try modelContext.save()
+                    try LibraryWriteCoordinator.save(modelContext)
                 } catch {
                     modelContext.rollback()
                 }
@@ -256,7 +256,7 @@ private struct NoteRow: View {
             Button(role: .destructive) {
                 modelContext.delete(note)
                 do {
-                    try modelContext.save()
+                    try LibraryWriteCoordinator.save(modelContext)
                 } catch {
                     modelContext.rollback()
                 }
