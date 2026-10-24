@@ -16,10 +16,11 @@ enum ExportError: Error {
     }
 }
 
-/// The legacy owner's export boundary. Guest Mode cannot activate this service.
+/// A selected-vault export boundary activated only by its authenticated session.
 /// Every operation owns its directory and snapshots metadata before background work.
 @MainActor
 final class ExportService: ObservableObject {
+    nonisolated deinit {}
     static let shared = ExportService(
         storage: FileStorageService.shared,
         directory: FileManager.default.temporaryDirectory.appendingPathComponent("WagLockExport", isDirectory: true))
@@ -281,8 +282,8 @@ final class ExportService: ObservableObject {
         catch { return Outcome(result: .failure(.exportFailed), ownsDirectory: ownsDirectory) }
     }
 
-    static func createShareController(for urls: [URL]) -> UIActivityViewController {
-        let service = ExportService.shared
+    func createShareController(for urls: [URL]) -> UIActivityViewController {
+        let service = self
         let valid = !service.containsManagedURL(urls) || service.jobID(for: urls) != nil
         let controller = UIActivityViewController(activityItems: valid ? urls : [], applicationActivities: nil)
         controller.excludedActivityTypes = [.assignToContact, .addToReadingList, .postToFlickr, .postToVimeo]

@@ -49,7 +49,7 @@ final class PhotoPreviewRenderingTests: XCTestCase {
         let presented: AnyView = video
             ? AnyView(VideoPlayerView(video: item, sessionID: auth.librarySessionID))
             : AnyView(detail)
-        let host = UIHostingController(rootView: presented.environmentObject(auth))
+        let host = UIHostingController(rootView: AnyView(presented.environmentObject(auth).environmentObject(try XCTUnwrap(auth.vaultContext)).environmentObject(try XCTUnwrap(auth.vaultContext).exports)))
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
         let previousWindow = scene.windows.first { $0.isKeyWindow }
         let window = UIWindow(windowScene: scene)

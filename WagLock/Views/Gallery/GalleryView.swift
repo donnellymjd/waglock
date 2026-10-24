@@ -10,6 +10,14 @@ import SwiftData
 import SwiftUI
 
 struct GalleryView: View {
+    @EnvironmentObject private var services: VaultSessionContext
+    var body: some View {
+        ScopedGalleryView(storage: services.storage)
+            .id(services.sessionID)
+    }
+}
+
+private struct ScopedGalleryView: View {
 
     // MARK: - Environment
 
@@ -19,7 +27,10 @@ struct GalleryView: View {
 
     // MARK: - State
 
-    @StateObject private var viewModel = GalleryViewModel()
+    @StateObject private var viewModel: GalleryViewModel
+    init(storage: FileStorageService) {
+        _viewModel = StateObject(wrappedValue: GalleryViewModel(storage: storage))
+    }
     @StateObject private var settings = AppSettings.shared
     @EnvironmentObject private var guestModeManager: GuestModeManager
     @State private var searchText = ""

@@ -9,6 +9,7 @@
 import SwiftUI
 
 struct NoteEditorView: View {
+    @EnvironmentObject private var vaultServices: VaultSessionContext
     @Environment(\.dismiss) private var dismiss
     @FocusState private var focusedField: Field?
 
@@ -81,6 +82,7 @@ struct NoteEditorView: View {
             }
         }
         .onAppear {
+            autosave.bind(to: vaultServices.documents)
             // Text is seeded at presentation. Reappearing after a keyboard,
             // navigation or scene transition must not overwrite current edits.
             focusedField = .content

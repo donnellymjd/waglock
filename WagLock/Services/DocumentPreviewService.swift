@@ -45,8 +45,9 @@ final class DocumentPreviewModel: ObservableObject {
     @Published private(set) var data: Data?
     @Published private(set) var isLoading = false
     @Published private(set) var error: String?
-    private let service: DocumentPreviewService
-    private let loader: Loader
+    private var service: DocumentPreviewService
+    private var loader: Loader
+    private var boundSession: UUID?
     private var observation: AnyCancellable?
     private var task: Task<Void, Never>?
     private var request = UUID()
@@ -66,6 +67,23 @@ final class DocumentPreviewModel: ObservableObject {
     }
 
     nonisolated deinit { task?.cancel() }
+
+    func bind(to context: VaultSessionContext) -> Bool {
+        guard context.isActive, boundSession == nil || boundSession == context.sessionID else { return false }
+        if boundSession == context.sessionID { return true }
+        clear()
+        boundSession = context.sessionID
+        service = context.documents
+        let storage = context.storage
+        loader = { path, password, ext in
+            try await storage.loadDecryptedDataAsync(path: path, password: password, preferredExtension: ext)
+        }
+        authorizationRevision = service.revision
+        observation = service.$revision.dropFirst().sink { [weak self] revision in
+            self?.clear(); self?.authorizationRevision = revision
+        }
+        return true
+    }
 
     /// Call on the main actor with immutable metadata, never a captured SwiftData model.
     @discardableResult

@@ -11,6 +11,7 @@ import SwiftData
 import SwiftUI
 
 struct BatchExportView: View {
+    @EnvironmentObject private var vaultServices: VaultSessionContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var authViewModel: AuthenticationViewModel
@@ -34,7 +35,7 @@ struct BatchExportView: View {
         _selectedItems = State(initialValue: initialSelection)
     }
 
-    private let exportService = ExportService.shared
+    private var exportService: ExportService { vaultServices.exports }
 
     var body: some View {
         NavigationStack {
@@ -348,7 +349,7 @@ struct ExportItemRow: View {
 
 struct ShareSheet: View {
     let items: [Any]
-    @ObservedObject private var exports = ExportService.shared
+    @EnvironmentObject private var exports: ExportService
     @Environment(\.dismiss) private var dismiss
     private var urls: [URL] { items.compactMap { $0 as? URL } }
 
@@ -364,10 +365,11 @@ struct ShareSheet: View {
 }
 
 private struct ActivitySheet: UIViewControllerRepresentable {
+    @EnvironmentObject private var exports: ExportService
     let items: [URL]
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        let controller = ExportService.createShareController(for: items)
+        let controller = exports.createShareController(for: items)
         return controller
     }
 

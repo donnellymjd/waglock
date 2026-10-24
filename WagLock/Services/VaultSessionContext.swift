@@ -2,7 +2,7 @@ import Foundation
 internal import Combine
 
 /// Immutable service handles for one authenticated vault/session. No global root is changed.
-/// Login integration is gated until all views and operations consume this context.
+/// Authenticated screens retain this graph for their originating session.
 @MainActor
 final class VaultSessionContext: ObservableObject {
     nonisolated deinit {}
@@ -15,14 +15,20 @@ final class VaultSessionContext: ObservableObject {
     let albums: AlbumStore
     let exports: ExportService
     let documents: DocumentPreviewService
+    let audio: AudioSessionController
     @Published private(set) var isActive = true
     private var isRevoking = false
 
     init(vaultID: UUID, sessionID: UUID, dataPassword: String, storage: FileStorageService,
-         temporaryRoot: URL, keychainNamespace: String) throws {
+         temporaryRoot: URL, keychainNamespace: String, preservePrimaryNamespaces: Bool = false) throws {
         guard !dataPassword.isEmpty, !keychainNamespace.isEmpty, temporaryRoot.isFileURL else {
             throw VaultAccessError.invalidData
         }
+        try FileManager.default.createDirectory(at: temporaryRoot, withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700, .protectionKey: FileProtectionType.complete])
+        try FreshEncryptedLibrary.safe(temporaryRoot)
+        let jobRoot = temporaryRoot.appendingPathComponent("WagLockSessionJobs", isDirectory: true)
+        let ownedDirectory = try ProtectedTemporaryFiles.createDirectory(in: jobRoot)
         self.vaultID = vaultID
         self.sessionID = sessionID
         self.storage = storage
@@ -32,13 +38,12 @@ final class VaultSessionContext: ObservableObject {
         self.mediaLoader = loader
         self.thumbnails = thumbnails
         let namespace = keychainNamespace + ".vault." + vaultID.uuidString
-        self.albums = AlbumStore(biometrics: BiometricSecretStore(service: namespace + ".album-biometrics"),
-            attemptStorage: SystemKeychainStorage(service: namespace + ".album-attempts"),
+        self.albums = AlbumStore(biometrics: BiometricSecretStore(service: preservePrimaryNamespaces ? keychainNamespace + ".biometrics" : namespace + ".album-biometrics"),
+            attemptStorage: SystemKeychainStorage(service: preservePrimaryNamespaces ? keychainNamespace + ".album-attempts" : namespace + ".album-attempts"),
             storage: storage, mediaLoader: loader, thumbnails: thumbnails)
-        self.exports = ExportService(storage: storage, directory: temporaryRoot
-            .appendingPathComponent(vaultID.uuidString, isDirectory: true)
-            .appendingPathComponent(sessionID.uuidString, isDirectory: true))
+        self.exports = ExportService(storage: storage, directory: ownedDirectory.appendingPathComponent("Exports", isDirectory: true))
         self.documents = DocumentPreviewService()
+        self.audio = AudioSessionController(directory: ownedDirectory.appendingPathComponent("Audio", isDirectory: true), storage: storage)
         albums.beginSession(vaultSecret: dataPassword)
         exports.beginSession(sessionID)
         documents.beginSession(sessionID)
@@ -61,6 +66,7 @@ final class VaultSessionContext: ObservableObject {
         LibraryMountCoordinator.invalidateSession(sessionID)
         exports.endSession(matching: sessionID)
         documents.endSession(matching: sessionID)
+        audio.stopPlayback()
         albums.endSession()
         mediaLoader.clearCache()
         thumbnails.clearAll()

@@ -13,6 +13,7 @@ import QuickLook
 import SwiftUI
 
 struct MediaDetailView: View {
+    @EnvironmentObject private var vaultServices: VaultSessionContext
 
     // MARK: - Properties
 
@@ -58,7 +59,7 @@ struct MediaDetailView: View {
 
     // MARK: - Services
 
-    private let storageService = FileStorageService.shared
+    private var storageService: FileStorageService { vaultServices.storage }
     private let keychainService = KeychainService.shared
 
     // MARK: - Body
@@ -119,7 +120,7 @@ struct MediaDetailView: View {
         }
         .onDisappear {
             documentPreview.clear()
-            if !showShareSheet, let exportJobID { ExportService.shared.cancelExport(exportJobID) }
+            if !showShareSheet, let exportJobID { vaultServices.exports.cancelExport(exportJobID) }
         }
         .onChange(of: exportScenePhase) { _, phase in
             if phase == .background {
@@ -492,6 +493,7 @@ struct MediaDetailView: View {
                 documentPreview.clear()
                 return
             }
+            guard documentPreview.bind(to: vaultServices) else { return }
             documentPreview.load(path: mediaItem.encryptedPath, password: password,
                                  fileExtension: mediaItem.fileExtension, sessionID: authViewModel.librarySessionID)
             return
@@ -541,7 +543,7 @@ struct MediaDetailView: View {
 
             // 照片在后台降采样解码，避免主线程解码 12MP+ 大图造成卡顿
             if mediaItem.type == .photo {
-                let image = await ThumbnailImageLoader.shared.image(
+                let image = await vaultServices.thumbnails.image(
                     for: mediaItem.id.uuidString,
                     data: data,
                     maxPixelSize: AppConstants.previewImageMaxPixelSize
@@ -586,7 +588,7 @@ struct MediaDetailView: View {
         exportError = nil
 
         let exportSessionID = authViewModel.librarySessionID
-        exportJobID = ExportService.shared.exportItems([sourceItem], password: password, sessionID: exportSessionID) { result in
+        exportJobID = vaultServices.exports.exportItems([sourceItem], password: password, sessionID: exportSessionID) { result in
             guard authViewModel.isAuthenticated, authViewModel.librarySessionID == exportSessionID else { return }
             switch result {
             case .success(let urls):

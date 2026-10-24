@@ -13,6 +13,7 @@ private struct AlbumKeyMaterial: Codable {
 
 @MainActor
 final class AlbumStore: ObservableObject {
+    nonisolated deinit {}
     static let shared = AlbumStore()
     @Published private(set) var revision = 0
     private var vaultKey: SecureBytes?

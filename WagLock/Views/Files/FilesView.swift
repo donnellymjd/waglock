@@ -10,6 +10,7 @@ import SwiftData
 import SwiftUI
 
 struct FilesView: View {
+    @EnvironmentObject private var vaultServices: VaultSessionContext
 
     // MARK: - Environment
 
@@ -198,7 +199,7 @@ struct FilesView: View {
         }
 
         do {
-            try FileStorageService.shared.deleteFile(path: encryptedPath)
+            try vaultServices.storage.deleteFile(path: encryptedPath)
         } catch {
             // 记录已删除，文件删除失败只会残留无引用的加密文件
         }

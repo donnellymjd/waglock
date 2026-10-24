@@ -9,6 +9,7 @@ import PDFKit
 import SwiftUI
 
 struct FilePreviewView: View {
+    @EnvironmentObject private var vaultServices: VaultSessionContext
 
     // MARK: - Properties
 
@@ -80,7 +81,7 @@ struct FilePreviewView: View {
         }
         .onDisappear {
             preview.clear()
-            if !showShareSheet, let exportJobID { ExportService.shared.cancelExport(exportJobID) }
+            if !showShareSheet, let exportJobID { vaultServices.exports.cancelExport(exportJobID) }
         }
         .onChange(of: exportScenePhase) { _, phase in
             if phase == .background {
@@ -248,6 +249,7 @@ struct FilePreviewView: View {
               !preview.isLoading, preview.data == nil,
               authViewModel.isAuthenticated,
               let password = authViewModel.sessionPassword else { return }
+        guard preview.bind(to: vaultServices) else { return }
         preview.load(path: file.encryptedPath, password: password,
                      fileExtension: file.fileExtension, sessionID: authViewModel.librarySessionID)
     }
@@ -263,7 +265,7 @@ struct FilePreviewView: View {
         exportError = nil
 
         let exportSessionID = authViewModel.librarySessionID
-        exportJobID = ExportService.shared.exportItems([sourceFile], password: password, sessionID: exportSessionID) { result in
+        exportJobID = vaultServices.exports.exportItems([sourceFile], password: password, sessionID: exportSessionID) { result in
             guard authViewModel.isAuthenticated, authViewModel.librarySessionID == exportSessionID else { return }
             switch result {
             case .success(let urls):

@@ -22,6 +22,15 @@ final class AuthenticationViewModel: ObservableObject {
     /// Fresh identity whenever session key material is replaced or cleared.
     @Published private(set) var librarySessionID = UUID()
 
+    @Published private(set) var vaultContext: VaultSessionContext?
+    @Published private(set) var secondaryVaultID: UUID?
+    var isPrimaryVault: Bool { secondaryVaultID == nil }
+    var libraryScope: LibraryMountCoordinator.Scope {
+        secondaryVaultID.map { .independentVault($0) } ?? .legacyOwner
+    }
+    private static let primaryVaultID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+    private struct BiometricGrant: Codable { let version: Int; let secondaryID: UUID?; let secret: String }
+
     /// 是否已设置密码
     @Published var isPasswordSet: Bool = false
 
@@ -47,6 +56,8 @@ final class AuthenticationViewModel: ObservableObject {
             sessionPasswordData?.wipe()
         }
         didSet {
+            vaultContext?.revoke()
+            vaultContext = nil
             LibraryMountCoordinator.invalidateSession(librarySessionID)
             exports.endSession(matching: librarySessionID)
             documentPreviews.endSession(matching: librarySessionID)
@@ -73,6 +84,10 @@ final class AuthenticationViewModel: ObservableObject {
     // MARK: - Services
 
     typealias DataPasswordLoader = @MainActor (String) async throws -> String
+    typealias ContextFactory = @MainActor (UUID?, UUID, String) throws -> VaultSessionContext
+    private let independentVaultsEnabled: Bool
+    private let contextFactory: ContextFactory?
+    private let biometrics: any BiometricSecretStoring
     private let loadDataPassword: DataPasswordLoader
     private let exports: ExportService
     private let documentPreviews: DocumentPreviewService
@@ -91,7 +106,12 @@ final class AuthenticationViewModel: ObservableObject {
 
     init(keychainService: KeychainService? = nil, manageInstallationState: Bool = true,
          dataPasswordLoader: DataPasswordLoader? = nil, exportService: ExportService? = nil,
-         documentPreviewService: DocumentPreviewService? = nil, attemptLimiter: PasswordAttemptLimiter? = nil) {
+         documentPreviewService: DocumentPreviewService? = nil, attemptLimiter: PasswordAttemptLimiter? = nil,
+         independentVaultsEnabled: Bool = LibraryStoragePolicy.encryptedMetadata,
+         contextFactory: ContextFactory? = nil, biometrics: (any BiometricSecretStoring)? = nil) {
+        self.independentVaultsEnabled = independentVaultsEnabled
+        self.contextFactory = contextFactory
+        self.biometrics = biometrics ?? BiometricSecretStore.shared
         let keychainService = keychainService ?? .shared
         self.exports = exportService ?? .shared
         self.documentPreviews = documentPreviewService ?? .shared
@@ -216,10 +236,18 @@ final class AuthenticationViewModel: ObservableObject {
         loginTask = Task(priority: .userInitiated) {
             defer { if token == authenticationGeneration { isProcessing = false } }
             // 在后台执行耗时的Keychain操作，避免阻塞主线程
-            let ownerMatch = await Task.detached {
-                await self.keychainService.verifyPassword(inputPassword)
-            }.value
+            let ownerKey: String?
+            let ownerMatch: Bool
+            if independentVaultsEnabled {
+                ownerKey = try? await loadDataPassword(inputPassword)
+                ownerMatch = ownerKey != nil
+            } else {
+                ownerKey = nil
+                ownerMatch = await Task.detached { await self.keychainService.verifyPassword(inputPassword) }.value
+            }
 
+            let independentGuest: KeychainService.IndependentGuestCredential? = independentVaultsEnabled
+                ? try? keychainService.unlockIndependentGuest(password: inputPassword) : nil
             let guestMatch = await Task.detached {
                 guard await self.keychainService.isGuestPasswordSet() else { return false }
                 return await self.keychainService.verifyGuestPassword(inputPassword)
@@ -230,11 +258,14 @@ final class AuthenticationViewModel: ObservableObject {
             // 回到主线程更新UI状态
             if ownerMatch {
                 do {
-                    let dataPassword = try await loadDataPassword(inputPassword)
+                    let dataPassword: String
+                    if let ownerKey { dataPassword = ownerKey }
+                    else { dataPassword = try await loadDataPassword(inputPassword) }
                     guard token == authenticationGeneration, !Task.isCancelled else { return }
 
                     try attemptLimiter.recordSuccess(reservation)
                     sessionPasswordData = SecureBytes(dataPassword)
+                    secondaryVaultID = nil
                     isAuthenticated = true
 
                     // 设置为主人模式
@@ -250,6 +281,16 @@ final class AuthenticationViewModel: ObservableObject {
                     guard token == authenticationGeneration, !Task.isCancelled else { return }
                     errorMessage = String(localized: "auth.error.loadKeyFailed")
                 }
+            } else if let independentGuest {
+                do { try attemptLimiter.recordSuccess(reservation) }
+                catch { errorMessage = "Unable to complete login protection. Try again."; return }
+                sessionPasswordData = SecureBytes(independentGuest.dataPassword)
+                secondaryVaultID = independentGuest.vaultID
+                isAuthenticated = true
+                GuestModeManager.shared.setAuthenticationMode(.secondaryOwner)
+                resumeAlbumAccess()
+                failedAttempts = 0; lockoutUntil = nil
+                clearFields()
             } else if guestMatch {
                 do { try attemptLimiter.recordSuccess(reservation) }
                 catch { errorMessage = "Unable to complete login protection. Try again."; return }
@@ -291,6 +332,7 @@ final class AuthenticationViewModel: ObservableObject {
 
     /// 登出
     func logout() {
+        vaultContext?.revoke()
         authenticationGeneration = UUID()
         loginTask?.cancel()
         savePasswordTask?.cancel()
@@ -299,6 +341,7 @@ final class AuthenticationViewModel: ObservableObject {
 
         // 🔒 安全清理密码内存（willSet 中就地清零）
         sessionPasswordData = nil
+        secondaryVaultID = nil
 
         // 清空解密图片缓存，确保明文像素不跨会话残留
         MediaLoaderService.shared.clearCache()
@@ -312,10 +355,17 @@ final class AuthenticationViewModel: ObservableObject {
 
     func enableBiometricUnlock(password: String) async throws {
         guard isAuthenticated, GuestModeManager.shared.isOwnerMode,
-              keychainService.verifyPassword(password) else { throw VaultAccessError.invalidPassword }
+              verifyPassword(password) else { throw VaultAccessError.invalidPassword }
         let token = authenticationGeneration
-        let secret = try keychainService.retrieveDataPassword(using: password)
-        try await BiometricSecretStore.shared.store(secret, account: BiometricSecretStore.vaultAccount) {
+        let secret: String
+        if let id = secondaryVaultID {
+            let credential = try keychainService.unlockIndependentGuest(password: password)
+            guard credential.vaultID == id else { throw VaultAccessError.invalidPassword }
+            secret = credential.dataPassword
+        } else { secret = try keychainService.retrieveDataPassword(using: password) }
+        let payload = try JSONEncoder().encode(BiometricGrant(version: 1, secondaryID: secondaryVaultID, secret: secret))
+        let grant = "WLBG1:" + payload.base64EncodedString()
+        try await biometrics.store(grant, account: BiometricSecretStore.vaultAccount) {
             token == self.authenticationGeneration && self.isAuthenticated
                 && GuestModeManager.shared.isOwnerMode
         }
@@ -330,7 +380,7 @@ final class AuthenticationViewModel: ObservableObject {
     func disableBiometricUnlock() {
         guard isAuthenticated, GuestModeManager.shared.isOwnerMode else { return }
         authenticationGeneration = UUID()
-        BiometricSecretStore.shared.remove(account: BiometricSecretStore.vaultAccount)
+        biometrics.remove(account: BiometricSecretStore.vaultAccount)
         isBiometricUnlockEnabled = false
         UserDefaults.standard.set(false, forKey: "vaultito.faceID.enabled")
     }
@@ -342,12 +392,24 @@ final class AuthenticationViewModel: ObservableObject {
         let token = authenticationGeneration
         defer { if token == authenticationGeneration { isProcessing = false } }
         do {
-            let secret = try await BiometricSecretStore.shared.read(
+            let secret = try await biometrics.read(
                 account: BiometricSecretStore.vaultAccount, reason: "Unlock WagLock")
             guard token == authenticationGeneration, !isAuthenticated else { throw CancellationError() }
-            sessionPasswordData = SecureBytes(secret)
+            let target: UUID?
+            let dataPassword: String
+            if secret.hasPrefix("WLBG1:") {
+                guard let bytes = Data(base64Encoded: String(secret.dropFirst(6))) else { throw VaultAccessError.invalidData }
+                let grant = try JSONDecoder().decode(BiometricGrant.self, from: bytes)
+                guard grant.version == 1, !grant.secret.isEmpty else { throw VaultAccessError.invalidData }
+                if let id = grant.secondaryID {
+                    guard try keychainService.independentGuestVaultID() == id else { throw VaultAccessError.invalidData }
+                }
+                target = grant.secondaryID; dataPassword = grant.secret
+            } else { target = nil; dataPassword = secret } // Existing enrollment remains primary-only.
+            sessionPasswordData = SecureBytes(dataPassword)
+            secondaryVaultID = target
             isAuthenticated = true
-            GuestModeManager.shared.setAuthenticationMode(.owner)
+            GuestModeManager.shared.setAuthenticationMode(target == nil ? .owner : .secondaryOwner)
             resumeAlbumAccess()
             clearFields()
         } catch {
@@ -363,6 +425,7 @@ final class AuthenticationViewModel: ObservableObject {
     }
 
     func suspendAlbumAccess() {
+        vaultContext?.revoke()
         documentPreviews.flushNotesBeforeSuspending(librarySessionID)
         exports.endSession(matching: librarySessionID)
         documentPreviews.endSession(matching: librarySessionID)
@@ -377,9 +440,36 @@ final class AuthenticationViewModel: ObservableObject {
 
     func resumeAlbumAccess() {
         if isAuthenticated, GuestModeManager.shared.isOwnerMode, let secret = sessionPassword {
-            exports.beginSession(librarySessionID)
-            documentPreviews.beginSession(librarySessionID)
-            AlbumStore.shared.beginSession(vaultSecret: secret)
+            do {
+                if vaultContext?.isActive != true {
+                    if vaultContext != nil { librarySessionID = UUID() }
+                    if let contextFactory {
+                        vaultContext = try contextFactory(secondaryVaultID, librarySessionID, secret)
+                    } else {
+                        let storage: FileStorageService
+                        if let id = secondaryVaultID {
+                            let parent = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                                .resolvingSymlinksInPath().appendingPathComponent("WagLockSecondaryMedia", isDirectory: true)
+                            try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+                            try FreshEncryptedLibrary.safe(parent)
+                            let root = parent.appendingPathComponent(id.uuidString, isDirectory: true)
+                            if FileManager.default.fileExists(atPath: root.path) { try FreshEncryptedLibrary.safe(root) }
+                            storage = FileStorageService(directory: root)
+                        } else { storage = .shared }
+                        vaultContext = try VaultSessionContext(vaultID: secondaryVaultID ?? Self.primaryVaultID,
+                            sessionID: librarySessionID, dataPassword: secret, storage: storage,
+                            temporaryRoot: FileManager.default.temporaryDirectory.appendingPathComponent("WagLockSessions"),
+                            keychainNamespace: keychainService.contextNamespace, preservePrimaryNamespaces: isPrimaryVault)
+                    }
+                }
+            } catch {
+                logout(); errorMessage = "Unable to open this library. Lock and try again."; return
+            }
+            if isPrimaryVault {
+                exports.beginSession(librarySessionID)
+                documentPreviews.beginSession(librarySessionID)
+                AlbumStore.shared.beginSession(vaultSecret: secret)
+            }
         }
     }
 
@@ -397,21 +487,43 @@ final class AuthenticationViewModel: ObservableObject {
 
     /// 验证密码是否正确
     func verifyPassword(_ password: String) -> Bool {
+        if let id = secondaryVaultID {
+            return (try? keychainService.unlockIndependentGuest(password: password).vaultID) == id
+        }
         return keychainService.verifyPassword(password)
     }
 
     /// 更新密码（重新加密后调用）
     func updatePassword(oldPassword: String, newPassword: String) throws {
-        let dataPassword = try keychainService.changePassword(
-            oldPassword: oldPassword,
-            newPassword: newPassword
-        )
+        let dataPassword: String
+        if secondaryVaultID != nil {
+            dataPassword = try keychainService.changeIndependentGuestPassword(oldPassword: oldPassword, newPassword: newPassword).dataPassword
+        } else {
+            dataPassword = try keychainService.changePassword(oldPassword: oldPassword, newPassword: newPassword)
+        }
         sessionPasswordData = SecureBytes(dataPassword)
         resumeAlbumAccess()
 
         // 密码变更同样清空明文图片缓存，只保留新会话下的解密结果
         MediaLoaderService.shared.clearCache()
         ThumbnailImageLoader.shared.clearAll()
+    }
+
+    func provisionSecondaryVault(password: String) throws {
+        guard independentVaultsEnabled, isAuthenticated, isPrimaryVault else { throw VaultAccessError.locked }
+        _ = try keychainService.provisionIndependentGuest(password: password)
+    }
+    var hasSecondaryVault: Bool {
+        do { return try keychainService.independentGuestVaultID() != nil } catch { return true }
+    }
+    func makeSelectedLibraryMount() -> LibraryMountCoordinator {
+        if let id = secondaryVaultID, let context = vaultContext {
+            let root = LibraryStoragePolicy.defaultRoot.deletingLastPathComponent()
+                .appendingPathComponent("WagLockSecondaryLibraries", isDirectory: true).appendingPathComponent(id.uuidString)
+            return LibraryMountCoordinator(encryptedRoot: root, anchor: keychainService.secondaryIdentityAnchor(id),
+                scope: .independentVault(id), storage: context.storage)
+        }
+        return LibraryMountCoordinator()
     }
 
     // MARK: - Computed Properties

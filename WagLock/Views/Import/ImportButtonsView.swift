@@ -12,10 +12,23 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ImportButtonsView: View {
+    @EnvironmentObject private var services: VaultSessionContext
+    let onImportComplete: ([MediaItem]) -> Void
+    var body: some View {
+        ScopedImportButtonsView(storage: services.storage, onImportComplete: onImportComplete)
+            .id(services.sessionID)
+    }
+}
+
+private struct ScopedImportButtonsView: View {
 
     // MARK: - Properties
 
-    @StateObject private var viewModel = ImportViewModel()
+    @StateObject private var viewModel: ImportViewModel
+    init(storage: FileStorageService, onImportComplete: @escaping ([MediaItem]) -> Void) {
+        _viewModel = StateObject(wrappedValue: ImportViewModel(storage: storage))
+        self.onImportComplete = onImportComplete
+    }
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var authViewModel: AuthenticationViewModel

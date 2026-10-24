@@ -4,12 +4,17 @@ import SwiftUI
 struct AuthenticatedLibraryView: View {
     @EnvironmentObject private var authentication: AuthenticationViewModel
     @EnvironmentObject private var mode: GuestModeManager
-    @StateObject private var library = LibraryMountCoordinator()
+    @StateObject private var library: LibraryMountCoordinator
+    let services: VaultSessionContext
+    init(services: VaultSessionContext, library: LibraryMountCoordinator) {
+        self.services = services
+        _library = StateObject(wrappedValue: library)
+    }
     @State private var retry = UUID()
 
     private var request: LibraryMountCoordinator.Request {
         .init(sessionID: authentication.librarySessionID,
-              scope: mode.isOwnerMode ? .legacyOwner : .ephemeralGuest)
+              scope: mode.isOwnerMode ? authentication.libraryScope : .ephemeralGuest)
     }
 
     var body: some View {
@@ -18,6 +23,10 @@ struct AuthenticatedLibraryView: View {
             if let mounted = library.active, mounted.request == expected {
                 ContentView()
                     .environmentObject(library)
+                    .environmentObject(services)
+                    .environmentObject(services.albums)
+                    .environmentObject(services.exports)
+                    .environmentObject(services.audio)
                     .modelContainer(mounted.container)
                     .id(mounted.id)
             } else if library.failed {

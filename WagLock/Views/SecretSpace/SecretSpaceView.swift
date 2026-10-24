@@ -11,6 +11,7 @@ import SwiftData
 import SwiftUI
 
 struct SecretSpaceView: View {
+    @EnvironmentObject private var vaultServices: VaultSessionContext
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \SecretNote.modifiedAt, order: .reverse) private var notes: [SecretNote]
     @EnvironmentObject private var auth: AuthenticationViewModel
@@ -223,7 +224,7 @@ struct SecretSpaceView: View {
 
     private func mayWrite(_ session: UUID) -> Bool {
         auth.isAuthenticated && guestModeManager.isOwnerMode && auth.librarySessionID == session
-            && DocumentPreviewService.shared.permits(session, revision: DocumentPreviewService.shared.revision)
+            && vaultServices.documents.permits(session, revision: vaultServices.documents.revision)
     }
 
 }

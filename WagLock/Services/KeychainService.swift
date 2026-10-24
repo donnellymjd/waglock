@@ -365,6 +365,13 @@ extension KeychainService {
     }
 }
 
+extension KeychainService {
+    var contextNamespace: String { service }
+    func secondaryIdentityAnchor(_ id: UUID) -> KeychainService {
+        KeychainService(service: service + ".vault." + id.uuidString)
+    }
+}
+
 // MARK: - Independent Secondary Vault Credentials
 
 extension KeychainService {

@@ -269,7 +269,7 @@ final class PortableExportSnapshotService {
 
     private func authorizedMount(_ request: LibraryMountCoordinator.Request, revision: UUID,
                                  mountID: UUID? = nil) throws -> LibraryMountCoordinator.Mount {
-        guard request.scope == .legacyOwner, isOwner(), authority.permits(request.sessionID, revision: revision),
+        guard request.scope != .ephemeralGuest, isOwner(), authority.permits(request.sessionID, revision: revision),
               let active = mounts.active, active.request == request,
               mountID == nil || active.id == mountID else { throw Failure.unauthorized }
         return active

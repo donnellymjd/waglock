@@ -22,13 +22,23 @@ enum VaultAccessError: LocalizedError {
 @MainActor
 protocol BiometricSecretStoring {
     func store(_ secret: String, account: String) async throws
+    func store(_ secret: String, account: String, authorizing: @MainActor () -> Bool) async throws
     func read(account: String, reason: String) async throws -> String
     func remove(account: String)
+}
+
+extension BiometricSecretStoring {
+    func store(_ secret: String, account: String, authorizing: @MainActor () -> Bool) async throws {
+        guard authorizing(), !Task.isCancelled else { throw CancellationError() }
+        try await store(secret, account: account)
+        guard authorizing(), !Task.isCancelled else { throw CancellationError() }
+    }
 }
 
 /// Secrets are released by Keychain ACL, not by an application-level Boolean.
 @MainActor
 final class BiometricSecretStore: BiometricSecretStoring {
+    nonisolated deinit {}
     static let shared = BiometricSecretStore()
     static let vaultAccount = "vault-unlock"
     typealias Authenticator = @MainActor (String) async throws -> LAContext

@@ -9,6 +9,7 @@
 import SwiftUI
 
 struct PhotoDetailView: View {
+    @EnvironmentObject private var vaultServices: VaultSessionContext
 
     // MARK: - Properties
 
@@ -123,7 +124,7 @@ struct PhotoDetailView: View {
             Text(exportError ?? String(localized: "common.unknownError"))
         }
         .onDisappear {
-            if !showShareSheet, let exportJobID { ExportService.shared.cancelExport(exportJobID) }
+            if !showShareSheet, let exportJobID { vaultServices.exports.cancelExport(exportJobID) }
         }
         .onChange(of: exportScenePhase) { _, phase in
             if phase == .background { isExporting = false; showShareSheet = false }
@@ -171,7 +172,7 @@ struct PhotoDetailView: View {
         isExporting = true
 
         let exportSessionID = authViewModel.librarySessionID
-        exportJobID = ExportService.shared.exportItems([item.source], password: password, sessionID: exportSessionID) { result in
+        exportJobID = vaultServices.exports.exportItems([item.source], password: password, sessionID: exportSessionID) { result in
             guard authViewModel.isAuthenticated, authViewModel.librarySessionID == exportSessionID else { return }
             switch result {
             case .success(let urls):
@@ -217,7 +218,7 @@ struct PhotoDetailView: View {
         }
 
         do {
-            try FileStorageService.shared.deleteFile(path: encryptedPath)
+            try vaultServices.storage.deleteFile(path: encryptedPath)
         } catch {
             // 记录已删除，文件删除失败只会残留无引用的加密文件
         }
@@ -244,6 +245,7 @@ struct PhotoDetailView: View {
 // MARK: - Zoomable Image View
 
 struct ZoomableImageView: View {
+    @EnvironmentObject private var vaultServices: VaultSessionContext
     let photo: MediaPreviewSnapshot
     let sessionID: UUID?
 
@@ -424,7 +426,7 @@ struct ZoomableImageView: View {
         loadError = nil
 
         do {
-            let image = try await MediaLoaderService.shared.loadImage(
+            let image = try await vaultServices.mediaLoader.loadImage(
                 from: photo,
                 password: password
             )

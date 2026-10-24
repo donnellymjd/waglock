@@ -380,6 +380,48 @@ final class EncryptedReleaseUITests: XCTestCase {
         let save = app.buttons["passwordChange.save"]; reveal(app, save); save.tap()
         XCTAssertTrue(app.buttons["Photos"].firstMatch.waitForExistence(timeout: 15), app.debugDescription)
     }
+    @MainActor func testAlternativePasscodeOpensIndependentPersistentNotesAndSettings() throws {
+        let app = try launch()
+        let guest = "PUBLIC-release-secondary-password"
+        let marker = String(UUID().uuidString.prefix(8))
+        let ownerTitle = "Primary sample " + marker, guestTitle = "Separate sample " + marker
+        func note(_ title: String) {
+            app.buttons["Notes"].firstMatch.tap(); app.navigationBars.buttons["New"].tap()
+            replace(app.textFields["note.title"], with: title)
+            replace(app.textViews["note.content"], with: "Disposable isolated UI fixture")
+            app.navigationBars.buttons["Done"].tap()
+            XCTAssertTrue(app.staticTexts[title].firstMatch.waitForExistence(timeout: 8))
+        }
+        note(ownerTitle)
+        app.buttons["Settings"].firstMatch.tap(); app.buttons["settings.security"].tap()
+        let configure = app.buttons["settings.guest.configure"]
+        if configure.exists {
+            reveal(app, configure); configure.tap()
+            replace(app.secureTextFields["guest.password"], with: guest)
+            replace(app.secureTextFields["guest.password.confirm"], with: guest)
+            app.buttons["guest.password.save"].tap()
+            XCTAssertTrue(app.staticTexts["Alternative passcode configured"].waitForExistence(timeout: 10), app.debugDescription)
+        }
+        app.terminate(); app.launch(); unlock(app, password: guest)
+        XCTAssertTrue(app.buttons["photos.albums"].waitForExistence(timeout: 15), app.debugDescription)
+        app.buttons["Notes"].firstMatch.tap()
+        XCTAssertFalse(app.staticTexts[ownerTitle].exists)
+        note(guestTitle)
+        app.buttons["Settings"].firstMatch.tap(); app.buttons["settings.security"].tap()
+        XCTAssertFalse(app.buttons["settings.guest.configure"].exists)
+        XCTAssertFalse(app.staticTexts["Alternative passcode configured"].exists)
+        XCTAssertTrue(app.buttons["settings.changePassword"].exists)
+        XCTAssertTrue(app.buttons["settings.faceID"].exists)
+        app.terminate(); app.launch(); unlock(app, password: guest)
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts[guestTitle].waitForExistence(timeout: 8))
+        XCTAssertFalse(app.staticTexts[ownerTitle].exists)
+        app.terminate(); app.launch(); unlock(app, password: owner)
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts[ownerTitle].waitForExistence(timeout: 8))
+        XCTAssertFalse(app.staticTexts[guestTitle].exists)
+    }
+
     @MainActor func testReleasePasswordChangePreservesLibrary() throws {
         let app = try launch()
         app.buttons["Notes"].firstMatch.tap(); app.navigationBars.buttons["New"].tap()

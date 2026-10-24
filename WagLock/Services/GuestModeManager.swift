@@ -43,7 +43,7 @@ final class GuestModeManager: ObservableObject {
     /// 判断是否应该显示内容
     /// - Returns: 主人模式返回true，访客模式返回false
     var shouldShowContent: Bool {
-        return currentMode == .owner
+        return currentMode == .owner || currentMode == .secondaryOwner
     }
 
     /// 判断是否为访客模式
@@ -53,7 +53,7 @@ final class GuestModeManager: ObservableObject {
 
     /// 判断是否为主人模式
     var isOwnerMode: Bool {
-        return currentMode == .owner
+        return currentMode == .owner || currentMode == .secondaryOwner
     }
 
     /// 重置为未认证状态（用于登出时）

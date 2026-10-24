@@ -4,6 +4,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct AudioView: View {
+    @EnvironmentObject private var vaultServices: VaultSessionContext
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var auth: AuthenticationViewModel
@@ -18,7 +19,7 @@ struct AudioView: View {
         let url: URL
     }
 
-    @ObservedObject private var audio = AudioSessionController.shared
+    @EnvironmentObject private var audio: AudioSessionController
     private struct AudioSelection: Identifiable {
         let id = UUID()
         let source: MediaItem
@@ -350,7 +351,7 @@ struct AudioView: View {
 
     private func persist(_ item: MediaItem) throws {
         guard canAccess, !Task.isCancelled else {
-            try? FileStorageService.shared.deleteFile(path: item.encryptedPath)
+            try? vaultServices.storage.deleteFile(path: item.encryptedPath)
             throw CancellationError()
         }
         modelContext.insert(item)
@@ -358,7 +359,7 @@ struct AudioView: View {
             try LibraryWriteCoordinator.save(modelContext)
         } catch {
             modelContext.rollback()
-            try? FileStorageService.shared.deleteFile(path: item.encryptedPath)
+            try? vaultServices.storage.deleteFile(path: item.encryptedPath)
             throw error
         }
     }
@@ -379,7 +380,7 @@ struct AudioView: View {
                 if backgroundID != .invalid { UIApplication.shared.endBackgroundTask(backgroundID) }
             }
             do {
-                let item = try await AudioImportService.importFile(url: url, password: password)
+                let item = try await AudioImportService.importFile(url: url, password: password, storage: vaultServices.storage)
                 let formatter = DateFormatter()
                 formatter.locale = AppConstants.presentationLocale
                 formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -424,7 +425,7 @@ struct AudioView: View {
                 }
             }
             do {
-                let decryptedURL = try await FileStorageService.shared.createDecryptedTempFileAsync(
+                let decryptedURL = try await vaultServices.storage.createDecryptedTempFileAsync(
                     path: path, password: password, preferredExtension: fileExtension)
                 defer { try? FileManager.default.removeItem(at: decryptedURL) }
                 try Task.checkCancellation()
@@ -500,7 +501,7 @@ struct AudioView: View {
             return
         }
         if audio.playingID == itemID { audio.stopPlayback() }
-        do { try FileStorageService.shared.deleteFile(path: path) }
+        do { try vaultServices.storage.deleteFile(path: path) }
         catch { errorMessage = String(localized: "audio.error.deleteFile") }
     }
 

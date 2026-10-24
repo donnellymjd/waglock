@@ -73,6 +73,10 @@ nonisolated class FileStorageService: @unchecked Sendable {
         createStorageDirectoryIfNeeded()
     }
 
+    convenience init(directory: URL) {
+        self.init(directory: directory, availableCapacity: Self.readAvailableCapacity)
+    }
+
     /// Disposable directories and injected capacity failures keep storage tests isolated.
     init(directory: URL, availableCapacity: @escaping @Sendable (URL) throws -> Int64) {
         storageDirectory = directory

@@ -25,8 +25,11 @@ final class PortableBackupSession: ObservableObject {
     private var directory: URL?
     private var observation: AnyCancellable?
     private let authority: DocumentPreviewService
+    private let albums: AlbumStore
+    private let storage: FileStorageService
 
-    init(authority: DocumentPreviewService? = nil) {
+    init(authority: DocumentPreviewService? = nil, albums: AlbumStore = .shared, storage: FileStorageService = .shared) {
+        self.albums = albums; self.storage = storage
         let service = authority ?? .shared
         self.authority = service
         observation = service.$revision.dropFirst().sink { [weak self] _ in
@@ -38,7 +41,7 @@ final class PortableBackupSession: ObservableObject {
     nonisolated deinit { task?.cancel(); worker?.cancel(); lease?.cancel() }
 
     func refresh(mounts: LibraryMountCoordinator, request: LibraryMountCoordinator.Request) {
-        guard request.scope == .legacyOwner, authority.permits(request.sessionID, revision: authority.revision),
+        guard request.scope != .ephemeralGuest, authority.permits(request.sessionID, revision: authority.revision),
               let active = mounts.active, active.request == request else { rows = []; return }
         do {
             rows = try active.container.mainContext.fetch(FetchDescriptor<VaultAlbum>()).map {
@@ -54,7 +57,7 @@ final class PortableBackupSession: ObservableObject {
         cancel()
         BackupCleanup.retry()
         let id = token, revision = authority.revision
-        let request = LibraryMountCoordinator.Request(sessionID: auth.librarySessionID, scope: .legacyOwner)
+        let request = LibraryMountCoordinator.Request(sessionID: auth.librarySessionID, scope: auth.libraryScope)
         guard let mount = mounts.active, mount.request == request else { error = "Unlock WagLock and try again."; return }
         let mountID = mount.id
         func check() throws {
@@ -86,17 +89,17 @@ final class PortableBackupSession: ObservableObject {
                         guard let album = records.first(where: { $0.id == row.id }) else { throw Failure.changed }
                         if row.policy == .faceIDOnly {
                             guard consent.contains(row.id), let password = passwords[row.id], password.count >= 12 else { throw Failure.credentials }
-                            try await AlbumStore.shared.unlock(album, useBiometrics: true, albums: records)
+                            try await self.albums.unlock(album, useBiometrics: true, albums: records)
                         } else {
                             guard row.policy == .inherited || !(passwords[row.id] ?? "").isEmpty else { throw Failure.credentials }
-                            try await AlbumStore.shared.unlock(album, password: passwords[row.id], albums: records)
+                            try await self.albums.unlock(album, password: passwords[row.id], albums: records)
                         }
                         try check(); prepared.insert(row.id)
                     }
                     pending.removeAll { prepared.contains($0.id) }
                 }
                 let collector = PortableExportSnapshotService(mounts: mounts, authority: authority,
-                    albums: .shared, storage: .shared, isOwner: { auth.isAuthenticated && GuestModeManager.shared.isOwnerMode && auth.librarySessionID == request.sessionID })
+                    albums: self.albums, storage: self.storage, isOwner: { auth.isAuthenticated && GuestModeManager.shared.isOwnerMode && auth.librarySessionID == request.sessionID })
                 let snapshot = try collector.capture(request, approvedBiometricAlbums: consent)
                 var credentials: [PortableExportSnapshot.DomainID: AgeFileWriter.Credential] = [.root: rootCredential]
                 for row in topology where row.policy != .inherited {
@@ -104,7 +107,7 @@ final class PortableBackupSession: ObservableObject {
                     credentials[.album(row.id)] = .password(password)
                 }
                 guard let key = auth.sessionPassword else { throw Failure.unavailable }
-                let plan = try BackupPlanFactory.make(snapshot: snapshot, rootKey: key, albumStore: .shared,
+                let plan = try BackupPlanFactory.make(snapshot: snapshot, rootKey: key, albumStore: self.albums,
                     albums: records, credentials: credentials)
                 try check(); try collector.validateAuthorization(snapshot)
                 let root = Self.jobRoot

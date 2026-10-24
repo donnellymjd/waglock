@@ -52,7 +52,7 @@ final class DocumentPreviewRenderingTests: XCTestCase {
         let presented: AnyView = usePager
             ? AnyView(FilePagerView(files: [item], initialFile: item, sessionID: auth.librarySessionID))
             : AnyView(detail)
-        let host = UIHostingController(rootView: presented.environmentObject(auth))
+        let host = UIHostingController(rootView: AnyView(presented.id(auth.librarySessionID).environmentObject(auth).environmentObject(try XCTUnwrap(auth.vaultContext)).environmentObject(try XCTUnwrap(auth.vaultContext).exports)))
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
         let previousWindow = scene.windows.first { $0.isKeyWindow }
         let window = UIWindow(windowScene: scene)
@@ -66,6 +66,11 @@ final class DocumentPreviewRenderingTests: XCTestCase {
         auth.suspendAlbumAccess()
         try await eventually("background removal") { !self.containsPDF(host.view) }
         auth.resumeAlbumAccess()
+        // The application remounts a new immutable session graph after suspension.
+        let resumed: AnyView = usePager
+            ? AnyView(FilePagerView(files: [item], initialFile: item, sessionID: auth.librarySessionID))
+            : AnyView(MediaDetailView(mediaItem: item, sessionID: auth.librarySessionID))
+        host.rootView = AnyView(resumed.id(auth.librarySessionID).environmentObject(auth).environmentObject(try XCTUnwrap(auth.vaultContext)).environmentObject(try XCTUnwrap(auth.vaultContext).exports))
         try await eventually("authorized resume") { self.containsPDF(host.view) }
         // Mimic the store disappearing while a presented screen is still dismissing.
         auth.logout()

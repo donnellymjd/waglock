@@ -9,7 +9,7 @@ struct AlbumBrowserView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var guest: GuestModeManager
-    @ObservedObject private var store = AlbumStore.shared
+    @EnvironmentObject private var store: AlbumStore
     @State private var showCreate = false
     @State private var showSecurity = false
     @State private var showFiles = false
@@ -246,7 +246,7 @@ private struct AlbumLibraryMoveView: View {
     @Query(sort: \MediaItem.createdAt, order: .reverse) private var media: [MediaItem]
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject private var store = AlbumStore.shared
+    @EnvironmentObject private var store: AlbumStore
     @State private var busy = false
     @State private var error: String?
 
@@ -288,7 +288,7 @@ private struct AlbumLibraryMoveView: View {
 struct AlbumUnlockView: View {
     let album: VaultAlbum
     let albums: [VaultAlbum]
-    @ObservedObject private var store = AlbumStore.shared
+    @EnvironmentObject private var store: AlbumStore
     @AppStorage(PasswordKeyboard.preferenceKey) private var keyboardRaw = PasswordKeyboard.numberPad.rawValue
     @State private var password = ""
     @State private var busy = false
@@ -337,6 +337,7 @@ struct AlbumUnlockView: View {
 }
 
 struct AlbumConfigurationView: View {
+    @EnvironmentObject private var vaultServices: VaultSessionContext
     let parent: VaultAlbum?
     var editing: VaultAlbum? = nil
     let albums: [VaultAlbum]
@@ -417,10 +418,10 @@ struct AlbumConfigurationView: View {
             defer { busy = false; password = ""; confirmation = "" }
             do {
                 if let editing {
-                    try await AlbumStore.shared.changeProtection(
+                    try await vaultServices.albums.changeProtection(
                         of: editing, to: protection, password: password, albums: albums, context: context)
                 } else {
-                    _ = try await AlbumStore.shared.create(name: name, parent: parent,
+                    _ = try await vaultServices.albums.create(name: name, parent: parent,
                         protection: protection, password: password, albums: albums, context: context)
                 }
                 dismiss()

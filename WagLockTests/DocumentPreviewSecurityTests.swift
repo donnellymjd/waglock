@@ -140,7 +140,9 @@ final class DocumentPreviewSecurityTests: XCTestCase {
         XCTAssertNil(model.data)
         XCTAssertNil(model.load(path: "owner", password: "key", fileExtension: ".pdf", sessionID: session))
         auth.resumeAlbumAccess()
-        await model.load(path: "owner", password: "key", fileExtension: ".pdf", sessionID: session)?.value
+        XCTAssertNotEqual(auth.librarySessionID, session)
+        XCTAssertNil(model.load(path: "owner", password: "key", fileExtension: ".pdf", sessionID: session))
+        await model.load(path: "owner", password: "key", fileExtension: ".pdf", sessionID: auth.librarySessionID)?.value
         XCTAssertNotNil(model.data)
         auth.logout()
         XCTAssertNil(model.data)

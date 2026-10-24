@@ -10,6 +10,7 @@ import SwiftData
 import SwiftUI
 
 struct SettingsView: View {
+    @EnvironmentObject private var vaultServices: VaultSessionContext
 
     // MARK: - Environment
 
@@ -190,7 +191,7 @@ struct SettingsView: View {
             Section("UNLOCKING") {
                 if guestModeManager.isOwnerMode {
                     NavigationLink { BiometricSettingsView() } label: {
-                        securityRow("faceid", "Face ID", authViewModel.isBiometricUnlockEnabled ? "Enabled for this vault" : "Disabled for this vault")
+                        securityRow("faceid", "Face ID", authViewModel.isBiometricUnlockEnabled ? "Enabled" : "Disabled")
                     }.accessibilityIdentifier("settings.faceID").wagLockCardRow()
                     Button { showChangePasswordSheet = true } label: {
                         securityRow("key", "Change password", "Verify your current password")
@@ -218,7 +219,16 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings.autoLock").wagLockCardRow()
                 }
             }
-            Section("OTHER WAYS IN") {
+            Section {
+                if LibraryStoragePolicy.encryptedMetadata && authViewModel.isPrimaryVault {
+                    if authViewModel.hasSecondaryVault {
+                        Text("Alternative passcode configured").foregroundStyle(.secondary)
+                    } else {
+                        Button { showGuestModeSetup = true } label: {
+                            securityRow("eye.slash", "Set up alternative passcode", "Open a separate encrypted library")
+                        }.accessibilityIdentifier("settings.guest.configure").wagLockCardRow()
+                    }
+                }
                 if guestModeManager.isOwnerMode && !LibraryStoragePolicy.encryptedMetadata {
                     NavigationLink {
                         List {
@@ -275,13 +285,14 @@ struct SettingsView: View {
         isLoadingStorage = true
         defer { isLoadingStorage = false }
 
-        storageInfo = await StorageService.shared.getStorageInfo(modelContext: modelContext)
+        storageInfo = await StorageService.shared.getStorageInfo(modelContext: modelContext, storage: vaultServices.storage)
     }
 
     private func clearCache() {
         Task {
             do {
-                _ = try StorageService.shared.clearCache()
+                vaultServices.mediaLoader.clearCache()
+                vaultServices.thumbnails.clearAll()
 
                 // 重新加载存储信息
                 await loadStorageInfo()
@@ -533,7 +544,7 @@ struct AboutView: View {
                             .accessibilityIdentifier("about.encryptedLibrary")
                     } else {
                         WagLockInfoCard(title: "Early test build", detail: AppConstants.developmentNotice)
-                        Text("Guest Mode hides content; it is not a separate encrypted vault.")
+                        Text("Vault access depends on its password and optional device-bound Face ID. Keep independent backups.")
                             .font(.footnote).foregroundStyle(ColorTheme.secondaryText)
                     }
                     Text("Local imports have no item limit or purchase requirement.")

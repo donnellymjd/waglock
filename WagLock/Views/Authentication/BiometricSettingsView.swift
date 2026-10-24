@@ -13,15 +13,16 @@ struct BiometricSettingsView: View {
                 Label(auth.isBiometricUnlockEnabled ? "Face ID enabled" : "Face ID disabled", systemImage: "faceid")
                 Text("Your vault password remains available. Face ID unlocks only on this device; changing enrolled biometrics requires enabling it again with your vault password.")
                     .font(.footnote)
-                Text("This build supports Face ID for the current vault. Assignment to an independent alternative vault is still in development.")
+                Text("Enter this vault’s password to assign Face ID to it. Passcodes continue to select their own libraries.")
                     .font(.footnote)
                 if auth.isBiometricUnlockEnabled {
                     Button("Disable Face ID", role: .destructive) { auth.disableBiometricUnlock() }
-                } else {
+                }
+                Group {
                     SecureField("Current vault password", text: $password)
                         .textContentType(.password)
                         .accessibilityIdentifier("vault.faceID.password")
-                    Button("Enable Face ID") {
+                    Button(auth.isBiometricUnlockEnabled ? "Assign Face ID to This Vault" : "Enable Face ID") {
                         error = nil
                         showAssignmentWarning = true
                     }

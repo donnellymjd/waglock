@@ -11,6 +11,7 @@ import Foundation
 enum AuthenticationMode {
     /// 主人模式 - 完整访问权限
     case owner
+    case secondaryOwner
 
     /// 访客模式 - 受限访问权限（隐藏所有内容）
     case guest

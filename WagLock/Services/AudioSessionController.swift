@@ -4,6 +4,7 @@ import Foundation
 
 @MainActor
 final class AudioSessionController: NSObject, ObservableObject, AVAudioRecorderDelegate {
+    nonisolated deinit {}
     static let shared = AudioSessionController()
 
     @Published private(set) var hasRecording = false

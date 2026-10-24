@@ -13,6 +13,8 @@ import SwiftUI
 struct WagLockApp: App {
     init() {
         ProtectedTemporaryFiles.removeAbandonedJobs()
+        ProtectedTemporaryFiles.removeAbandonedJobs(in: FileManager.default.temporaryDirectory
+            .appendingPathComponent("WagLockSessions").appendingPathComponent("WagLockSessionJobs"))
         MediaImportService.removeAbandonedProviderCopies()
         ExportService.shared.cleanupAbandonedExports()
         PortableBackupSession.cleanupAbandonedJobs()
@@ -57,7 +59,12 @@ struct WagLockApp: App {
                         && guestModeManager.currentMode != .unauthenticated
                     {
                         // 已认证且模式不为未认证状态 - 显示主应用
-                        AuthenticatedLibraryView()
+                        Group {
+                            if let services = authViewModel.vaultContext {
+                                AuthenticatedLibraryView(services: services, library: authViewModel.makeSelectedLibraryMount())
+                                    .id(services.sessionID)
+                            }
+                        }
                             .id(authViewModel.librarySessionID)
                             .environmentObject(authViewModel)
                             .environmentObject(guestModeManager)
@@ -126,7 +133,7 @@ struct WagLockApp: App {
                     let returnedFromBackground = lastBackgroundedAt != nil
                     autoLockIfNeeded()
                     if returnedFromBackground { authViewModel.resumeAlbumAccess() }
-                    AudioSessionController.shared.tick()
+                    authViewModel.vaultContext?.audio.tick()
                 default:
                     break
                 }
@@ -136,7 +143,7 @@ struct WagLockApp: App {
 
     private func revokeCapturedSession() {
         authViewModel.handleBackground(lockImmediately: true)
-        AudioSessionController.shared.stopPlayback()
+        authViewModel.vaultContext?.audio.stopPlayback()
     }
 
     // MARK: - Auto Lock
@@ -148,7 +155,7 @@ struct WagLockApp: App {
         defer { lastBackgroundedAt = nil }
 
         // 正在录音或存在未保存录音时，不执行自动锁定，确保长时间后台录音稳定不被销毁
-        guard !AudioSessionController.shared.hasRecording else { return }
+        guard !(authViewModel.vaultContext?.audio.hasRecording ?? false) else { return }
 
         guard authViewModel.isAuthenticated,
             let backgroundedAt = lastBackgroundedAt

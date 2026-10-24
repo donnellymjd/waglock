@@ -152,10 +152,10 @@ class StorageService {
     // MARK: - Storage Info
 
     /// 获取存储统计信息
-    func getStorageInfo(modelContext: ModelContext) async -> StorageInfo {
+    func getStorageInfo(modelContext: ModelContext, storage: FileStorageService? = nil) async -> StorageInfo {
         let totalUsed = await calculateTotalStorageUsed(modelContext: modelContext)
-        let cacheSize = calculateCacheSize()
-        let documentsSize = calculateDocumentsDirectorySize()
+        let cacheSize = storage == nil ? calculateCacheSize() : 0
+        let documentsSize = storage.map { calculateDirectorySize(url: $0.getStorageDirectory()) } ?? calculateDocumentsDirectorySize()
 
         // 获取设备可用空间
         let availableSpace = getAvailableSpace()

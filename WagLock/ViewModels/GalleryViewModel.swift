@@ -53,13 +53,14 @@ class GalleryViewModel: ObservableObject {
 
     var modelContext: ModelContext?
 
-    private let storageService = FileStorageService.shared
+    private let storageService: FileStorageService
     private let encryptionService = EncryptionService.shared
     private let appSettings = AppSettings.shared
 
     // MARK: - Initialization
 
-    init() {
+    init(storage: FileStorageService = .shared) {
+        self.storageService = storage
         self.sortOrder = AppSettings.shared.sortOrder
     }
 

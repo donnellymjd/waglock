@@ -2,11 +2,20 @@ import SwiftUI
 import UIKit
 
 struct PortableBackupView: View {
+    @EnvironmentObject private var services: VaultSessionContext
+    var body: some View { ScopedPortableBackupView(services: services).id(services.sessionID) }
+}
+
+private struct ScopedPortableBackupView: View {
+    init(services: VaultSessionContext) {
+        _session = StateObject(wrappedValue: PortableBackupSession(authority: services.documents,
+            albums: services.albums, storage: services.storage))
+    }
     @EnvironmentObject private var auth: AuthenticationViewModel
     @EnvironmentObject private var mounts: LibraryMountCoordinator
     @EnvironmentObject private var mode: GuestModeManager
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var session = PortableBackupSession()
+    @StateObject private var session: PortableBackupSession
     @State private var method = "password"
     @State private var password = ""
     @State private var confirmation = ""
@@ -19,7 +28,7 @@ struct PortableBackupView: View {
     @State private var saved = false
     @State private var backupName = "WagLock-Backup"
     private struct BackupFile: Identifiable { let id = UUID(); let url: URL }
-    private var request: LibraryMountCoordinator.Request { .init(sessionID: auth.librarySessionID, scope: .legacyOwner) }
+    private var request: LibraryMountCoordinator.Request { .init(sessionID: auth.librarySessionID, scope: auth.libraryScope) }
     private var biometricRows: [PortableBackupSession.AlbumRow] { session.rows.filter { $0.policy == .faceIDOnly } }
 
     var body: some View {

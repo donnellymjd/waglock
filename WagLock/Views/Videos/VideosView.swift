@@ -11,6 +11,7 @@ import SwiftData
 import SwiftUI
 
 struct VideosView: View {
+    @EnvironmentObject private var vaultServices: VaultSessionContext
 
     // MARK: - Environment
 
@@ -169,7 +170,7 @@ struct VideosView: View {
         }
 
         do {
-            try FileStorageService.shared.deleteFile(path: encryptedPath)
+            try vaultServices.storage.deleteFile(path: encryptedPath)
         } catch {
             // 记录已删除，文件删除失败只会残留无引用的加密文件
         }
@@ -179,6 +180,7 @@ struct VideosView: View {
 // MARK: - Video Card View
 
 struct VideoCardView: View {
+    @EnvironmentObject private var vaultServices: VaultSessionContext
     let video: MediaPreviewSnapshot
     private let thumbnailData: Data?
     @State private var thumbnailImage: UIImage?
@@ -258,7 +260,7 @@ struct VideoCardView: View {
         .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
         .task(id: video.id) {
             guard let thumbnailData else { return }
-            let image = await ThumbnailImageLoader.shared.image(
+            let image = await vaultServices.thumbnails.image(
                 for: video.id.uuidString,
                 data: thumbnailData
             )

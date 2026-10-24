@@ -9,6 +9,7 @@
 import SwiftUI
 
 struct GuestModeSetupView: View {
+    @EnvironmentObject private var auth: AuthenticationViewModel
 
     // MARK: - Environment
 
@@ -48,7 +49,7 @@ struct GuestModeSetupView: View {
                                     .font(.title3)
                                     .fontWeight(.bold)
 
-                                Text(String(localized: "guestMode.setup.description"))
+                                Text(LibraryStoragePolicy.encryptedMetadata ? "Create a separate encrypted library opened by a different passcode on the ordinary login screen." : String(localized: "guestMode.setup.description"))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -116,16 +117,16 @@ struct GuestModeSetupView: View {
                         // 安全说明
                         infoRow(
                             icon: "eye.slash.fill",
-                            text: String(localized: "guestMode.info.hideContent"))
+                            text: "Each vault has independent content and keys.")
                         infoRow(
                             icon: "person.2.fill",
-                            text: String(localized: "guestMode.info.hideSettings"))
+                            text: "Lock the app before entering the other passcode.")
                         infoRow(
                             icon: "key.fill",
                             text: String(localized: "guestMode.info.differentPassword"))
                         infoRow(
                             icon: "number.circle.fill",
-                            text: String(localized: "guestMode.info.digitsOnly"))
+                            text: "Use a PIN or a full password. No forensic invisibility is promised.")
                     }
                     .padding(.vertical, 8)
                 } header: {
@@ -206,7 +207,8 @@ struct GuestModeSetupView: View {
         // 4. 保存访客密码
         Task {
             do {
-                try keychainService.saveGuestPassword(guestPassword)
+                if LibraryStoragePolicy.encryptedMetadata { try auth.provisionSecondaryVault(password: guestPassword) }
+                else { try keychainService.saveGuestPassword(guestPassword) }
 
                 await MainActor.run {
                     isProcessing = false

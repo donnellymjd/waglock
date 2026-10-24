@@ -5,7 +5,7 @@ struct AlbumPreviewView: View {
     let asset: AlbumAsset
     let album: VaultAlbum
     let albums: [VaultAlbum]
-    @ObservedObject private var store = AlbumStore.shared
+    @EnvironmentObject private var store: AlbumStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var phase
     @State private var url: URL?

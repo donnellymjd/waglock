@@ -2,6 +2,7 @@ import AVKit
 import SwiftUI
 
 struct VideoPlayerView: View {
+    @EnvironmentObject private var vaultServices: VaultSessionContext
     private let sourceVideo: MediaItem
     let video: MediaPreviewSnapshot
     private let originatingSessionID: UUID?
@@ -144,7 +145,7 @@ struct VideoPlayerView: View {
         audioSessionActive = true
         loadTask = Task { @MainActor in
             do {
-                let url = try await FileStorageService.shared.createDecryptedTempFileAsync(
+                let url = try await vaultServices.storage.createDecryptedTempFileAsync(
                     path: video.encryptedPath, password: password, preferredExtension: video.fileExtension)
                 guard !Task.isCancelled, loadGeneration == generation, isCurrentSession, scenePhase == .active else {
                     try? FileManager.default.removeItem(at: url)
@@ -187,7 +188,7 @@ struct VideoPlayerView: View {
         shareGeneration = UUID()
         let generation = shareGeneration
         let sessionID = authViewModel.librarySessionID
-        exportJobID = ExportService.shared.exportItems([sourceVideo], password: password, sessionID: sessionID) { result in
+        exportJobID = vaultServices.exports.exportItems([sourceVideo], password: password, sessionID: sessionID) { result in
             guard generation == shareGeneration, isCurrentSession,
                   authViewModel.librarySessionID == sessionID else { return }
             guard scenePhase == .active else { cancelSharing(); return }
@@ -201,7 +202,7 @@ struct VideoPlayerView: View {
 
     private func cancelSharing() {
         shareGeneration = UUID()
-        if let exportJobID { ExportService.shared.cancelExport(exportJobID) }
+        if let exportJobID { vaultServices.exports.cancelExport(exportJobID) }
         exportJobID = nil; isSharing = false; showShareSheet = false; exportedURLs.removeAll()
     }
 
@@ -218,7 +219,7 @@ struct VideoPlayerView: View {
             return
         }
         stopPlayback()
-        try? FileStorageService.shared.deleteFile(path: path)
+        try? vaultServices.storage.deleteFile(path: path)
         dismiss()
     }
 }

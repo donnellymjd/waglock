@@ -15,7 +15,7 @@ final class NoteAutosaveCoordinator: ObservableObject {
         let authorize: @MainActor () -> Bool
         let commit: Action
     }
-    private let authority: DocumentPreviewService
+    private var authority: DocumentPreviewService
     private let delay: Delay
     private var pending: Pending?
     private var task: Task<Void, Never>?
@@ -30,6 +30,16 @@ final class NoteAutosaveCoordinator: ObservableObject {
         suspensionObservation = authority.pendingNoteFlushes.sink { [weak self] session in
             guard self?.pending?.session == session else { return }
             self?.flush()
+        }
+        observation = authority.$revision.dropFirst().sink { [weak self] _ in self?.cancel() }
+    }
+
+    func bind(to authority: DocumentPreviewService) {
+        guard self.authority !== authority else { return }
+        cancel()
+        self.authority = authority
+        suspensionObservation = authority.pendingNoteFlushes.sink { [weak self] session in
+            guard self?.pending?.session == session else { return }; self?.flush()
         }
         observation = authority.$revision.dropFirst().sink { [weak self] _ in self?.cancel() }
     }

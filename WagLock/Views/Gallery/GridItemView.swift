@@ -9,6 +9,7 @@
 import SwiftUI
 
 struct GridItemView: View {
+    @EnvironmentObject private var vaultServices: VaultSessionContext
 
     // MARK: - Properties
 
@@ -156,7 +157,7 @@ struct GridItemView: View {
         }
 
         isLoadingThumbnail = true
-        let image = await ThumbnailImageLoader.shared.image(
+        let image = await vaultServices.thumbnails.image(
             for: mediaItem.id.uuidString,
             data: thumbnailData
         )

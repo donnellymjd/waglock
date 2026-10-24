@@ -227,6 +227,10 @@ final class ExportSessionSecurityTests: XCTestCase {
         auth.suspendAlbumAccess()
         XCTAssertFalse(FileManager.default.fileExists(atPath: first[0].path))
         auth.resumeAlbumAccess()
+        let staleSession = try XCTUnwrap(session)
+        session = auth.librarySessionID
+        XCTAssertNotEqual(session, staleSession)
+        XCTAssertNil(exports.exportItems([media], password: password, sessionID: staleSession) { _ in })
         let second = try await export([media])
         auth.logout()
         XCTAssertFalse(FileManager.default.fileExists(atPath: second[0].path))
