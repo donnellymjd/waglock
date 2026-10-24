@@ -39,3 +39,7 @@ All298 unit/security tests pass in `/private/tmp/waglock-build51-session-boundar
 Release UI evidence: the stale-calculator preference/attempt-count relaunch check and password-change persistence pass in the initial combined run; its draft assertion counted virtualized screen cells and failed (8 versus9). The corrected check uses an accessible saved-note count and passes both immediate and old600-second preference cycles in `/private/tmp/waglock-build51-draft-count-ui.xcresult`. Repeated lock and unfinished-draft/background/cold-relaunch checks pass in `/private/tmp/waglock-build51-synchronous-lock-ui.xcresult`. Final password-change/cold-relaunch check after centralized revocation passes in `/private/tmp/waglock-build51-final-password-ui.xcresult`. Captured-screen behavior and physical-device acceptance remain manual gates.
 
 Linear items D2S-152,153,154,155,156 and163 are Done for their verified implementation scopes. The other findings retain the residual/physical/format work described above. No claim of all13 findings resolved is made.
+
+## October24 installation
+
+Build51 is installed over the existing public-identity WagLock app, preserving its library/credentials; filtered phone metadata confirms1.0(51). Remote launch was denied because the phone locked after installation. The owner is asked to open manually and check password changes, retained media, unfinished drafts, Face ID/background locking and capture detection. These checks are pending, not passed. No reset or media/credential inspection occurred. [Device record](device-testing.md).

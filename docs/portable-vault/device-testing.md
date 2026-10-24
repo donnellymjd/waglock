@@ -203,3 +203,11 @@ Build44 installation succeeded and the installed-app query confirms 1.3.8 (44). 
 
 
 **Owner follow-up (2026-10-23):** “otherwise everything else works.” Record the normal application checks associated with build43 as passed, with the video-viewer design preference addressed by build44. This does not establish acceptance of the revised build44 viewer or independently confirm the separate complete Mac backup-recovery check. Build44 viewer acceptance remains pending.
+
+## Build51 — security-hardening installation, October24
+
+Installed the verified development-signed **WagLock1.0(51)** update under `com.d2sci.waglock`, from source commit `cd739e8`. Filtered installed-app metadata confirms name/version/build. No uninstall, reset, library migration, media read/export or credential inspection was performed. WagLock Dev and its separate library remain untouched. The phone reconnected after the owner's “ready” response; remote launch then failed because the phone had locked. Installation is successful; launch and functional acceptance are not established by this result. Open WagLock manually.
+
+Evidence: `/private/tmp/waglock-build51-install.log`, `/private/tmp/waglock-build51-installed.json`, `/private/tmp/waglock-build51-launch.log`, `/private/tmp/waglock-build51-app-info.log`. Final package verification: `/private/tmp/waglock-build51-final-phone-verification.json`;298 unit/security tests and recorded release UI regressions pass. See [launch triage](security-launch-triage.md) for scope and residual findings.
+
+Owner check requested with disposable samples: main/album password changes and relaunch preserve media; an unfinished note survives background locking and resumes; Face ID success/cancellation and immediate background locking work; screen recording started outside WagLock blocks its content until capture stops. Do not send passwords/private content. Native wrappers are strengthened on new setup or explicit password/protection changes; existing reads do not silently convert. Guest Mode is not enabled in51 and remains a required independent-vault integration for1.0. Physical acceptance remains pending. No submission/upload is authorized by this installation.
