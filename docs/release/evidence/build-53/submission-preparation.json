@@ -1,0 +1,54 @@
+{
+  "status": "prepared-not-uploaded-not-submitted",
+  "date": "2026-10-24",
+  "bundleId": "com.d2sci.waglock",
+  "version": "1.0",
+  "build": "53",
+  "sourceTag": "candidate-1.0-build53",
+  "sourceCommit": "d2faa188cf23ae4ced4310cf7d3c08a990d0e986",
+  "sourceArchive": "/private/tmp/WagLock-1.0-build53-source.tar.gz",
+  "sourceArchiveSHA256": "6ddbbcc61b1dc48b03d8266ba290a53c93db72aa288b4009530a973387d0ecf0",
+  "developmentSignedArchive": "/private/tmp/WagLock-1.0-build53-candidate.xcarchive",
+  "executableSHA256": "f9e6aff19eaf1a8b08ff430d4e3b08a0f6d05df201b7e2d5d74925b8f3d7eb7e",
+  "archivePackageChecksPassed": true,
+  "ownerBuild53PhoneChecklist": "passed",
+  "ownerBuild52SelectedVaultRecoveryChecklist": "passed",
+  "tests": {
+    "unitAndSecurity": 314,
+    "xctest": 186,
+    "swiftTesting": 128,
+    "focusedBoundaries": 57,
+    "finalMediaLifecycle": 7,
+    "releaseRegressionUIWorkflows": 2,
+    "nativeScreenshotWorkflows": 2,
+    "pythonBackupToolTests": 16,
+    "officialAgeVersion": "1.3.2",
+    "independentFixtureSets": 2
+  },
+  "screenshots": "../../screenshots/build53/README.md",
+  "distributionExport": {
+    "exitCode": 70,
+    "error": "No iOS App Store provisioning profile for com.d2sci.waglock",
+    "log": "/private/tmp/waglock-build53-distribution-export.log",
+    "usableDevelopmentIdentityPresent": true,
+    "localDistributionIdentityPresent": false,
+    "appStoreConnectAPICredentialConfigured": false
+  },
+  "externalGates": [
+    "App Store distribution signing/provisioning and validation",
+    "Account source/platform distribution terms review",
+    "Actual App Store Connect app record, privacy/age/publisher/contact fields",
+    "Supported encryption documentation/determination and worldwide territory availability",
+    "Upload/select processed build, attach assets, manual-release review submission"
+  ],
+  "residualSecurityWork": [
+    "D2S-162: bind native media ciphertext to metadata-record identity; public legacy-v1 import/read restriction is implemented",
+    "Broader D2S-105 audit, whole database rollback, legacy Dev metadata, memory/decoder-cache limits",
+    "Direct AirPlay hardware validation not performed; no screenshot/external-camera prevention claim"
+  ],
+  "noAutomaticProvisioningUpdate": true,
+  "noUploadOrSubmission": true,
+  "byteIdenticalBuildClaim": false,
+  "independentAuditClaim": false,
+  "workingTreeNote": "Later build54 counter edits and unrelated design files are preserved unstaged; this source archive is made from the immutable tested build53 tag."
+}
