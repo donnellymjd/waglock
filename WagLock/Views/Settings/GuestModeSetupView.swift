@@ -14,6 +14,7 @@ struct GuestModeSetupView: View {
     // MARK: - Environment
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     // MARK: - State
 
@@ -152,6 +153,8 @@ struct GuestModeSetupView: View {
                 }
             }
             .disabled(isProcessing)
+            .onDisappear { guestPassword = ""; confirmPassword = "" }
+            .onChange(of: scenePhase) { _, phase in if phase == .background { guestPassword = ""; confirmPassword = "" } }
         }
     }
 

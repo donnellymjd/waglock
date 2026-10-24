@@ -59,6 +59,8 @@ final class SecondaryVaultAuthenticationTests: XCTestCase {
         let primaryFile = try primary.storage.saveEncrypted(data: EncryptionService.shared.encrypt(data: Data("PUBLIC primary only".utf8), password: primarySecret))
         auth.logout()
         XCTAssertFalse(primary.isActive)
+        XCTAssertThrowsError(try auth.updatePassword(oldPassword: "PUBLIC-primary-password", newPassword: "PUBLIC-unauthorized-change"))
+        XCTAssertTrue(keychain.verifyPassword("PUBLIC-primary-password"))
         try await login(auth, "PUBLIC-secondary-password")
         XCTAssertFalse(auth.isPrimaryVault)
         XCTAssertTrue(GuestModeManager.shared.isOwnerMode)

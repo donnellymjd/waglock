@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BiometricSettingsView: View {
     @EnvironmentObject private var auth: AuthenticationViewModel
+    @Environment(\.scenePhase) private var scenePhase
     @State private var password = ""
     @State private var error: String?
     @State private var busy = false
@@ -43,6 +44,7 @@ struct BiometricSettingsView: View {
             Text("Face ID always opens the vault assigned to it. It cannot tell which vault you intend to use. Someone asking you to unlock the app could see that vault's contents. Use the appropriate passcode when you need to choose a vault.")
         }
         .onDisappear { password = ""; showAssignmentWarning = false }
+        .onChange(of: scenePhase) { _, phase in if phase == .background { password = "" } }
     }
     private func enableForCurrentVault() {
         let sessionID = auth.librarySessionID

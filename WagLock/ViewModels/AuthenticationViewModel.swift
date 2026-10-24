@@ -495,6 +495,7 @@ final class AuthenticationViewModel: ObservableObject {
 
     /// 更新密码（重新加密后调用）
     func updatePassword(oldPassword: String, newPassword: String) throws {
+        guard isAuthenticated, GuestModeManager.shared.isOwnerMode else { throw VaultAccessError.locked }
         let dataPassword: String
         if secondaryVaultID != nil {
             dataPassword = try keychainService.changeIndependentGuestPassword(oldPassword: oldPassword, newPassword: newPassword).dataPassword

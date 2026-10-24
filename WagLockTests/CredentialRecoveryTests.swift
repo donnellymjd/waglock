@@ -134,6 +134,35 @@ struct CredentialRecoveryTests {
         #expect(throws: (any Error).self) { try keychain.unlockIndependentGuest(password: "secondary-password") }
     }
 
+    @Test func releaseRejectsFastLegacySlotsWithoutChangingRecoveryMaterial() throws {
+        let (legacyReader, storage) = fixture()
+        try legacy(storage)
+        try legacyReader.saveGuestPassword("PUBLIC-legacy-guest")
+        let previous = storage.items
+        let release = KeychainService(service: "recovery-fixture", storage: storage, allowLegacyCredentials: false)
+        #expect(release.isPasswordSet())
+        #expect(!release.verifyPassword("legacy-password"))
+        #expect(throws: (any Error).self) { try release.retrieveDataPassword(using: "legacy-password") }
+        #expect(!release.isGuestPasswordSet())
+        #expect(!release.verifyGuestPassword("PUBLIC-legacy-guest"))
+        #expect(throws: (any Error).self) { try release.saveGuestPassword("PUBLIC-new-guest") }
+        #expect(storage.items == previous)
+        #expect(legacyReader.verifyPassword("legacy-password"))
+        #expect(legacyReader.verifyGuestPassword("PUBLIC-legacy-guest"))
+    }
+
+    @Test func releaseStillOpensModernPrimaryAndIndependentSecondaryCredentials() throws {
+        let storage = FaultKeychainStorage()
+        let release = KeychainService(service: "release-modern", storage: storage,
+            makeDataPassword: { "PUBLIC-random-independent-secret" }, allowLegacyCredentials: false)
+        let primary = try release.savePassword("PUBLIC-modern-primary")
+        let secondary = try release.provisionIndependentGuest(password: "PUBLIC-modern-secondary")
+        #expect(try release.retrieveDataPassword(using: "PUBLIC-modern-primary") == primary)
+        #expect(try release.unlockIndependentGuest(password: "PUBLIC-modern-secondary") == secondary)
+        #expect(try release.changePassword(oldPassword: "PUBLIC-modern-primary", newPassword: "PUBLIC-modern-changed") == primary)
+        #expect(!release.verifyPassword("PUBLIC-modern-primary"))
+    }
+
     private func legacy(_ storage: FaultKeychainStorage, password: String = "legacy-password",
                         secret: String = "original-data-secret") throws {
         let salt = Data(repeating: 42, count: 16)

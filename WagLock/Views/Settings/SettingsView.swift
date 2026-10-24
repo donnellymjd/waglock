@@ -366,6 +366,7 @@ struct SettingsView: View {
 // MARK: - Change Password View
 
 struct ChangePasswordView: View {
+    @Environment(\.scenePhase) private var passwordScenePhase
     @EnvironmentObject var authViewModel: AuthenticationViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -471,6 +472,12 @@ struct ChangePasswordView: View {
                 }
             }
         }
+        .onDisappear { clearPasswordInputs() }
+        .onChange(of: passwordScenePhase) { _, phase in if phase == .background { clearPasswordInputs() } }
+    }
+
+    private func clearPasswordInputs() {
+        currentPassword = ""; newPassword = ""; confirmPassword = ""
     }
 
     private var isValid: Bool {

@@ -290,6 +290,7 @@ struct AlbumUnlockView: View {
     let albums: [VaultAlbum]
     @EnvironmentObject private var store: AlbumStore
     @AppStorage(PasswordKeyboard.preferenceKey) private var keyboardRaw = PasswordKeyboard.numberPad.rawValue
+    @Environment(\.scenePhase) private var scenePhase
     @State private var password = ""
     @State private var busy = false
     @State private var error: String?
@@ -323,6 +324,8 @@ struct AlbumUnlockView: View {
                 if let error { Text(error).foregroundStyle(.red) }
             }
         }.wagLockList()
+        .onDisappear { password = "" }
+        .onChange(of: scenePhase) { _, phase in if phase == .background { password = "" } }
     }
 
     private func unlock(biometric: Bool) {

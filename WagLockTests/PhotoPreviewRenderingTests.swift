@@ -14,6 +14,52 @@ final class PhotoPreviewRenderingTests: XCTestCase {
         try await exercise(video: true)
     }
 
+    func testLateGenericVideoPlaintextIsRemovedAfterLogout() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("late-preview-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let gate = LateVideoPreviewGate()
+        let storage = FileStorageService(directory: root.appendingPathComponent("media"), availableCapacity: { _ in Int64.max })
+        let password = "PUBLIC-late-preview-password"
+        let source = root.appendingPathComponent("PUBLIC-source")
+        try Data("PUBLIC owned plaintext sample".utf8).write(to: source)
+        let path = try storage.saveEncryptedFile(from: source, password: password)
+        let credentials = KeychainService(service: UUID().uuidString, storage: InMemoryAttemptStorage())
+        try credentials.savePassword(password)
+        let auth = AuthenticationViewModel(keychainService: credentials, manageInstallationState: false,
+            contextFactory: { id, session, secret in
+                try VaultSessionContext(vaultID: id ?? UUID(), sessionID: session, dataPassword: secret,
+                    storage: storage, temporaryRoot: root, keychainNamespace: "PUBLIC-" + root.lastPathComponent)
+            })
+        defer { auth.logout() }
+        auth.password = password; await auth.login()?.value
+        let services = try XCTUnwrap(auth.vaultContext)
+        let item = MediaItem(fileName: "PUBLIC late preview", fileExtension: "mp4", fileSize: 28,
+            type: .video, encryptedPath: path)
+        let host = UIHostingController(rootView: MediaDetailView(mediaItem: item, sessionID: auth.librarySessionID,
+            videoLoader: { storage, path, password, ext in
+                let output = try await storage.createDecryptedTempFileAsync(path: path, password: password, preferredExtension: ext)
+                await gate.pause(output)
+                return output
+            })
+            .environmentObject(auth).environmentObject(services).environmentObject(services.exports))
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let previous = scene.windows.first { $0.isKeyWindow }
+        let window = UIWindow(windowScene: scene); window.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
+        window.rootViewController = host; window.makeKeyAndVisible(); host.view.layoutIfNeeded()
+        defer { window.isHidden = true; window.rootViewController = nil; previous?.makeKey() }
+        let output = try await gate.waitUntilPaused()
+        XCTAssertTrue(FileManager.default.fileExists(atPath: output.path))
+        auth.logout()
+        await gate.resume()
+        let deadline = Date().addingTimeInterval(5)
+        while FileManager.default.fileExists(atPath: output.path), Date() < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.path), "Late plaintext must not attach to a revoked view")
+        XCTAssertTrue(storage.fileExists(path: path))
+    }
+
     private func exercise(video: Bool) async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("photo-teardown-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -72,4 +118,20 @@ final class PhotoPreviewRenderingTests: XCTestCase {
         XCTAssertFalse(auth.isAuthenticated)
         XCTAssertTrue(storage.fileExists(path: path))
     }
+}
+
+
+private actor LateVideoPreviewGate {
+    private var output: URL?
+    private var continuation: CheckedContinuation<Void, Never>?
+    func pause(_ url: URL) async {
+        output = url
+        await withCheckedContinuation { continuation = $0 }
+    }
+    func waitUntilPaused() async throws -> URL {
+        let deadline = Date().addingTimeInterval(8)
+        while output == nil, Date() < deadline { try await Task.sleep(for: .milliseconds(20)) }
+        guard let output else { throw CancellationError() }; return output
+    }
+    func resume() { continuation?.resume(); continuation = nil }
 }

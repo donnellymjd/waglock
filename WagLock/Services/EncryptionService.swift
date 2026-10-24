@@ -337,7 +337,8 @@ nonisolated class EncryptionService: @unchecked Sendable {
 
     /// Retains buffered and ZNSC v1 readers. No destination is published until all
     /// available authentication/framing checks pass; any existing output survives failure.
-    func decryptFile(inputURL: URL, to outputURL: URL, password: String) throws {
+    func decryptFile(inputURL: URL, to outputURL: URL, password: String,
+                     allowLegacyStreams: Bool = !LibraryStoragePolicy.encryptedMetadata) throws {
         guard !password.isEmpty else { throw EncryptionError.invalidPassword }
         try ensureDifferentFiles(inputURL, outputURL)
         let reader = try FileHandle(forReadingFrom: inputURL)
@@ -353,7 +354,7 @@ nonisolated class EncryptionService: @unchecked Sendable {
 
         let fields = try readExactly(4, from: reader)
         let version = fields[0]
-        guard version == 1 || version == chunkVersion, fields[1] == 0 else {
+        guard (version == chunkVersion || (version == 1 && allowLegacyStreams)), fields[1] == 0 else {
             throw EncryptionError.invalidData
         }
         let indicator = UInt16(bigEndianData: Data(fields.suffix(2)))

@@ -17,11 +17,17 @@ struct MediaDetailView: View {
 
     // MARK: - Properties
 
+    typealias VideoLoader = @Sendable (FileStorageService, String, String, String) async throws -> URL
+    private let videoLoader: VideoLoader
     private let sourceItem: MediaItem
     let mediaItem: MediaPreviewSnapshot
     private let originatingSessionID: UUID?
 
-    init(mediaItem: MediaItem, sessionID: UUID? = nil) {
+    init(mediaItem: MediaItem, sessionID: UUID? = nil,
+         videoLoader: @escaping VideoLoader = { storage, path, password, ext in
+             try await storage.createDecryptedTempFileAsync(path: path, password: password, preferredExtension: ext)
+         }) {
+        self.videoLoader = videoLoader
         self.sourceItem = mediaItem
         self.mediaItem = MediaPreviewSnapshot(mediaItem)
         self.originatingSessionID = sessionID
@@ -119,11 +125,14 @@ struct MediaDetailView: View {
             }
         }
         .onDisappear {
+            clearSensitiveMedia()
             documentPreview.clear()
             if !showShareSheet, let exportJobID { vaultServices.exports.cancelExport(exportJobID) }
         }
+        .onChange(of: vaultServices.isActive) { _, active in if !active { clearSensitiveMedia() } }
         .onChange(of: exportScenePhase) { _, phase in
             if phase == .background {
+                clearSensitiveMedia()
                 documentPreview.clear()
                 isExporting = false
                 showShareSheet = false
@@ -522,13 +531,13 @@ struct MediaDetailView: View {
             }
 
             if mediaItem.type == .video {
-                let tempURL = try await storageService.createDecryptedTempFileAsync(
-                    path: mediaItem.encryptedPath,
-                    password: password,
-                    preferredExtension: mediaItem.fileExtension
-                )
+                let tempURL = try await videoLoader(storageService, mediaItem.encryptedPath, password, mediaItem.fileExtension)
 
                 await MainActor.run {
+                    guard isCurrentSession, vaultServices.isActive, !Task.isCancelled else {
+                        try? FileManager.default.removeItem(at: tempURL)
+                        return
+                    }
                     self.isLoading = false
                     self.setupVideoPlayer(url: tempURL)
                 }
@@ -541,6 +550,8 @@ struct MediaDetailView: View {
                 preferredExtension: mediaItem.fileExtension
             )
 
+            guard isCurrentSession, vaultServices.isActive, !Task.isCancelled else { return }
+
             // 照片在后台降采样解码，避免主线程解码 12MP+ 大图造成卡顿
             if mediaItem.type == .photo {
                 let image = await vaultServices.thumbnails.image(
@@ -550,6 +561,7 @@ struct MediaDetailView: View {
                 )
 
                 await MainActor.run {
+                    guard isCurrentSession, vaultServices.isActive, !Task.isCancelled else { return }
                     guard let image = image else {
                         self.errorMessage = MediaLoaderError.invalidImageData.localizedDescription
                         self.isLoading = false
@@ -563,13 +575,15 @@ struct MediaDetailView: View {
             }
 
             await MainActor.run {
+                guard isCurrentSession, vaultServices.isActive, !Task.isCancelled else { return }
                 self.decryptedData = data
                 self.isLoading = false
             }
 
         } catch {
             await MainActor.run {
-                self.errorMessage = error.localizedDescription
+                guard isCurrentSession, vaultServices.isActive, !Task.isCancelled else { return }
+                self.errorMessage = "Unable to open this file. Unlock and try again."
                 self.isLoading = false
             }
         }
@@ -652,6 +666,13 @@ struct MediaDetailView: View {
         AVAudioSession.activateForVideoPlayback()
     }
 
+    private func clearSensitiveMedia() {
+        decryptedData = nil
+        decryptedImage = nil
+        cleanupVideoPlayer()
+        cleanupDocumentTempFile()
+    }
+
     /// 清理视频播放器资源
     private func cleanupVideoPlayer() {
         // 停止播放
@@ -678,6 +699,7 @@ struct MediaDetailView: View {
     /// 保存临时文件（用于文档预览）
     private func prepareDocumentTempFile(data: Data) async {
         // 避免重复创建
+        guard isCurrentSession, vaultServices.isActive, !Task.isCancelled else { return }
         if documentTempURL != nil {
             return
         }
@@ -687,6 +709,10 @@ struct MediaDetailView: View {
             // 明文文档临时文件使用最高文件保护级别，防止锁屏后被读取
             try data.write(to: tempURL, options: [.atomic, .completeFileProtection])
             await MainActor.run {
+                guard isCurrentSession, vaultServices.isActive, !Task.isCancelled else {
+                    try? FileManager.default.removeItem(at: tempURL)
+                    return
+                }
                 documentTempURL = tempURL
             }
         } catch {

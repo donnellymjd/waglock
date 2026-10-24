@@ -257,6 +257,28 @@ struct EncryptionServiceTests {
         }
     }
 
+    @Test func releaseStreamPolicyRejectsV1AndPreservesExplicitRecovery() throws {
+        try fixture { directory in
+            let plaintext = Data("PUBLIC legacy recovery sample".utf8)
+            let legacy = try legacyV1(chunks: [plaintext])
+            let input = directory.appendingPathComponent("legacy"), output = directory.appendingPathComponent("out")
+            let sentinel = Data("PUBLIC preserve destination".utf8)
+            try legacy.write(to: input); try sentinel.write(to: output)
+            #expect(throws: (any Error).self) {
+                try crypto.decryptFile(inputURL: input, to: output, password: password, allowLegacyStreams: false)
+            }
+            #expect(try Data(contentsOf: input) == legacy)
+            #expect(try Data(contentsOf: output) == sentinel)
+            try crypto.decryptFile(inputURL: input, to: output, password: password, allowLegacyStreams: true)
+            #expect(try Data(contentsOf: output) == plaintext)
+            let source = directory.appendingPathComponent("original"), current = directory.appendingPathComponent("v2")
+            try plaintext.write(to: source)
+            try crypto.encryptFile(inputURL: source, to: current, password: password)
+            try crypto.decryptFile(inputURL: current, to: output, password: password, allowLegacyStreams: false)
+            #expect(try Data(contentsOf: output) == plaintext)
+        }
+    }
+
     /// Independent fixture encoder for the exact pre-hardening format, not the v2 writer.
     private func legacyV1(chunks: [Data]) throws -> Data {
         let salt = Data((0..<16).map(UInt8.init))

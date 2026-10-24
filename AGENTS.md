@@ -54,3 +54,8 @@ Existing security coverage is incomplete; the preceding paragraph is guidance, n
 
 ## Commit & Pull Request Guidelines
 Commits follow short, imperative subjects (`Add session password storage`, `Fix photo picker crash`). Each commit should build and pass `xcodebuild test`. Pull requests must include: summary of behavior changes, linked issue or requirement doc, screenshots/video for UI adjustments, and a checklist confirming migrations or new assets. Highlight any security-sensitive changes (encryption tweaks, password handling) so reviewers can focus on regression risk.
+
+
+## Accepted build53 launch boundaries — October24
+
+Public encrypted release refuses fast legacy SHA256 owner/guest slots, native ZNSC v1 stream reads and native .encrypted imports. Preserve explicit Dev/recovery readers and supported modern credentials, v2/buffered media and age backup recovery; no migration, reset or native format conversion is implied. Recheck originating immutable active context after every preview await and discard late owned plaintext. Clear password presentations on background/disappearance, while permitting transient inactive system dialogs; require live authentication before credential changes. Full314 tests, actual release UI and the requested build53 physical checklist passed, including recording started while unlocked. D2S-162 record binding and broader audit limitations remain open. Use docs/release/app-store/README.md for current packaging/account gates; old build50/51 holds are historical. Do not overwrite unrelated ongoing design or version-counter work when freezing the accepted candidate.

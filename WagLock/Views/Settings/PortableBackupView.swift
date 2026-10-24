@@ -134,8 +134,8 @@ private struct ScopedPortableBackupView: View {
         }
         .wagLockList().navigationTitle("Encrypted backup").navigationBarTitleDisplayMode(.inline)
         .onAppear { session.refresh(mounts: mounts, request: request) }
-        .onDisappear { session.cancel() }
-        .onChange(of: scenePhase) { _, phase in if phase == .background { session.cancel() } }
+        .onDisappear { session.cancel(); clearCredentials() }
+        .onChange(of: scenePhase) { _, phase in if phase == .background { session.cancel(); clearCredentials() } }
         .onChange(of: session.readyURL) { _, url in if url != nil { password = ""; confirmation = ""; albumPasswords = [:]; albumConfirmations = [:] } }
         .sheet(item: $handoff, onDismiss: { if session.handingOff { session.finishHandoff() } }) { file in
             SystemBackupSave(url: file.url) { success in
@@ -143,6 +143,10 @@ private struct ScopedPortableBackupView: View {
             }
         }
     }
+    private func clearCredentials() {
+        password = ""; confirmation = ""; albumPasswords = [:]; albumConfirmations = [:]
+    }
+
     private func passwordField(_ title: String, text: Binding<String>, identifier: String) -> some View {
         SwitchablePasswordField(title: title, text: text, keyboard: keyboard, identifier: identifier,
             submitTitle: "Done", onSubmit: { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) })

@@ -1,1 +1,1 @@
-Initial WagLock release: local encrypted photos, videos, files and notes; nested protected albums; optional Face ID; and encrypted backups with independent open-source recovery.
+Initial WagLock release: local encrypted photos, videos, files and notes; a separate library selected by an alternative passcode; nested protected albums; optional Face ID assignment; and encrypted backups with independent open-source recovery.

@@ -90,9 +90,13 @@ class ImportViewModel: ObservableObject {
         guard !urls.isEmpty else { return }
 
         // 检测是否有加密文件
-        let encryptedFiles = urls.filter { $0.pathExtension == "encrypted" }
+        let encryptedFiles = urls.filter { $0.pathExtension.lowercased() == "encrypted" }
 
         if !encryptedFiles.isEmpty {
+            guard !LibraryStoragePolicy.encryptedMetadata else {
+                errorMessage = "Native encrypted-file import is unavailable in this release. Recover originals with the documented recovery tools, then import them through Photos or Files. Your source files are unchanged."
+                return
+            }
             // 如果有加密文件，优先处理第一个加密文件
             let firstEncryptedFile = encryptedFiles[0]
             pendingEncryptedFile = (

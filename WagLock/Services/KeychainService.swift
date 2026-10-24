@@ -48,7 +48,9 @@ class KeychainService: LibraryIdentityAnchor {
     static let shared = KeychainService()
     /// 独立命名空间用于隔离凭据，不迁移其他 service 的数据。
     init(service: String = AppConstants.bundleIdentifier, storage: (any KeychainStorage)? = nil,
-         makeDataPassword: (() throws -> String)? = nil) {
+         makeDataPassword: (() throws -> String)? = nil,
+         allowLegacyCredentials: Bool = !LibraryStoragePolicy.encryptedMetadata) {
+        self.allowLegacyCredentials = allowLegacyCredentials
         self.service = service
         self.storage = storage ?? SystemKeychainStorage(service: service)
         self.makeDataPassword = makeDataPassword ?? (LibraryStoragePolicy.encryptedMetadata ? { try FreshEncryptedLibrary.randomSecret() } : nil)
@@ -60,6 +62,7 @@ class KeychainService: LibraryIdentityAnchor {
 
     // MARK: - Constants
 
+    private let allowLegacyCredentials: Bool
     private let service: String
     private let storage: any KeychainStorage
     private let makeDataPassword: (() throws -> String)?
@@ -213,6 +216,7 @@ class KeychainService: LibraryIdentityAnchor {
                   !credentials.dataPassword.isEmpty else { throw KeychainError.invalidData }
             return credentials.dataPassword
         }
+        guard allowLegacyCredentials else { throw KeychainError.invalidData }
         let savedHash = try readFromKeychain(account: passwordAccount)
         let salt = try readFromKeychain(account: saltAccount)
         guard salt.count == 16, savedHash.count == 32,
@@ -302,7 +306,7 @@ extension KeychainService {
     /// - Parameter password: Guest credential, using the same 6–128 character policy as the owner.
     /// - Throws: KeychainError
     func saveGuestPassword(_ password: String) throws {
-        guard !LibraryStoragePolicy.encryptedMetadata else { throw KeychainError.invalidData }
+        guard allowLegacyCredentials else { throw KeychainError.invalidData }
         // Input rules match the owner; existing credential encoding/readers are retained.
         guard Self.validateGuestPassword(password).isValid else {
             throw KeychainError.invalidData
@@ -326,7 +330,7 @@ extension KeychainService {
     /// - Parameter password: 用户输入的密码
     /// - Returns: 密码是否正确
     func verifyGuestPassword(_ password: String) -> Bool {
-        guard !LibraryStoragePolicy.encryptedMetadata else { return false }
+        guard allowLegacyCredentials else { return false }
         do {
             let savedHash = try readFromKeychain(account: guestPasswordAccount)
             let salt = try readFromKeychain(account: guestSaltAccount)
@@ -340,7 +344,7 @@ extension KeychainService {
     /// 检查是否已设置访客密码
     /// - Returns: 是否已设置访客密码
     func isGuestPasswordSet() -> Bool {
-        guard !LibraryStoragePolicy.encryptedMetadata else { return false }
+        guard allowLegacyCredentials else { return false }
         do {
             let data = try readFromKeychain(account: isGuestSetAccount)
             return data.first == 1

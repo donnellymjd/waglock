@@ -64,8 +64,13 @@ class MediaImportService {
 
     private let encryptionService = EncryptionService.shared
     private let storageService: FileStorageService
+    private let allowNativeEncryptedImport: Bool
 
-    init(storage: FileStorageService = .shared) { storageService = storage }
+    init(storage: FileStorageService = .shared,
+         allowNativeEncryptedImport: Bool = !LibraryStoragePolicy.encryptedMetadata) {
+        storageService = storage
+        self.allowNativeEncryptedImport = allowNativeEncryptedImport
+    }
 
     // MARK: - Public Methods
 
@@ -419,6 +424,7 @@ class MediaImportService {
         originalPassword: String,
         newPassword: String
     ) async throws -> [MediaItem] {
+        guard allowNativeEncryptedImport else { throw ImportError.unsupportedType }
 
         // 1. 读取加密文件数据
         let encryptedData = try Data(contentsOf: url)

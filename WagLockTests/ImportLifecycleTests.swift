@@ -7,6 +7,23 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct ImportLifecycleTests {
+    @Test func releaseNativeEncryptedImportRefusesBeforeReadingOrWriting() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("PUBLIC-source.encrypted")
+        let original = Data("PUBLIC source must be preserved".utf8)
+        try original.write(to: source)
+        let storage = FileStorageService(directory: root.appendingPathComponent("media"), availableCapacity: { _ in Int64.max })
+        let service = MediaImportService(storage: storage, allowNativeEncryptedImport: false)
+        do {
+            _ = try await service.importEncryptedFileWithReencryption(url: source, originalPassword: "PUBLIC old", newPassword: "PUBLIC new")
+            Issue.record("Release native encrypted import unexpectedly succeeded")
+        } catch ImportError.unsupportedType {} catch { Issue.record("Wrong rejection: \(error)") }
+        #expect(try Data(contentsOf: source) == original)
+        #expect(storage.getAllEncryptedFiles().isEmpty)
+    }
+
     private func owner() async throws -> (AuthenticationViewModel, KeychainService) {
         let keychain = KeychainService(service: "import-lifecycle-" + UUID().uuidString)
         try keychain.savePassword("fixture-password")
