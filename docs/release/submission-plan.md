@@ -1,6 +1,6 @@
 # First App Store submission
 
-Owner direction: October 22, 2026; revised October23 to require security-review remediation and independent Guest Mode for1.0. Prepare a small first release, submit when ready with **manual release**, and develop follow-up improvements separately. **Status: not ready for submission.** The owner accepted the complete build50 phone/recovery checklist. Build51 supersedes it with security hardening and passed the four requested physical checks on October24; independent Guest Mode remains a required launch item. No earlier acceptance certifies these later changes.
+Owner direction: October 22, 2026; revised October23 to require security-review remediation and independent Guest Mode for1.0. Prepare a small first release, submit when ready with **manual release**, and develop follow-up improvements separately. **Status: not ready for submission.** The owner accepted the complete build50 phone/recovery checklist. Build51 supersedes it with security hardening and passed the four requested physical checks on October24; build52 subsequently implements independent Guest Mode and the owner passed its requested populated-vault/Face ID/background/recovery checklist. Remaining security and distribution/account gates stay open. No earlier acceptance certifies these later changes.
 
 ## Scope and order
 
@@ -141,3 +141,10 @@ October24: owner confirms the requested build51 physical checks passed (password
 ## Build52 independent-vault candidate — October24
 
 Build52 connects ordinary primary/secondary passcodes to immutable selected-vault services, separate modern credentials, encrypted indexes/media roots, album biometric/attempt namespaces and selected-only age backups. Explicit Face ID assignment to either vault retains the disclosure warning and primary legacy-enrollment compatibility.309 unit/security checks and the actual-release two-vault persistence/settings UI check pass; see [implementation and limits](../portable-vault/secondary-vault-design.md). The signed development candidate is installed over WagLock on the owner's iPhone without resetting the primary library. Physical acceptance of populated vaults, Face ID assignment, background previews/drafts and secondary backup recovery is requested and pending. This supersedes earlier statements that the public candidate only hides/rejects Guest Mode; it does not clear any remaining security/distribution/declaration gate or authorize upload. Build50 archives/screenshots/source freezes remain historical.
+
+
+## October24 — build52 owner acceptance passed
+
+The owner replied “passed” to the complete requested build52 phone checklist: the existing main library opens; an alternative passcode creates/opens its own photo, note and protected-album library with cold-relaunch persistence and separation in both directions; Face ID can be explicitly assigned to each vault, shows the disclosure warning, opens only the assigned vault and remains locked on cancellation; backgrounded note/PDF behavior works; and a backup made from the secondary vault independently recovers only that vault. No passwords or private media were requested or retained.
+
+D2S-115 is Done for the requested1.0 feature. This is owner-reported physical functional/recovery acceptance paired with309 unit/security tests and3 actual-release UI workflows, not independent audit, forensic-deniability or full security certification. D2S-105 and remaining review findings/distribution gates stay open. Installed candidate remains WagLock1.0(52), implementation cd9741f; no new binary, migration, reset, archive/upload or submission was made for this acceptance record.

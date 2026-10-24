@@ -12,7 +12,7 @@ WagLock combines encrypted media storage with nested albums, separate album pass
 
 WagLock is an independent fork of [SealedPocket / ZeroNet Space](https://github.com/materialofair/zeroNet_Space), not the official upstream app. Original attribution and license notices are preserved.
 
-> **Development preview:** test with disposable media and keep independent originals. The fresh release candidate encrypts library metadata and supports explicit age backup recovery. Existing development libraries retain legacy limitations. Build52 connects independent alternative vaults; physical acceptance is pending. WagLock has not completed an independent security audit.
+> **Development preview:** test with disposable media and keep independent originals. The fresh release candidate encrypts library metadata and supports explicit age backup recovery. Existing development libraries retain legacy limitations. Build52 connects independent alternative vaults; the owner passed the requested phone and recovery checks. WagLock has not completed an independent security audit.
 
 [Build it](#build-and-run) · [Security and recovery](#security-and-recovery) · [Roadmap](#roadmap) · [Development docs](docs/portable-vault/README.md)
 
@@ -21,7 +21,7 @@ WagLock is an independent fork of [SealedPocket / ZeroNet Space](https://github.
 - **Local media library:** browse photos, videos, audio and files; import through Photos and Files; preview and share supported formats.
 - **Nested albums:** create albums and subalbums under **Photos → Albums**. Choose inherited protection, a separate album password, password-or-Face-ID access, or Face ID-only access. Ancestor protection still applies.
 - **Vault unlock:** use a vault password with optional Face ID convenience. Switch between Number pad and Full keyboard without changing the password text. Password quality feedback appears when setting or changing a password, not during login.
-- **Alternative passcode (release candidate):** a second passcode opens a separate encrypted library with independent content, keys and album protection. Face ID can be explicitly assigned to either vault, with a disclosure warning. Physical validation is pending.
+- **Alternative passcode (release candidate):** a second passcode opens a separate encrypted library with independent content, keys and album protection. Face ID can be explicitly assigned to either vault, with a disclosure warning. The requested phone/recovery checks pass.
 - **Session locking:** backgrounding locks albums and revokes managed export/document-preview access. The fresh release locks the vault immediately on background; legacy Dev retains its documented timeout/recording policy.
 - **Free local features:** no purchase prompts or paid feature gates. Storage capacity is the practical limit on imports.
 - **Adaptive interface:** redesigned libraries, players and settings; System, Light and Dark appearance.
@@ -32,7 +32,7 @@ The app also includes notes and audio import/playback. New audio recording is de
 ## Current development status
 
 As of **October 23, 2026**, build 50 prepared a separate **WagLock 1.0** fresh encrypted library under `com.d2sci.waglock`. Models, thumbnails, notes and drafts persist in an authenticated encrypted index with a memory-only UI projection. New credentials use an independent random data secret retained across password changes. Existing **WagLock Dev 1.3.8 (44)** and its library are preserved. This is not a migration. See [the fresh-library contract](docs/portable-vault/fresh-encrypted-library.md) for evidence and limits. Native video viewing uses standard AVKit controls. Build47 corrects Apple-directory alias validation; the owner confirms the new library opens and survives repeated locking. Build48 corrects the localized app label: release is WagLock, development is WagLock Dev. Build49 makes unfinished notes visible with Resume draft and flushes the latest pending edit before background locking. Build50 corrects delayed encrypted autosaves cancelling themselves, stabilizes editor navigation during draft-list refreshes, and preserves current text across reappearance; the owner has now passed the complete phone and independent backup-recovery checklist. The intermittent classification report remains tracked; Apple distribution signing and submission declarations remain pending.
-Build51 hardening removes calculator authentication, persists password budgets, adds versioned stronger password wrappers, contains storage paths, owns temporary plaintext jobs and locks immediately with synchronous key revocation. Build51 verification:298 unit/security tests pass, and the owner passed the requested phone checks on October24. Build52 adds the integrated independent-vault release candidate with309 passing unit/security tests and actual release UI isolation checks; owner phone acceptance remains open.
+Build51 hardening removes calculator authentication, persists password budgets, adds versioned stronger password wrappers, contains storage paths, owns temporary plaintext jobs and locks immediately with synchronous key revocation. Build51 verification:298 unit/security tests pass, and the owner passed the requested phone checks on October24. Build52 adds the integrated independent-vault release candidate with309 passing unit/security tests and actual release UI isolation checks; the owner passed the requested build52 phone and secondary-backup recovery checks.
 
 The immediate target is a first App Store submission with manual release, including the now-required independent Guest Mode. [Submission preparation and readiness gates](docs/release/submission-plan.md) track the licensing route, security/recovery work, final identity, privacy/support, listing and exact-archive validation. The proposed store identity is separate from the existing development app. **No App Store submission or public-release approval is announced.**
 
@@ -40,7 +40,7 @@ The immediate target is a first App Store submission with manual release, includ
 | --- | --- |
 | Encrypted media, nested album passwords and optional biometrics | Available in the development app; further hardening remains |
 | Encrypted export with independent desktop extraction | Build 39 development candidate; password/recovery-key choices, nested protection and Files/cloud destinations; see limits below |
-| Separate populated vault selected by an alternative passcode | Implemented in build52 release candidate; automated isolation checks pass, physical acceptance pending |
+| Separate populated vault selected by an alternative passcode | Implemented in build52 release candidate; automated isolation and requested phone/recovery checks pass |
 | Encrypted Trash with configurable retention | Planned; enabled with seven-day retention by default when implemented |
 | Encrypted note fields/drafts | Fresh release candidate; full Markdown editing and encrypted search remain backlog |
 | Consent-controlled shared albums | Discovery/prototype planning; not available in the app |
@@ -56,7 +56,7 @@ Important boundaries in the current build:
 - Fresh release libraries encrypt metadata, thumbnails, notes/drafts and album names/hierarchy. Existing development libraries retain their legacy plaintext metadata; no automatic conversion is performed. Whole authentic database rollback remains an open limitation.
 - Copying encrypted media alone is not a supported recovery procedure. Device-bound Keychain material can be required, especially after password changes. Do not rely on WagLock as the only copy of a library.
 - Face ID-only albums have no album-password fallback. Losing their device-bound biometric factor can permanently prevent access. Password-or-Face-ID albums retain a password path.
-- The build52 public candidate provides independent alternative vaults pending physical acceptance. The separately installed WagLock Dev44 retains legacy presentation-only Guest Mode. Neither promises forensic deniability.
+- The build52 public candidate provides independent alternative vaults with the requested phone/recovery checks passed. The separately installed WagLock Dev44 retains legacy presentation-only Guest Mode. Neither promises forensic deniability.
 - Local cleanup cannot retract a copy already handed to another app. PDFKit, QuickLook, decoder caches and other preview paths remain part of the ongoing audit; no secure-deletion guarantee is made.
 
 Read the [architecture/security audit](docs/portable-vault/audits/D2S-105.md), [album key boundaries](docs/portable-vault/albums-and-biometrics.md) and [recovery requirements](docs/portable-vault/requirements.md) before testing with meaningful data.

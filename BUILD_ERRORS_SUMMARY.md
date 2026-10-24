@@ -472,3 +472,10 @@ Per-session exports/audio use marked protected jobs, and startup cleanup only tr
 
 
 Additional actual-release UI regression checks both pass: repeated immediate-background draft/resume cycles and primary password-change/cold-relaunch persistence, `/private/tmp/waglock-build52-release-regressions.xcresult`. Together with the separate independent-vault workflow, all3 selected release UI checks pass. Final source-only cleanup after these builds changes comments/indentation only, with no functional token changes. Physical acceptance is still pending.
+
+
+## October24 — build52 owner acceptance passed
+
+The owner replied “passed” to the complete requested build52 phone checklist: the existing main library opens; an alternative passcode creates/opens its own photo, note and protected-album library with cold-relaunch persistence and separation in both directions; Face ID can be explicitly assigned to each vault, shows the disclosure warning, opens only the assigned vault and remains locked on cancellation; backgrounded note/PDF behavior works; and a backup made from the secondary vault independently recovers only that vault. No passwords or private media were requested or retained.
+
+D2S-115 is Done for the requested1.0 feature. This is owner-reported physical functional/recovery acceptance paired with309 unit/security tests and3 actual-release UI workflows, not independent audit, forensic-deniability or full security certification. D2S-105 and remaining review findings/distribution gates stay open. Installed candidate remains WagLock1.0(52), implementation cd9741f; no new binary, migration, reset, archive/upload or submission was made for this acceptance record.

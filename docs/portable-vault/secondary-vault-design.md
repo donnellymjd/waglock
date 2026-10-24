@@ -1,6 +1,6 @@
 # Secondary passcode / independent alternative vault
 
-Owner priority: **2026-10-18**, [D2S-115](https://linear.app/d2sci/issue/D2S-115/design-and-implement-decoy-vault-guest-password-isolation), tied to D2S-111/116 and audit A01/A03/A08/A11. **Current status (October24): build52 implements independent Guest Mode in the public encrypted release configuration; automated isolation/UI checks pass, physical acceptance is pending. D2S-115 remains Urgent/In Progress.** Linear's existing High-priority issue was updated with this scope. The original source snapshot remains unchanged.
+Owner priority: **2026-10-18**, [D2S-115](https://linear.app/d2sci/issue/D2S-115/design-and-implement-decoy-vault-guest-password-isolation), tied to D2S-111/116 and audit A01/A03/A08/A11. **Current status (October24): build52 implements independent Guest Mode in the public encrypted release configuration; automated isolation/UI checks and the requested physical/recovery checklist pass. D2S-115 is Done; broader audit/release gates remain.** Linear's existing High-priority issue was updated with this scope. The original source snapshot remains unchanged.
 
 ## Requested experience
 
@@ -123,3 +123,10 @@ Build52 was signed with the existing development provisioning and installed over
 
 
 Additional release UI regression evidence: repeated note-draft/background cycles and primary password-change/cold reopening both pass (`/private/tmp/waglock-build52-release-regressions.xcresult`), bringing this candidate's selected release workflows to3 passing checks. This does not replace the requested hardware acceptance.
+
+
+## October24 — build52 owner acceptance passed
+
+The owner replied “passed” to the complete requested build52 phone checklist: the existing main library opens; an alternative passcode creates/opens its own photo, note and protected-album library with cold-relaunch persistence and separation in both directions; Face ID can be explicitly assigned to each vault, shows the disclosure warning, opens only the assigned vault and remains locked on cancellation; backgrounded note/PDF behavior works; and a backup made from the secondary vault independently recovers only that vault. No passwords or private media were requested or retained.
+
+D2S-115 is Done for the requested1.0 feature. This is owner-reported physical functional/recovery acceptance paired with309 unit/security tests and3 actual-release UI workflows, not independent audit, forensic-deniability or full security certification. D2S-105 and remaining review findings/distribution gates stay open. Installed candidate remains WagLock1.0(52), implementation cd9741f; no new binary, migration, reset, archive/upload or submission was made for this acceptance record.

@@ -50,3 +50,10 @@ Build51 is installed over the existing public-identity WagLock app, preserving i
 ## October24 — build52 integration checkpoint
 
 Independent Guest Mode is implemented in the public encrypted release and installed for owner acceptance.309 unit/security checks and actual release UI prove normal passcode routing, independent persistent notes/settings and cold reopening; additional snapshot checks reject primary ciphertext referenced by the secondary index. Physical Face ID/backup acceptance is still pending. See [secondary-vault implementation](secondary-vault-design.md). D2S-115, D2S-105 and submission remain open; the remaining findings/review limitations above are not automatically closed by this feature.
+
+
+## October24 — build52 owner acceptance passed
+
+The owner replied “passed” to the complete requested build52 phone checklist: the existing main library opens; an alternative passcode creates/opens its own photo, note and protected-album library with cold-relaunch persistence and separation in both directions; Face ID can be explicitly assigned to each vault, shows the disclosure warning, opens only the assigned vault and remains locked on cancellation; backgrounded note/PDF behavior works; and a backup made from the secondary vault independently recovers only that vault. No passwords or private media were requested or retained.
+
+D2S-115 is Done for the requested1.0 feature. This is owner-reported physical functional/recovery acceptance paired with309 unit/security tests and3 actual-release UI workflows, not independent audit, forensic-deniability or full security certification. D2S-105 and remaining review findings/distribution gates stay open. Installed candidate remains WagLock1.0(52), implementation cd9741f; no new binary, migration, reset, archive/upload or submission was made for this acceptance record.
