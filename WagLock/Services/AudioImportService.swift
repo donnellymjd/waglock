@@ -4,7 +4,7 @@ import Foundation
 /// Validates audio before writing encrypted content. Database ownership stays with the caller.
 @MainActor
 enum AudioImportService {
-    static func importFile(url: URL, password: String) async throws -> MediaItem {
+    static func importFile(url: URL, password: String, storage: FileStorageService = .shared) async throws -> MediaItem {
         try Task.checkCancellation()
         guard !password.isEmpty else { throw ImportError.permissionDenied }
         let asset = AVURLAsset(url: url)
@@ -18,7 +18,7 @@ enum AudioImportService {
         // Stream large files off the UI thread; await completion even on cancellation so
         // the caller's security-scoped URL stays valid until the write has finished.
         let path = try await Task.detached(priority: .userInitiated) {
-            try FileStorageService.shared.saveEncryptedFile(
+            try storage.saveEncryptedFile(
                 from: url, password: password, originalFileName: url.lastPathComponent)
         }.value
         do {
@@ -28,7 +28,7 @@ enum AudioImportService {
                 fileExtension: "." + url.pathExtension,
                 fileSize: Int64(size), type: .audio, encryptedPath: path, duration: duration)
         } catch {
-            try? FileStorageService.shared.deleteFile(path: path)
+            try? storage.deleteFile(path: path)
             throw error
         }
     }

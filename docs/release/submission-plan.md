@@ -1,6 +1,6 @@
 # First App Store submission
 
-Owner direction: October 22, 2026; revised October23 to require security-review remediation and independent Guest Mode for1.0. Prepare a small first release, submit when ready with **manual release**, and develop follow-up improvements separately. **Status: not ready for submission.** The owner accepted the complete build50 phone/recovery checklist. Build51 supersedes it with security hardening and needs fresh physical acceptance; independent Guest Mode remains a required launch item. No earlier acceptance certifies these later changes.
+Owner direction: October 22, 2026; revised October23 to require security-review remediation and independent Guest Mode for1.0. Prepare a small first release, submit when ready with **manual release**, and develop follow-up improvements separately. **Status: not ready for submission.** The owner accepted the complete build50 phone/recovery checklist. Build51 supersedes it with security hardening and passed the four requested physical checks on October24; independent Guest Mode remains a required launch item. No earlier acceptance certifies these later changes.
 
 ## Scope and order
 
@@ -134,3 +134,5 @@ The first attempt to save this handoff was not executed because automatic approv
 ## Security review hold — build51 work
 
 The owner supplied a13-item security review after build50 preparation and explicitly authorizes disabling calculator login for1.0. Create D2S-152–164 and address confirmed launch exposure before another archive/source freeze. Build50 is historical and must not be uploaded. [Report and triage](../portable-vault/security-launch-triage.md). Existing device acceptance does not validate the upcoming security changes.
+
+October24: owner confirms the requested build51 physical checks passed (password changes/media persistence, draft/background resume, Face ID/immediate locking and already-active recording protection). Guest Mode integration, remaining review items and account-side submission gates are still open. This does not accept any later Guest Mode development build.

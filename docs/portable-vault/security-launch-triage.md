@@ -43,3 +43,5 @@ Linear items D2S-152,153,154,155,156 and163 are Done for their verified implemen
 ## October24 installation
 
 Build51 is installed over the existing public-identity WagLock app, preserving its library/credentials; filtered phone metadata confirms1.0(51). Remote launch was denied because the phone locked after installation. The owner is asked to open manually and check password changes, retained media, unfinished drafts, Face ID/background locking and capture detection. These checks are pending, not passed. No reset or media/credential inspection occurred. [Device record](device-testing.md).
+
+**October24 owner acceptance:** all four requested build51 phone checks passed. D2S-157 and D2S-160 are now Done, bringing the verified completed findings to8 of13. Already-active screen recording protection passed on the phone; D2S-164 remains open for direct AirPlay/in-app transition coverage. D2S-105 and submission remain open because the broader audit, other findings, independent Guest Mode and account-side gates are incomplete. This result is limited to the requested checks and does not certify the subsequent Guest Mode code.

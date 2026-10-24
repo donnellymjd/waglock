@@ -56,6 +56,27 @@ final class AudioServiceTests: XCTestCase {
 
     }
 
+    func testAudioImportsUseTheSuppliedVaultWithoutReadingAnotherRoot() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("audio-domains-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let storageA = FileStorageService(directory: root.appendingPathComponent("a"), availableCapacity: { _ in 1_000_000_000 })
+        let storageB = FileStorageService(directory: root.appendingPathComponent("b"), availableCapacity: { _ in 1_000_000_000 })
+        let source = try makeAudioFile()
+        defer { try? FileManager.default.removeItem(at: source) }
+        let original = try Data(contentsOf: source)
+        let a = try await AudioImportService.importFile(url: source, password: "PUBLIC audio key A", storage: storageA)
+        let b = try await AudioImportService.importFile(url: source, password: "PUBLIC audio key B", storage: storageB)
+        XCTAssertFalse(storageB.fileExists(path: a.encryptedPath))
+        XCTAssertFalse(storageA.fileExists(path: b.encryptedPath))
+        let bytesA = try await storageA.loadDecryptedDataAsync(path: a.encryptedPath, password: "PUBLIC audio key A", preferredExtension: "wav")
+        let bytesB = try await storageB.loadDecryptedDataAsync(path: b.encryptedPath, password: "PUBLIC audio key B", preferredExtension: "wav")
+        XCTAssertEqual(bytesA, original); XCTAssertEqual(bytesB, original)
+        XCTAssertThrowsError(try storageB.getFileURL(for: storageA.getFileURL(for: a.encryptedPath).path))
+        let savedA = try storageA.loadEncrypted(path: a.encryptedPath)
+        try storageB.deleteFile(path: b.encryptedPath)
+        XCTAssertEqual(try storageA.loadEncrypted(path: a.encryptedPath), savedA)
+    }
+
     private func capturePlayerForVisualReview(_ item: MediaItem) async throws {
         let controller = AudioSessionController(directory: FileManager.default.temporaryDirectory.appendingPathComponent("audio-ui-" + UUID().uuidString))
         defer { controller.cleanup() }

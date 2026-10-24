@@ -26,8 +26,11 @@ final class AudioSessionController: NSObject, ObservableObject, AVAudioRecorderD
     private var operation: Task<Void, Never>?
     private var generation = UUID()
     private let directory: URL
+    private let storage: FileStorageService
 
-    init(directory: URL = FileManager.default.temporaryDirectory.appendingPathComponent("AudioMemos", isDirectory: true)) {
+    init(directory: URL = FileManager.default.temporaryDirectory.appendingPathComponent("AudioMemos", isDirectory: true),
+         storage: FileStorageService = .shared) {
+        self.storage = storage
         self.directory = directory
         super.init()
         // The application has one audio controller. Remove plaintext left by a terminated run.
@@ -170,7 +173,7 @@ final class AudioSessionController: NSObject, ObservableObject, AVAudioRecorderD
         let fileExtension = item.fileExtension
         operation = Task {
             do {
-                let url = try await FileStorageService.shared.createDecryptedTempFileAsync(
+                let url = try await storage.createDecryptedTempFileAsync(
                     path: path, password: password, preferredExtension: fileExtension)
                 guard !Task.isCancelled, token == generation else {
                     removeTemporaryFile(url)

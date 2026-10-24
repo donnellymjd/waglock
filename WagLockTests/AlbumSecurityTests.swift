@@ -94,6 +94,51 @@ struct AlbumSecurityTests {
     }
 
     @Test
+    func separateAlbumStoresKeepImportsPreviewsAndDeletesInsideTheirSuppliedVault() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("album-domains-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let storageA = FileStorageService(directory: root.appendingPathComponent("a"), availableCapacity: { _ in 1_000_000_000 })
+        let storageB = FileStorageService(directory: root.appendingPathComponent("b"), availableCapacity: { _ in 1_000_000_000 })
+        let dbA = try container(), dbB = try container()
+        let a = AlbumStore(biometrics: TestBiometricStore(), attemptStorage: InMemoryAttemptStorage(), storage: storageA)
+        let b = AlbumStore(biometrics: TestBiometricStore(), attemptStorage: InMemoryAttemptStorage(), storage: storageB)
+        a.beginSession(vaultSecret: "PUBLIC independent root A")
+        b.beginSession(vaultSecret: "PUBLIC independent root B")
+        defer { a.endSession(); b.endSession() }
+        let albumA = try await a.create(name: "Same album", parent: nil, protection: .password, password: "PUBLIC album A", albums: [], context: dbA.mainContext)
+        let albumB = try await b.create(name: "Same album", parent: nil, protection: .password, password: "PUBLIC album B", albums: [], context: dbB.mainContext)
+        let source = root.appendingPathComponent("source.txt")
+        let bytesA = Data("PUBLIC vault A content".utf8), bytesB = Data("PUBLIC vault B content".utf8)
+        try bytesA.write(to: source)
+        let assetA = try await a.importFile(source, into: albumA, albums: [albumA], context: dbA.mainContext, originalName: "same.txt")
+        try bytesB.write(to: source)
+        let assetB = try await b.importFile(source, into: albumB, albums: [albumB], context: dbB.mainContext, originalName: "same.txt")
+        #expect(storageA.fileExists(path: assetA.encryptedPath))
+        #expect(!storageB.fileExists(path: assetA.encryptedPath))
+        #expect(storageB.fileExists(path: assetB.encryptedPath))
+        #expect(!storageA.fileExists(path: assetB.encryptedPath))
+        let previewA = try await a.preview(assetA, in: albumA, albums: [albumA])
+        let previewB = try await b.preview(assetB, in: albumB, albums: [albumB])
+        defer {
+            try? FileManager.default.removeItem(at: previewA.deletingLastPathComponent())
+            try? FileManager.default.removeItem(at: previewB.deletingLastPathComponent())
+        }
+        #expect(try Data(contentsOf: previewA) == bytesA)
+        #expect(try Data(contentsOf: previewB) == bytesB)
+        await denied { try await b.unlock(albumA, password: "PUBLIC album A", albums: [albumA]) }
+        await denied { _ = try await b.preview(assetA, in: albumB, albums: [albumB]) }
+        let absoluteA = try storageA.getFileURL(for: assetA.encryptedPath).path
+        #expect(throws: (any Error).self) { try storageB.deleteFile(path: absoluteA) }
+        let savedA = try storageA.loadEncrypted(path: assetA.encryptedPath)
+        try b.delete(assetB, from: albumB, albums: [albumB], context: dbB.mainContext)
+        #expect(!storageB.fileExists(path: assetB.encryptedPath))
+        #expect(try storageA.loadEncrypted(path: assetA.encryptedPath) == savedA)
+        a.lock(albumA, albums: [albumA]); b.endSession()
+        try await a.unlock(albumA, password: "PUBLIC album A", albums: [albumA])
+        #expect(try a.assets(in: albumA, albums: [albumA]).count == 1)
+    }
+
+    @Test
     func parentAndChildPasswordsAreIndependentAndParentLockCascades() async throws {
         let db = try container()
         let store = AlbumStore(biometrics: TestBiometricStore(), attemptStorage: InMemoryAttemptStorage())

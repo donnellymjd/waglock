@@ -22,9 +22,12 @@ final class AlbumStore: ObservableObject {
     private let attemptStorage: any KeychainStorage
     private let attemptNow: () -> Date
     private let crypto = EncryptionService.shared
+    private let storage: FileStorageService
 
     init(biometrics: any BiometricSecretStoring = BiometricSecretStore.shared,
-         attemptStorage: (any KeychainStorage)? = nil, attemptNow: @escaping () -> Date = Date.init) {
+         attemptStorage: (any KeychainStorage)? = nil, attemptNow: @escaping () -> Date = Date.init,
+         storage: FileStorageService = .shared) {
+        self.storage = storage
         self.biometrics = biometrics
         self.attemptStorage = attemptStorage ?? SystemKeychainStorage(service: AppConstants.bundleIdentifier + ".album-attempts")
         self.attemptNow = attemptNow
@@ -270,8 +273,9 @@ final class AlbumStore: ObservableObject {
         let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
         let type = MediaType.from(fileExtension: url.pathExtension)
         // Existing streaming reader/writer retained; omit original names from ciphertext paths.
+        let storage = self.storage
         let path = try await Task.detached(priority: .userInitiated) {
-            try FileStorageService.shared.saveEncryptedFile(from: url, password: secret)
+            try storage.saveEncryptedFile(from: url, password: secret)
         }.value
         do {
             try Task.checkCancellation()
@@ -298,7 +302,7 @@ final class AlbumStore: ObservableObject {
             return asset
         } catch {
             if LibraryWriteCoordinator.mayDiscardUncommittedResources(in: context) {
-                try? FileStorageService.shared.deleteFile(path: path)
+                try? storage.deleteFile(path: path)
             }
             throw error
         }
@@ -314,7 +318,7 @@ final class AlbumStore: ObservableObject {
         let directory = try ProtectedTemporaryFiles.createDirectory()
         let suffix = asset.fileExtension.filter { $0.isLetter || $0.isNumber }
         let url = directory.appendingPathComponent("preview").appendingPathExtension(suffix)
-        let source = try FileStorageService.shared.getFileURL(for: asset.encryptedPath)
+        let source = try storage.getFileURL(for: asset.encryptedPath)
         do {
             try await Task.detached(priority: .userInitiated) {
                 try EncryptionService.shared.decryptFile(inputURL: source, to: url, password: secret)
@@ -336,7 +340,7 @@ final class AlbumStore: ObservableObject {
         _ = try key(for: album, albums: albums)
         let token = generation
         let sourcePath = media.encryptedPath
-        let source = try await FileStorageService.shared.createDecryptedTempFileAsync(
+        let source = try await storage.createDecryptedTempFileAsync(
             path: sourcePath, password: root, preferredExtension: media.fileExtension)
         defer { try? FileManager.default.removeItem(at: source) }
         guard token == generation else { throw CancellationError() }
@@ -352,7 +356,7 @@ final class AlbumStore: ObservableObject {
         // Destination is committed and verified before the original record or ciphertext is removed.
         context.delete(media)
         do { try LibraryWriteCoordinator.save(context) } catch { context.rollback(); throw error }
-        try? FileStorageService.shared.deleteFile(path: sourcePath)
+        try? storage.deleteFile(path: sourcePath)
         MediaLoaderService.shared.clearCache(forPath: sourcePath)
         ThumbnailImageLoader.shared.clearAll()
         revision += 1
@@ -374,7 +378,7 @@ final class AlbumStore: ObservableObject {
         let previous = album.encryptedCatalog
         album.encryptedCatalog = try crypto.encrypt(data: JSONEncoder().encode(catalog), password: secret)
         do { try LibraryWriteCoordinator.save(context) } catch { album.encryptedCatalog = previous; throw error }
-        try? FileStorageService.shared.deleteFile(path: removed.encryptedPath)
+        try? storage.deleteFile(path: removed.encryptedPath)
         revision += 1
     }
 
