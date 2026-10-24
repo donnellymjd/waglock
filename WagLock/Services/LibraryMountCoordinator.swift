@@ -26,6 +26,7 @@ final class LibraryMountCoordinator: ObservableObject {
     enum Scope: Hashable {
         case legacyOwner
         case ephemeralGuest
+        case independentVault(UUID)
     }
 
     struct Request: Hashable {
@@ -53,8 +54,12 @@ final class LibraryMountCoordinator: ObservableObject {
     private let encryptedRoot: URL?
     private let legacySources: [URL]
     private let anchor: any LibraryIdentityAnchor
+    private let encryptedScope: Scope
+    private let storage: FileStorageService
 
     init(factory: @escaping Factory = LibraryMountCoordinator.openLegacyContainer) {
+        self.encryptedScope = .legacyOwner
+        self.storage = .shared
         self.factory = factory
         self.anchor = KeychainService.shared
         self.encryptedRoot = LibraryStoragePolicy.encryptedMetadata ? LibraryStoragePolicy.defaultRoot : nil
@@ -63,7 +68,10 @@ final class LibraryMountCoordinator: ObservableObject {
         self.legacySources = [url, URL(fileURLWithPath: url.path + "-wal"), URL(fileURLWithPath: url.path + "-shm")]
     }
 
-    init(encryptedRoot: URL, anchor: any LibraryIdentityAnchor, legacySources: [URL] = []) {
+    init(encryptedRoot: URL, anchor: any LibraryIdentityAnchor, legacySources: [URL] = [],
+         scope: Scope = .legacyOwner, storage: FileStorageService = .shared) {
+        self.encryptedScope = scope
+        self.storage = storage
         self.factory = Self.openLegacyContainer
         self.encryptedRoot = encryptedRoot; self.legacySources = legacySources; self.anchor = anchor
     }
@@ -79,10 +87,17 @@ final class LibraryMountCoordinator: ObservableObject {
         isLoading = true
         do {
             let container: ModelContainer
-            if let encryptedRoot, request.scope == .legacyOwner {
+            // An explicitly scoped mount never falls back to a legacy or other-vault store.
+            if case .independentVault = request.scope {
+                guard encryptedRoot != nil, request.scope == encryptedScope else { throw Failure.inactiveSession }
+            }
+            if case .independentVault = encryptedScope {
+                guard request.scope == encryptedScope else { throw Failure.inactiveSession }
+            }
+            if let encryptedRoot, request.scope == encryptedScope {
                 guard let dataPassword else { throw Failure.inactiveSession }
                 if LibraryStoragePolicy.encryptedMetadata, !FileManager.default.fileExists(atPath: encryptedRoot.path),
-                   !FileStorageService.shared.getAllEncryptedFiles().isEmpty { throw FreshEncryptedLibrary.Failure.legacySource }
+                   !storage.getAllEncryptedFiles().isEmpty { throw FreshEncryptedLibrary.Failure.legacySource }
                 let repository = try FreshEncryptedLibrary.open(at: encryptedRoot, dataPassword: dataPassword, anchor: anchor,
                     legacySources: legacySources, authorized: { [weak self] in self?.generation == token && isAuthorized() })
                 encryptedRepository = repository
@@ -170,16 +185,18 @@ final class LibraryMountCoordinator: ObservableObject {
     }
 
     func exportDrafts() throws -> [PortableExportSnapshot.Draft] {
-        guard active?.request.scope == .legacyOwner else { throw Failure.inactiveSession }
+        guard let scope = active?.request.scope, scope == encryptedScope else { throw Failure.inactiveSession }
         if let repository = encryptedRepository {
             guard let raw = try repository.loadDraft() else { return [] }
             let value = try MetadataDraftCodec.value(raw)
             return [.init(origin: .encryptedVault, title: value.title, content: value.content, updatedAt: value.updatedAt)]
         }
+        guard scope == .legacyOwner else { throw Failure.inactiveSession }
         return try PortableExportSnapshotService.drafts(keychain: .shared, defaults: .standard)
     }
 
     private static func openLegacyContainer(_ scope: Scope) async throws -> ModelContainer {
+        if case .independentVault = scope { throw Failure.inactiveSession }
         let schema = Schema([MediaItem.self, SecretNote.self, VaultAlbum.self])
         // Keep the owner configuration byte-for-byte equivalent to the former app setup:
         // default URL, schema, migration and identity. Never open that store for Guest Mode.

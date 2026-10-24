@@ -436,3 +436,19 @@ Final release password-change UI after centralized key replacement: **1 passed**
 Owner reports “passed” for all requested build51 phone checks: main/album password change with media persistence, unfinished-draft background/resume, Face ID success/cancellation/immediate locking, and capture already active before opening. No additional backup-recovery, direct AirPlay or in-app capture-transition test is inferred. D2S-157/160 are Done; D2S-164 retains remaining capture coverage. The broader audit and Guest Mode release gate remain open.
 
 Subsequent development makes album storage and audio import/playback storage explicit constructor/operation dependencies, keeping a stable captured handle across asynchronous work and rollback. Existing defaults remain the same, and the installed phone app is still the accepted build51 from cd739e8; no new Guest Mode build or routing flag was installed. Separate disposable-root tests prove same-named album media imports/previews/deletes and independently encrypted audio stay within the supplied storage domain and preserve the other domain's ciphertext. Targeted22 tests pass (`/private/tmp/waglock-guest-storage-boundary.xcresult`); full300 unit/security tests pass, zero failed/skipped (`/private/tmp/waglock-guest-storage-full.xcresult`). There is no completed production independent guest vault claim; credentials, selected context, UI/index/settings/cache/biometric/export routing and physical two-vault tests remain.
+
+
+## October24 — independent secondary credential, mount and service context groundwork
+
+D2S-115 remains In Progress. Added a create-only, independently randomized secondary credential, authenticated service/UUID binding and atomic explicit secondary password changes; primary password changes reject collisions. No new login/UI path or biometric grant is activated. Added fixed independent encrypted mount scopes and an immutable VaultSessionContext containing scoped storage/import/document/album/export/cache handles. Album cache invalidation is injectable. Existing owner/legacy defaults remain active and no phone data or credentials were changed.
+
+Validation:
+- Credential/mount targeted run:45 tests passed, `/private/tmp/waglock-secondary-boundaries.xcresult`.
+- Full credential/mount regression:306 tests passed, `/private/tmp/waglock-secondary-full.xcresult`.
+- Final single-read credential helper:23 tests passed, `/private/tmp/waglock-secondary-credentials-final.xcresult`.
+- Context/album targeted run:15 tests passed, `/private/tmp/waglock-vault-context-targeted.xcresult`; the named DocumentPreviewServiceTests filter had no matching suite, so document coverage is from the explicit context test and full run below.
+- Final full unit/security run: **307 tests passed (183 XCTest +124 Swift Testing), zero failures/skips**, `/private/tmp/waglock-vault-context-full.xcresult`.
+
+New tests prove cold credential/key retention, failed-write preservation, password ambiguity rejection, tampered UUID/ciphertext and foreign-service denial, two populated encrypted note/draft mounts, selected-session revocation and real encrypted-document preview isolation. These are backend checks, not complete two-vault physical-device acceptance. No new phone build/install, App Store package/upload or migration occurred. Login/service consumers, primary namespace compatibility and Face ID assignment still require integration before release Guest Mode is enabled. Unrelated design-chat files were left untouched.
+
+Automatic approval review rejected an additional proposed credential-cleanup edit as risking secondary-vault access loss. That cleanup edit was omitted; no credential-deletion/reset path was added or bypassed. The narrower collision-read hardening and remaining work were approved and verified.

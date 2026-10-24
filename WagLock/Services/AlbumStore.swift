@@ -23,11 +23,16 @@ final class AlbumStore: ObservableObject {
     private let attemptNow: () -> Date
     private let crypto = EncryptionService.shared
     private let storage: FileStorageService
+    private let mediaLoader: MediaLoaderService
+    private let thumbnails: ThumbnailImageLoader
 
     init(biometrics: any BiometricSecretStoring = BiometricSecretStore.shared,
          attemptStorage: (any KeychainStorage)? = nil, attemptNow: @escaping () -> Date = Date.init,
-         storage: FileStorageService = .shared) {
+         storage: FileStorageService = .shared, mediaLoader: MediaLoaderService = .shared,
+         thumbnails: ThumbnailImageLoader = .shared) {
         self.storage = storage
+        self.mediaLoader = mediaLoader
+        self.thumbnails = thumbnails
         self.biometrics = biometrics
         self.attemptStorage = attemptStorage ?? SystemKeychainStorage(service: AppConstants.bundleIdentifier + ".album-attempts")
         self.attemptNow = attemptNow
@@ -357,8 +362,8 @@ final class AlbumStore: ObservableObject {
         context.delete(media)
         do { try LibraryWriteCoordinator.save(context) } catch { context.rollback(); throw error }
         try? storage.deleteFile(path: sourcePath)
-        MediaLoaderService.shared.clearCache(forPath: sourcePath)
-        ThumbnailImageLoader.shared.clearAll()
+        mediaLoader.clearCache(forPath: sourcePath)
+        thumbnails.clearAll()
         revision += 1
     }
 

@@ -254,6 +254,41 @@ final class FreshEncryptedLibraryTests: XCTestCase {
         mounts.invalidate()
     }
 
+    func testIndependentMountSeparatesNotesDraftsAndSessionRevocation() async throws {
+        let firstID = UUID(), secondID = UUID()
+        let first = LibraryMountCoordinator(encryptedRoot: try root(), anchor: Anchor(), scope: .independentVault(firstID))
+        let second = LibraryMountCoordinator(encryptedRoot: try root(), anchor: Anchor(), scope: .independentVault(secondID))
+        let firstRequest = LibraryMountCoordinator.Request(sessionID: UUID(), scope: .independentVault(firstID))
+        let secondRequest = LibraryMountCoordinator.Request(sessionID: UUID(), scope: .independentVault(secondID))
+        await first.mount(firstRequest, dataPassword: "PUBLIC-first-independent-key") { true }
+        await second.mount(secondRequest, dataPassword: "PUBLIC-second-independent-key") { true }
+        let firstContext = try first.container(for: firstRequest).mainContext
+        let secondContext = try second.container(for: secondRequest).mainContext
+        firstContext.insert(SecretNote(title: "PUBLIC first", content: "first only"))
+        secondContext.insert(SecretNote(title: "PUBLIC second", content: "second only"))
+        try LibraryWriteCoordinator.save(firstContext)
+        try LibraryWriteCoordinator.save(secondContext)
+        let firstDraft = LibraryWriteCoordinator.draftManager(in: firstContext)
+        let secondDraft = LibraryWriteCoordinator.draftManager(in: secondContext)
+        XCTAssertTrue(firstDraft.saveDraft(title: "first draft", content: "first"))
+        XCTAssertTrue(secondDraft.saveDraft(title: "second draft", content: "second"))
+        XCTAssertEqual(try first.exportDrafts().first?.content, "first")
+        XCTAssertEqual(try second.exportDrafts().first?.content, "second")
+        LibraryMountCoordinator.invalidateSession(firstRequest.sessionID)
+        XCTAssertThrowsError(try LibraryWriteCoordinator.save(firstContext))
+        XCTAssertFalse(firstDraft.saveDraft(title: "late", content: "late"))
+        XCTAssertEqual(try second.exportDrafts().first?.content, "second")
+        await first.mount(firstRequest, dataPassword: "PUBLIC-first-independent-key") { true }
+        let reopened = try first.container(for: firstRequest).mainContext
+        XCTAssertEqual(try reopened.fetch(FetchDescriptor<SecretNote>()).map(\.content), ["first only"])
+        XCTAssertEqual(try secondContext.fetch(FetchDescriptor<SecretNote>()).map(\.content), ["second only"])
+        await first.mount(secondRequest, dataPassword: "PUBLIC-second-independent-key") { true }
+        XCTAssertTrue(first.failed)
+        XCTAssertNil(first.active)
+        XCTAssertThrowsError(try first.exportDrafts())
+        second.invalidate()
+    }
+
     func testEncryptedMountRevokesWritesDraftsAndExportOnInvalidation() async throws {
         let root = try root(), anchor = Anchor(), mounts = LibraryMountCoordinator(encryptedRoot: root, anchor: anchor)
         let request = LibraryMountCoordinator.Request(sessionID: UUID(), scope: .legacyOwner)

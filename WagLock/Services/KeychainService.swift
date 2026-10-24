@@ -103,7 +103,7 @@ class KeychainService: LibraryIdentityAnchor {
     func savePassword(_ password: String) throws -> String {
         guard Self.validatePasswordStrength(password).isValid else { throw KeychainError.invalidData }
         guard !isPasswordSet() else { throw KeychainError.duplicateItem }
-        guard !verifyGuestPassword(password) else { throw KeychainError.invalidData }
+        guard !verifyGuestPassword(password), !(try matchesIndependentGuestPassword(password)) else { throw KeychainError.invalidData }
         let dataPassword = try makeDataPassword?() ?? password
         guard !dataPassword.isEmpty else { throw KeychainError.invalidData }
         let record = try encodeOwnerCredentials(dataPassword, using: password)
@@ -182,7 +182,7 @@ class KeychainService: LibraryIdentityAnchor {
     @discardableResult
     func changePassword(oldPassword: String, newPassword: String) throws -> String {
         guard Self.validatePasswordStrength(newPassword).isValid else { throw KeychainError.invalidData }
-        guard !verifyGuestPassword(newPassword) else { throw KeychainError.invalidData }
+        guard !verifyGuestPassword(newPassword), !(try matchesIndependentGuestPassword(newPassword)) else { throw KeychainError.invalidData }
         let dataPassword = try readDataPassword(using: oldPassword)
         let record = try encodeOwnerCredentials(dataPassword, using: newPassword)
         // The only required mutation: verifier and wrapped key cannot diverge.
@@ -362,6 +362,106 @@ extension KeychainService {
     /// - Returns: (是否有效, 错误信息)
     static func validateGuestPassword(_ password: String) -> (isValid: Bool, message: String?) {
         validatePasswordStrength(password)
+    }
+}
+
+// MARK: - Independent Secondary Vault Credentials
+
+extension KeychainService {
+    /// Not connected to login until every selected-vault service boundary is wired.
+    /// One create-only record provisions the opaque identity and independent random secret.
+    struct IndependentGuestCredential: Codable, Equatable {
+        let version: Int
+        let service: String
+        let vaultID: UUID
+        let dataPassword: String
+    }
+
+    private struct IndependentGuestRecord: Codable {
+        let version: Int
+        let vaultID: UUID
+        let envelope: Data
+    }
+
+    private var independentGuestAccount: String { "waglock.secondary-credentials.v1" }
+
+    /// Checked absence only; an unavailable or malformed item is never a setup invitation.
+    /// The outer ID is an unauthenticated routing hint, never authorization to mount.
+    /// Unlock authenticates this ID against both the wrapper context and its payload.
+    func independentGuestVaultID() throws -> UUID? {
+        guard let record = try optionalItem(account: independentGuestAccount) else { return nil }
+        return try decodeIndependentGuestRecord(record).vaultID
+    }
+
+    @discardableResult
+    func provisionIndependentGuest(password: String) throws -> IndependentGuestCredential {
+        guard Self.validatePasswordStrength(password).isValid else { throw KeychainError.invalidData }
+        // Require an existing, readable primary record; setup cannot mask a Keychain failure.
+        guard let owner = try optionalItem(account: ownerAccount), !owner.isEmpty else {
+            throw KeychainError.invalidData
+        }
+        guard !verifyPassword(password) else { throw KeychainError.invalidData }
+        guard try independentGuestVaultID() == nil else { throw KeychainError.duplicateItem }
+        let credential = IndependentGuestCredential(version: 1, service: service,
+            vaultID: UUID(), dataPassword: try FreshEncryptedLibrary.randomSecret())
+        let record = try encodeIndependentGuest(credential, password: password)
+        try storage.write(account: independentGuestAccount, data: record, createOnly: true)
+        return credential
+    }
+
+    func unlockIndependentGuest(password: String) throws -> IndependentGuestCredential {
+        let record = try decodeIndependentGuestRecord(storage.read(account: independentGuestAccount))
+        return try openIndependentGuest(record, password: password)
+    }
+
+    private func openIndependentGuest(_ record: IndependentGuestRecord, password: String) throws -> IndependentGuestCredential {
+        let plaintext = try PasswordEnvelope.open(record.envelope, password: password,
+            context: independentGuestContext(record.vaultID))
+        let credential = try JSONDecoder().decode(IndependentGuestCredential.self, from: plaintext)
+        guard credential.version == 1, credential.service == service,
+              credential.vaultID == record.vaultID, !credential.dataPassword.isEmpty else {
+            throw KeychainError.invalidData
+        }
+        return credential
+    }
+
+    @discardableResult
+    func changeIndependentGuestPassword(oldPassword: String, newPassword: String) throws -> IndependentGuestCredential {
+        guard Self.validatePasswordStrength(newPassword).isValid else { throw KeychainError.invalidData }
+        // Read primary storage explicitly so an unavailable item cannot conceal a collision.
+        guard try optionalItem(account: ownerAccount) != nil, !verifyPassword(newPassword) else {
+            throw KeychainError.invalidData
+        }
+        let credential = try unlockIndependentGuest(password: oldPassword)
+        let record = try encodeIndependentGuest(credential, password: newPassword)
+        try storage.write(account: independentGuestAccount, data: record, createOnly: false)
+        return credential
+    }
+
+    private func matchesIndependentGuestPassword(_ password: String) throws -> Bool {
+        guard let bytes = try optionalItem(account: independentGuestAccount) else { return false }
+        let record = try decodeIndependentGuestRecord(bytes)
+        return (try? openIndependentGuest(record, password: password)) != nil
+    }
+
+    private func independentGuestContext(_ id: UUID) -> String {
+        "secondary:" + service + ":" + id.uuidString
+    }
+
+    private func encodeIndependentGuest(_ credential: IndependentGuestCredential, password: String) throws -> Data {
+        let envelope = try PasswordEnvelope.seal(JSONEncoder().encode(credential), password: password,
+            context: independentGuestContext(credential.vaultID))
+        return try JSONEncoder().encode(IndependentGuestRecord(version: 1, vaultID: credential.vaultID, envelope: envelope))
+    }
+
+    private func decodeIndependentGuestRecord(_ data: Data) throws -> IndependentGuestRecord {
+        guard data.count <= 100_000 else { throw KeychainError.invalidData }
+        let record = try JSONDecoder().decode(IndependentGuestRecord.self, from: data)
+        // This slot has no legacy format: never permit PasswordEnvelope's legacy fallback.
+        guard record.version == 1, record.envelope.starts(with: Data("WLPE".utf8)) else {
+            throw KeychainError.invalidData
+        }
+        return record
     }
 }
 

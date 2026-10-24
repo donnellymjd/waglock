@@ -49,6 +49,91 @@ struct CredentialRecoveryTests {
         #expect(storage.items["waglock.library-identity.v1"] == identity)
     }
 
+    @Test func independentGuestRetainsIdentityAndSecretAcrossRestartAndPasswordChange() throws {
+        let (keychain, storage) = fixture()
+        let primary = try keychain.savePassword("primary-password")
+        let guest = try keychain.provisionIndependentGuest(password: "secondary-password")
+        #expect(guest.dataPassword != primary)
+        #expect(guest.dataPassword != "secondary-password")
+        #expect(try keychain.independentGuestVaultID() == guest.vaultID)
+        let encrypted = try EncryptionService.shared.encrypt(data: Data("secondary fixture".utf8), password: guest.dataPassword)
+        #expect(throws: (any Error).self) { try EncryptionService.shared.decrypt(encryptedData: encrypted, password: primary) }
+        let restarted = KeychainService(service: "recovery-fixture", storage: storage)
+        #expect(try restarted.unlockIndependentGuest(password: "secondary-password") == guest)
+        #expect(try restarted.changeIndependentGuestPassword(oldPassword: "secondary-password", newPassword: "changed-secondary") == guest)
+        #expect(throws: (any Error).self) { try restarted.unlockIndependentGuest(password: "secondary-password") }
+        #expect(try restarted.unlockIndependentGuest(password: "changed-secondary") == guest)
+        #expect(try restarted.retrieveDataPassword(using: "primary-password") == primary)
+    }
+
+    @Test func independentGuestRejectsAmbiguousPasswordsAndReplacement() throws {
+        let (keychain, storage) = fixture()
+        try keychain.savePassword("primary-password")
+        #expect(throws: (any Error).self) { try keychain.provisionIndependentGuest(password: "primary-password") }
+        try keychain.provisionIndependentGuest(password: "secondary-password")
+        let previous = storage.items
+        #expect(throws: (any Error).self) { try keychain.provisionIndependentGuest(password: "replacement-password") }
+        #expect(throws: (any Error).self) { try keychain.changePassword(oldPassword: "primary-password", newPassword: "secondary-password") }
+        #expect(throws: (any Error).self) { try keychain.changeIndependentGuestPassword(oldPassword: "secondary-password", newPassword: "primary-password") }
+        #expect(storage.items == previous)
+    }
+
+    @Test func independentGuestFailedProvisionAndChangePreservePrimaryAndGuest() throws {
+        let (keychain, storage) = fixture()
+        try keychain.savePassword("primary-password")
+        let primaryItems = storage.items
+        storage.failWrites = true
+        #expect(throws: (any Error).self) { try keychain.provisionIndependentGuest(password: "secondary-password") }
+        #expect(storage.items == primaryItems)
+        storage.failWrites = false
+        let guest = try keychain.provisionIndependentGuest(password: "secondary-password")
+        let bothItems = storage.items
+        storage.failWrites = true
+        #expect(throws: (any Error).self) { try keychain.changeIndependentGuestPassword(oldPassword: "secondary-password", newPassword: "changed-secondary") }
+        #expect(storage.items == bothItems)
+        #expect(try keychain.unlockIndependentGuest(password: "secondary-password") == guest)
+    }
+
+    @Test func independentGuestUnavailableOrCorruptRecordDoesNotBecomeAbsence() throws {
+        let (keychain, storage) = fixture()
+        try keychain.savePassword("primary-password")
+        storage.failReads = true
+        #expect(throws: (any Error).self) { try keychain.independentGuestVaultID() }
+        #expect(throws: (any Error).self) { try keychain.provisionIndependentGuest(password: "secondary-password") }
+        storage.failReads = false
+        storage.items["waglock.secondary-credentials.v1"] = Data("broken".utf8)
+        let previous = storage.items
+        #expect(throws: (any Error).self) { try keychain.independentGuestVaultID() }
+        #expect(throws: (any Error).self) { try keychain.provisionIndependentGuest(password: "secondary-password") }
+        #expect(throws: (any Error).self) { try keychain.changePassword(oldPassword: "primary-password", newPassword: "changed-primary") }
+        #expect(storage.items == previous)
+    }
+
+    @Test func independentGuestAuthenticatesServiceIdentityAndCiphertext() throws {
+        let (keychain, storage) = fixture()
+        try keychain.savePassword("primary-password")
+        try keychain.provisionIndependentGuest(password: "secondary-password")
+        let account = "waglock.secondary-credentials.v1"
+        let original = try #require(storage.items[account])
+        let otherService = KeychainService(service: "other-service", storage: storage)
+        #expect(throws: (any Error).self) { try otherService.unlockIndependentGuest(password: "secondary-password") }
+        #expect(throws: (any Error).self) { try keychain.unlockIndependentGuest(password: "primary-password") }
+        var json = try #require(JSONSerialization.jsonObject(with: original) as? [String: Any])
+        json["vaultID"] = UUID().uuidString
+        storage.items[account] = try JSONSerialization.data(withJSONObject: json)
+        #expect(throws: (any Error).self) { try keychain.unlockIndependentGuest(password: "secondary-password") }
+        json = try #require(JSONSerialization.jsonObject(with: original) as? [String: Any])
+        let encodedEnvelope = try #require(json["envelope"] as? String)
+        var envelope = try #require(Data(base64Encoded: encodedEnvelope))
+        envelope[envelope.count - 1] ^= 1
+        json["envelope"] = envelope.base64EncodedString()
+        storage.items[account] = try JSONSerialization.data(withJSONObject: json)
+        #expect(throws: (any Error).self) { try keychain.unlockIndependentGuest(password: "secondary-password") }
+        json["envelope"] = Data("not a modern wrapper".utf8).base64EncodedString()
+        storage.items[account] = try JSONSerialization.data(withJSONObject: json)
+        #expect(throws: (any Error).self) { try keychain.unlockIndependentGuest(password: "secondary-password") }
+    }
+
     private func legacy(_ storage: FaultKeychainStorage, password: String = "legacy-password",
                         secret: String = "original-data-secret") throws {
         let salt = Data(repeating: 42, count: 16)
