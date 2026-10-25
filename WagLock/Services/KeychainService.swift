@@ -56,9 +56,22 @@ class KeychainService: LibraryIdentityAnchor {
         self.makeDataPassword = makeDataPassword ?? (LibraryStoragePolicy.encryptedMetadata ? { try FreshEncryptedLibrary.randomSecret() } : nil)
     }
 
-    func passwordAttemptLimiter(scope: String = "vault", now: @escaping () -> Date = Date.init) -> PasswordAttemptLimiter {
-        PasswordAttemptLimiter(storage: storage, scope: scope, now: now)
+    func passwordAttemptLimiter(scope: String = "vault", now: @escaping () -> Date = Date.init,
+                                elapsedTime: (() -> Double)? = nil, epoch: UUID? = nil) -> PasswordAttemptLimiter {
+        PasswordAttemptLimiter(storage: storage, scope: scope, now: now, elapsedTime: elapsedTime, epoch: epoch)
     }
+
+    private var biometricOwnerAccount: String { "waglock.biometric-owner.v1" }
+    func biometricOwner() throws -> String? {
+        guard let data = try optionalItem(account: biometricOwnerAccount) else { return nil }
+        guard data.count <= 64, let value = String(data: data, encoding: .utf8),
+              value == "primary" || UUID(uuidString: value) != nil else { throw KeychainError.invalidData }
+        return value
+    }
+    func setBiometricOwner(_ owner: String) throws {
+        try storage.write(account: biometricOwnerAccount, data: Data(owner.utf8), createOnly: false)
+    }
+    func clearBiometricOwner() { try? storage.delete(account: biometricOwnerAccount) }
 
     // MARK: - Constants
 
@@ -421,7 +434,13 @@ extension KeychainService {
     }
 
     func unlockIndependentGuest(password: String) throws -> IndependentGuestCredential {
-        let record = try decodeIndependentGuestRecord(storage.read(account: independentGuestAccount))
+        let data: Data
+        do { data = try storage.read(account: independentGuestAccount) }
+        catch KeychainError.itemNotFound {
+            try PasswordEnvelope.performDummyVerification(password)
+            throw KeychainError.itemNotFound
+        }
+        let record = try decodeIndependentGuestRecord(data)
         return try openIndependentGuest(record, password: password)
     }
 
@@ -439,10 +458,8 @@ extension KeychainService {
     @discardableResult
     func changeIndependentGuestPassword(oldPassword: String, newPassword: String) throws -> IndependentGuestCredential {
         guard Self.validatePasswordStrength(newPassword).isValid else { throw KeychainError.invalidData }
-        // Read primary storage explicitly so an unavailable item cannot conceal a collision.
-        guard try optionalItem(account: ownerAccount) != nil, !verifyPassword(newPassword) else {
-            throw KeychainError.invalidData
-        }
+        // Never inspect the primary credential from a secondary password-change request.
+        // Login gives a matching secondary credential precedence, including a collision.
         let credential = try unlockIndependentGuest(password: oldPassword)
         let record = try encodeIndependentGuest(credential, password: newPassword)
         try storage.write(account: independentGuestAccount, data: record, createOnly: false)

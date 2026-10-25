@@ -1,3 +1,5 @@
+> **Submission hold — October24 follow-up:** build53 must not be submitted while the second security review is remediated (D2S-165–172). Known listing fields may be prepared/saved. Do not submit, release or infer acceptance of build54 from historical build53 tests.
+
 # WagLock 1.0 build53 submission handoff
 
 Engineering preparation and the requested owner phone checks are complete for build53. This supersedes the historical build50 security hold/package. It is **prepared, not uploaded or submitted**. The broader audit remains open; the narrow launch mitigations and residual limits are recorded in [build53 evidence](../evidence/build-53/README.md).

@@ -34,6 +34,11 @@ nonisolated enum PasswordEnvelope {
         return try AES.GCM.open(box, using: key, authenticating: header + Data(context.utf8))
     }
 
+    /// Equal KDF work for a missing optional login credential; no verifier or key is stored.
+    static func performDummyVerification(_ password: String) throws {
+        _ = try derive(password, salt: Data(repeating: 0, count: 16))
+    }
+
     private static func derive(_ password: String, salt: Data) throws -> SymmetricKey {
         var input = Data(password.utf8), output = Data(count: 32)
         defer { input.resetBytes(in: 0..<input.count); output.resetBytes(in: 0..<output.count) }

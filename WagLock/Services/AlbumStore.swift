@@ -21,6 +21,7 @@ final class AlbumStore: ObservableObject {
     private var generation = UUID()
     private let biometrics: any BiometricSecretStoring
     private let attemptStorage: any KeychainStorage
+    private let attemptElapsedTime: (() -> Double)?
     private let attemptNow: () -> Date
     private let crypto = EncryptionService.shared
     private let storage: FileStorageService
@@ -29,6 +30,7 @@ final class AlbumStore: ObservableObject {
 
     init(biometrics: any BiometricSecretStoring = BiometricSecretStore.shared,
          attemptStorage: (any KeychainStorage)? = nil, attemptNow: @escaping () -> Date = Date.init,
+         attemptElapsedTime: (() -> Double)? = nil,
          storage: FileStorageService = .shared, mediaLoader: MediaLoaderService = .shared,
          thumbnails: ThumbnailImageLoader = .shared) {
         self.storage = storage
@@ -36,6 +38,7 @@ final class AlbumStore: ObservableObject {
         self.thumbnails = thumbnails
         self.biometrics = biometrics
         self.attemptStorage = attemptStorage ?? SystemKeychainStorage(service: AppConstants.bundleIdentifier + ".album-attempts")
+        self.attemptElapsedTime = attemptElapsedTime
         self.attemptNow = attemptNow
     }
 
@@ -163,7 +166,7 @@ final class AlbumStore: ObservableObject {
         }
         guard token == generation else { throw CancellationError() }
         _ = try parentKey(for: album, albums: albums)
-        let limiter = PasswordAttemptLimiter(storage: attemptStorage, scope: album.id.uuidString, now: attemptNow)
+        let limiter = PasswordAttemptLimiter(storage: attemptStorage, scope: album.id.uuidString, now: attemptNow, elapsedTime: attemptElapsedTime)
         let reservation: PasswordAttemptLimiter.Reservation?
         if protection.requiresPassword && !useBiometrics {
             guard factor != nil else { throw VaultAccessError.locked }

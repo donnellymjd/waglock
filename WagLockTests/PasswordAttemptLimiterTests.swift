@@ -25,11 +25,15 @@ final class PasswordAttemptLimiterTests: XCTestCase {
     func testReservationsSurviveNewInstancesAndCooldownGrowsWithoutDeletingAnything() throws {
         let storage = InMemoryAttemptStorage()
         var date = Date(timeIntervalSince1970: 1_800_000_000)
-        let make = { PasswordAttemptLimiter(storage: storage, scope: "vault", now: { date }) }
+        var elapsed: Double = 0
+        let epoch = UUID()
+        let make = { PasswordAttemptLimiter(storage: storage, scope: "vault", now: { date }, elapsedTime: { elapsed }, epoch: epoch) }
         for _ in 0..<5 { _ = try make().reserve() }
         XCTAssertThrowsError(try make().reserve())
         XCTAssertEqual(try make().status().failures, 5)
-        date = date.addingTimeInterval(301)
+        date = date.addingTimeInterval(86400)
+        XCTAssertThrowsError(try make().reserve(), "A forward clock jump must not buy a guess")
+        elapsed = 301
         _ = try make().reserve()
         XCTAssertEqual(try make().status().blockedUntil, date.addingTimeInterval(600))
         XCTAssertThrowsError(try make().reserve())
@@ -75,15 +79,36 @@ final class PasswordAttemptLimiterTests: XCTestCase {
         let blocked = AuthenticationViewModel(keychainService: keychain, manageInstallationState: false)
         blocked.password = "PUBLIC-owner-password"
         XCTAssertNil(blocked.login()); XCTAssertFalse(blocked.isAuthenticated)
-        var date = Date().addingTimeInterval(301)
+        let date = Date().addingTimeInterval(86400)
         let limiter = keychain.passwordAttemptLimiter(now: { date })
-        let auth = AuthenticationViewModel(keychainService: keychain, manageInstallationState: false, attemptLimiter: limiter)
+        XCTAssertThrowsError(try limiter.reserve(), "A new process or wall clock cannot skip the durable wait")
+        // Success/reset is exercised on a separate uncontended budget.
+        let successLimiter = keychain.passwordAttemptLimiter(scope: "PUBLIC-success")
+        let auth = AuthenticationViewModel(keychainService: keychain, manageInstallationState: false, attemptLimiter: successLimiter)
         auth.password = "PUBLIC-owner-password"; await auth.login()?.value
         XCTAssertTrue(auth.isAuthenticated); auth.logout()
-        date = date.addingTimeInterval(1)
-        XCTAssertEqual(try limiter.status().failures, 0)
-        let fresh = AuthenticationViewModel(keychainService: keychain, manageInstallationState: false)
+        XCTAssertEqual(try successLimiter.status().failures, 0)
+        let fresh = AuthenticationViewModel(keychainService: keychain, manageInstallationState: false, attemptLimiter: successLimiter)
         fresh.password = "PUBLIC-owner-password"; await fresh.login()?.value
         XCTAssertTrue(fresh.isAuthenticated); fresh.logout()
     }
+    func testNewProcessAndClockChangesCannotSkipRemainingDelay() throws {
+        let storage = InMemoryAttemptStorage()
+        var date = Date()
+        var elapsed: Double = 0
+        let epoch = UUID()
+        let first = PasswordAttemptLimiter(storage: storage, scope: "PUBLIC-clock", now: { date }, elapsedTime: { elapsed }, epoch: epoch)
+        for _ in 0..<5 { _ = try first.reserve() }
+        date = date.addingTimeInterval(86400 * 365)
+        XCTAssertThrowsError(try first.reserve())
+        elapsed = 120
+        XCTAssertThrowsError(try first.reserve()) // Persist180 seconds remaining.
+        let next = PasswordAttemptLimiter(storage: storage, scope: "PUBLIC-clock", now: { date }, elapsedTime: { elapsed }, epoch: UUID())
+        XCTAssertThrowsError(try next.reserve())
+        date = date.addingTimeInterval(-86400 * 730)
+        elapsed += 181
+        XCTAssertEqual(try next.reserve().failures, 6)
+        XCTAssertThrowsError(try next.reserve())
+    }
+
 }

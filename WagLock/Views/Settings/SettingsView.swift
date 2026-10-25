@@ -45,7 +45,7 @@ struct SettingsView: View {
                             List { securitySection }.wagLockList().navigationTitle("Security & access")
                                 .navigationBarTitleDisplayMode(.inline)
                         } label: {
-                            settingsCard("lock.shield", "Security & access", LibraryStoragePolicy.encryptedMetadata ? "Face ID, password and auto-lock" : "Face ID, password and Guest Mode")
+                            settingsCard("lock.shield", "Security & access", LibraryStoragePolicy.encryptedMetadata ? (authViewModel.canManageBiometricUnlock ? "Face ID, password and auto-lock" : "Password and auto-lock") : "Face ID, password and Guest Mode")
                         }.accessibilityIdentifier("settings.security")
                     }
                     VStack(alignment: .leading, spacing: 8) {
@@ -190,9 +190,11 @@ struct SettingsView: View {
         Group {
             Section("UNLOCKING") {
                 if guestModeManager.isOwnerMode {
+                    if authViewModel.canManageBiometricUnlock {
                     NavigationLink { BiometricSettingsView() } label: {
                         securityRow("faceid", "Face ID", authViewModel.isBiometricUnlockEnabled ? "Enabled" : "Disabled")
                     }.accessibilityIdentifier("settings.faceID").wagLockCardRow()
+                    }
                     Button { showChangePasswordSheet = true } label: {
                         securityRow("key", "Change password", "Verify your current password")
                     }.accessibilityIdentifier("settings.changePassword").wagLockCardRow()
@@ -487,12 +489,6 @@ struct ChangePasswordView: View {
 
     private func changePassword() {
         errorMessage = nil
-
-        // 验证当前密码
-        guard authViewModel.verifyPassword(currentPassword) else {
-            errorMessage = String(localized: "settings.changePassword.error.invalidCurrent")
-            return
-        }
 
         // 开始修改密码
         isChanging = true

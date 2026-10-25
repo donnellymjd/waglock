@@ -17,21 +17,21 @@
 			containerPortal = 405590522EBB867900944275 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 405590592EBB867900944275;
-			remoteInfo = "WagLock";
+			remoteInfo = WagLock;
 		};
 		405590742EBB867B00944275 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 405590522EBB867900944275 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 405590592EBB867900944275;
-			remoteInfo = "WagLock";
+			remoteInfo = WagLock;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		4055905A2EBB867900944275 /* WagLock.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WagLock.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		405590692EBB867B00944275 /* WagLockTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "WagLockTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		405590732EBB867B00944275 /* WagLockUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "WagLockUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		405590692EBB867B00944275 /* WagLockTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WagLockTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		405590732EBB867B00944275 /* WagLockUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WagLockUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		40B133EE2ECA009700B54115 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; name = Localizable.xcstrings; path = Resources/Localizable.xcstrings; sourceTree = "<group>"; };
 		A71000000000000000000002 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Resources/en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -39,17 +39,17 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		4055905C2EBB867900944275 /* WagLock */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "WagLock";
+			path = WagLock;
 			sourceTree = "<group>";
 		};
 		4055906C2EBB867B00944275 /* WagLockTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "WagLockTests";
+			path = WagLockTests;
 			sourceTree = "<group>";
 		};
 		405590762EBB867B00944275 /* WagLockUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "WagLockUITests";
+			path = WagLockUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -119,10 +119,10 @@
 			fileSystemSynchronizedGroups = (
 				4055905C2EBB867900944275 /* WagLock */,
 			);
-			name = "WagLock";
+			name = WagLock;
 			packageProductDependencies = (
 			);
-			productName = "WagLock";
+			productName = WagLock;
 			productReference = 4055905A2EBB867900944275 /* WagLock.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -142,10 +142,10 @@
 			fileSystemSynchronizedGroups = (
 				4055906C2EBB867B00944275 /* WagLockTests */,
 			);
-			name = "WagLockTests";
+			name = WagLockTests;
 			packageProductDependencies = (
 			);
-			productName = "WagLockTests";
+			productName = WagLockTests;
 			productReference = 405590692EBB867B00944275 /* WagLockTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
@@ -165,10 +165,10 @@
 			fileSystemSynchronizedGroups = (
 				405590762EBB867B00944275 /* WagLockUITests */,
 			);
-			name = "WagLockUITests";
+			name = WagLockUITests;
 			packageProductDependencies = (
 			);
-			productName = "WagLockUITests";
+			productName = WagLockUITests;
 			productReference = 405590732EBB867B00944275 /* WagLockUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
@@ -418,11 +418,9 @@
 				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon-Paper AppIcon-Calculator AppIcon-Pebble AppIcon-Ruler AppIcon-Spectrum AppIcon-CaughtYouLooking AppIcon-WatchfulHusky";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				SWIFT_OBJC_BRIDGING_HEADER = "WagLock/Support/WagLock-Bridging-Header.h";
-				OTHER_CFLAGS = "$(inherited) -O2";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 53;
+				CURRENT_PROJECT_VERSION = 55;
 				DEVELOPMENT_TEAM = Z3B45KM866;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -441,6 +439,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.3.8;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-O2",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.d2sci.vaultito.dev;
 				PRODUCT_MODULE_NAME = WagLock;
 				PRODUCT_NAME = WagLock;
@@ -449,6 +451,7 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "WagLock/Support/WagLock-Bridging-Header.h";
 				SWIFT_STRICT_CONCURRENCY = targeted;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = NO;
 				SWIFT_VERSION = 5.0;
@@ -463,11 +466,9 @@
 				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon-Paper AppIcon-Calculator AppIcon-Pebble AppIcon-Ruler AppIcon-Spectrum AppIcon-CaughtYouLooking AppIcon-WatchfulHusky";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				SWIFT_OBJC_BRIDGING_HEADER = "WagLock/Support/WagLock-Bridging-Header.h";
-				OTHER_CFLAGS = "$(inherited) -O2";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 53;
+				CURRENT_PROJECT_VERSION = 55;
 				DEVELOPMENT_TEAM = Z3B45KM866;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -486,6 +487,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.3.8;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-O2",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.d2sci.vaultito.dev;
 				PRODUCT_MODULE_NAME = WagLock;
 				PRODUCT_NAME = WagLock;
@@ -494,6 +499,7 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "WagLock/Support/WagLock-Bridging-Header.h";
 				SWIFT_STRICT_CONCURRENCY = targeted;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = NO;
 				SWIFT_VERSION = 5.0;
@@ -507,7 +513,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 53;
+				CURRENT_PROJECT_VERSION = 55;
 				DEVELOPMENT_TEAM = Z3B45KM866;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
@@ -529,7 +535,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 53;
+				CURRENT_PROJECT_VERSION = 55;
 				DEVELOPMENT_TEAM = Z3B45KM866;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
@@ -550,7 +556,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 53;
+				CURRENT_PROJECT_VERSION = 55;
 				DEVELOPMENT_TEAM = Z3B45KM866;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.3.8;
@@ -562,7 +568,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = "WagLock";
+				TEST_TARGET_NAME = WagLock;
 			};
 			name = Debug;
 		};
@@ -570,7 +576,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 53;
+				CURRENT_PROJECT_VERSION = 55;
 				DEVELOPMENT_TEAM = Z3B45KM866;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.3.8;
@@ -582,7 +588,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = "WagLock";
+				TEST_TARGET_NAME = WagLock;
 			};
 			name = Release;
 		};

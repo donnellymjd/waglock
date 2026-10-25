@@ -74,8 +74,11 @@ struct CredentialRecoveryTests {
         let previous = storage.items
         #expect(throws: (any Error).self) { try keychain.provisionIndependentGuest(password: "replacement-password") }
         #expect(throws: (any Error).self) { try keychain.changePassword(oldPassword: "primary-password", newPassword: "secondary-password") }
-        #expect(throws: (any Error).self) { try keychain.changeIndependentGuestPassword(oldPassword: "secondary-password", newPassword: "primary-password") }
         #expect(storage.items == previous)
+        let guest = try keychain.unlockIndependentGuest(password: "secondary-password")
+        #expect(try keychain.changeIndependentGuestPassword(oldPassword: "secondary-password", newPassword: "primary-password") == guest)
+        #expect(try keychain.unlockIndependentGuest(password: "primary-password") == guest)
+        #expect(keychain.verifyPassword("primary-password"))
     }
 
     @Test func independentGuestFailedProvisionAndChangePreservePrimaryAndGuest() throws {

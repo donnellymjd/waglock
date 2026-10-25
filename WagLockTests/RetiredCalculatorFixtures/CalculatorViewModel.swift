@@ -1,3 +1,4 @@
+@testable import WagLock
 //
 //  CalculatorViewModel.swift
 //  WagLock

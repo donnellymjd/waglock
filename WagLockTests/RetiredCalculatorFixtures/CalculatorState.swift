@@ -1,3 +1,4 @@
+@testable import WagLock
 //
 //  CalculatorState.swift
 //  WagLock

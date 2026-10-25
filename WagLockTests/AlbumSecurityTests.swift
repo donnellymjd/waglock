@@ -41,7 +41,8 @@ struct AlbumSecurityTests {
         let storage = InMemoryAttemptStorage()
         let biometric = TestBiometricStore()
         var date = Date(timeIntervalSince1970: 1_800_000_000)
-        let make = { AlbumStore(biometrics: biometric, attemptStorage: storage, attemptNow: { date }) }
+        var elapsed: Double = 0
+        let make = { AlbumStore(biometrics: biometric, attemptStorage: storage, attemptNow: { date }, attemptElapsedTime: { elapsed }) }
         let initial = make()
         initial.beginSession(vaultSecret: "vault-fixture")
         let album = try await initial.create(name: "Budget", parent: nil, protection: .passwordAndFaceID,
@@ -63,7 +64,9 @@ struct AlbumSecurityTests {
         try await store.unlock(album, useBiometrics: true, albums: [album, other])
         store.lock(album, albums: [album, other])
         await denied { try await store.unlock(album, password: "album-password", albums: [album, other]) }
-        date = date.addingTimeInterval(301)
+        date = date.addingTimeInterval(86400)
+        await denied { try await store.unlock(album, password: "album-password", albums: [album, other]) }
+        elapsed = 301
         try await store.unlock(album, password: "album-password", albums: [album, other])
         store.lock(album, albums: [album, other])
         try await store.unlock(album, password: "album-password", albums: [album, other])

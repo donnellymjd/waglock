@@ -1,5 +1,7 @@
 # First App Store submission
 
+> October24 follow-up: **submission hold** for build53. Track D2S-165–172 and [build55 remediation](../portable-vault/security-review-build55.md). Prior engineering/phone acceptance below does not accept the new changes.
+
 Owner direction: prepare a small first release with manual release. **Current candidate: 1.0(53), engineering and requested owner phone checks passed October24; account-side distribution gates remain open.** Use the [current submission handoff](app-store/README.md) and [build53 evidence](evidence/build-53/README.md). Earlier build-specific sections below are historical and do not override this checkpoint. No upload or submission has occurred.
 
 ## Scope and order

@@ -1,5 +1,5 @@
 {
-  "status": "prepared-not-filed",
+  "status": "security-hold-build53",
   "bundleId": "com.d2sci.waglock",
   "version": "1.0",
   "build": "53",
@@ -22,5 +22,6 @@
   "privacyRecommendation": "Data Not Collected, pending account-holder confirmation of actual support/diagnostic arrangements",
   "encryptionDeclaration": "pending account-holder determination; do not claim exemption or invent a compliance code",
   "ageRating": "complete Apple questionnaire; no rating asserted before filing",
-  "sourceTag": "candidate-1.0-build53"
+  "sourceTag": "candidate-1.0-build53",
+  "nextCandidateBuild": "55"
 }

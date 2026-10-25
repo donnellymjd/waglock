@@ -256,7 +256,7 @@ final class AuthenticationViewModel: ObservableObject {
             guard token == authenticationGeneration, !Task.isCancelled else { return }
 
             // 回到主线程更新UI状态
-            if ownerMatch {
+            if ownerMatch && independentGuest == nil {
                 do {
                     let dataPassword: String
                     if let ownerKey { dataPassword = ownerKey }
@@ -354,8 +354,8 @@ final class AuthenticationViewModel: ObservableObject {
     }
 
     func enableBiometricUnlock(password: String) async throws {
-        guard isAuthenticated, GuestModeManager.shared.isOwnerMode,
-              verifyPassword(password) else { throw VaultAccessError.invalidPassword }
+        guard canManageBiometricUnlock else { throw VaultAccessError.locked }
+        guard try verifyCurrentPassword(password) else { throw VaultAccessError.invalidPassword }
         let token = authenticationGeneration
         let secret: String
         if let id = secondaryVaultID {
@@ -367,20 +367,32 @@ final class AuthenticationViewModel: ObservableObject {
         let grant = "WLBG1:" + payload.base64EncodedString()
         try await biometrics.store(grant, account: BiometricSecretStore.vaultAccount) {
             token == self.authenticationGeneration && self.isAuthenticated
-                && GuestModeManager.shared.isOwnerMode
+                && self.canManageBiometricUnlock
         }
-        guard token == authenticationGeneration, !Task.isCancelled, isAuthenticated, GuestModeManager.shared.isOwnerMode else {
+        guard token == authenticationGeneration, !Task.isCancelled, canManageBiometricUnlock else {
             // Do not delete a shared account that a newer authorized enrollment may own.
             throw CancellationError()
         }
+        try keychainService.setBiometricOwner(secondaryVaultID?.uuidString ?? "primary")
         isBiometricUnlockEnabled = true
         UserDefaults.standard.set(true, forKey: "vaultito.faceID.enabled")
     }
 
+    /// Legacy enrollments without ownership metadata belong to the primary vault.
+    var canManageBiometricUnlock: Bool {
+        guard isAuthenticated, GuestModeManager.shared.isOwnerMode else { return false }
+        if isPrimaryVault { return true }
+        do {
+            if let owner = try keychainService.biometricOwner() { return owner == secondaryVaultID?.uuidString }
+            return !isBiometricUnlockEnabled
+        } catch { return false }
+    }
+
     func disableBiometricUnlock() {
-        guard isAuthenticated, GuestModeManager.shared.isOwnerMode else { return }
+        guard canManageBiometricUnlock else { return }
         authenticationGeneration = UUID()
         biometrics.remove(account: BiometricSecretStore.vaultAccount)
+        keychainService.clearBiometricOwner()
         isBiometricUnlockEnabled = false
         UserDefaults.standard.set(false, forKey: "vaultito.faceID.enabled")
     }
@@ -487,15 +499,26 @@ final class AuthenticationViewModel: ObservableObject {
 
     /// 验证密码是否正确
     func verifyPassword(_ password: String) -> Bool {
+        (try? verifyCurrentPassword(password)) == true
+    }
+
+    /// Selected-vault security operations share a durable budget, even after biometric entry.
+    private func verifyCurrentPassword(_ password: String) throws -> Bool {
+        guard isAuthenticated, GuestModeManager.shared.isOwnerMode else { throw VaultAccessError.locked }
+        let limiter = keychainService.passwordAttemptLimiter(scope: "settings:" + (secondaryVaultID?.uuidString ?? "primary"))
+        let reservation = try limiter.reserve()
+        let valid: Bool
         if let id = secondaryVaultID {
-            return (try? keychainService.unlockIndependentGuest(password: password).vaultID) == id
-        }
-        return keychainService.verifyPassword(password)
+            valid = (try? keychainService.unlockIndependentGuest(password: password).vaultID) == id
+        } else { valid = keychainService.verifyPassword(password) }
+        if valid { try limiter.recordSuccess(reservation) }
+        return valid
     }
 
     /// 更新密码（重新加密后调用）
     func updatePassword(oldPassword: String, newPassword: String) throws {
         guard isAuthenticated, GuestModeManager.shared.isOwnerMode else { throw VaultAccessError.locked }
+        guard try verifyCurrentPassword(oldPassword) else { throw VaultAccessError.invalidPassword }
         let dataPassword: String
         if secondaryVaultID != nil {
             dataPassword = try keychainService.changeIndependentGuestPassword(oldPassword: oldPassword, newPassword: newPassword).dataPassword
