@@ -1,0 +1,48 @@
+{
+  "date": "2026-10-24",
+  "status": "security-candidate-phone-acceptance-pending",
+  "bundleId": "com.d2sci.waglock",
+  "version": "1.0",
+  "build": "55",
+  "sourceCommit": "f37ebb9a6bf58572370e102a7c59e2c7c6105a2a",
+  "sourceTag": "candidate-1.0-build55",
+  "sourceArchive": "/private/tmp/WagLock-1.0-build55-source.tar.gz",
+  "sourceArchiveSHA256": "e8c86fc36ccea5d7515c95483ffda77e5dc540db6abedd32f34a4a0d7d1f0bc9",
+  "developmentSignedArchive": "/private/tmp/WagLock-1.0-build55-security.xcarchive",
+  "packageVerification": "archive-verification.json",
+  "tests": {
+    "unitAndSecurity": 317,
+    "xctest": 189,
+    "swiftTesting": 128,
+    "failures": 0,
+    "skips": 0,
+    "initialFocused": 15,
+    "initialReleaseUI": 2,
+    "finalBuild55ReleaseUI": 2
+  },
+  "unitResult": "/private/tmp/waglock-build54-review-full-final.xcresult",
+  "releaseUIResult": "/private/tmp/waglock-build55-review-release-ui.xcresult",
+  "supersededFailure": "First full run had an obsolete Date-based album cooldown test expectation; corrected to monotonic elapsed clock and full suite rerun passed.",
+  "ownerPhoneAcceptance": "pending",
+  "phoneInstall": "installed successfully after owner ready",
+  "safariFormTask": "canceled by owner; no fields changed",
+  "distributionUploadOrSubmission": false,
+  "laterWorkingTreeCountersPreserved": true,
+  "openFollowups": [
+    "D2S-169 remaining timing evaluation/other side channels",
+    "D2S-170 explicit handling of old pre-release password wrappers",
+    "D2S-162 ciphertext-to-record binding",
+    "D2S-173 whole-library rollback",
+    "Memory zeroization, screenshots and forensic deniability not promised"
+  ],
+  "launchFixesAwaitingPhysicalConfirmation": [
+    "D2S-167",
+    "D2S-172"
+  ],
+  "implementationVerifiedIssues": [
+    "D2S-165",
+    "D2S-166",
+    "D2S-168",
+    "D2S-171"
+  ]
+}
