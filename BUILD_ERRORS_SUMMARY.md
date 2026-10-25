@@ -511,3 +511,8 @@ Build57 final release UI: independent-vault and password-change workflows pass; 
 ## October25 build58 biometric control regression
 
 Owner reports Face ID opens a vault but its setting is absent. Added a regression for older/mismatched ownership markers; it fails against57, then passes after ownership is reconciled only from a successfully verified biometric grant. Full334 tests pass without failure/skip (206 XCTest,128 Swift Testing), including cancellation, hidden foreign enrollment and legacy-primary upgrade coverage. Signed archive and Release simulator build/package pass. No storage or grant reset. See docs/release/evidence/build-58/README.md for actual Release UI/install/UAT results.
+
+
+## October25 — prepared AutoFill59
+
+Prepared opt-in release config and dedicated static webcredentials site; no default release/Dev identity change or phone installation. Unsigned/ad-hoc Release simulator builds and actual Release password-change/persistence UI pass. The initial cached development profile lacked Associated Domains. An authorized existing-ID Xcode provisioning refresh succeeds; the actual signed59 app and explicit provisioned App ID/domain pass the new verifier, signature/notices/privacy checks. Six synthetic negative verifier checks pass. Live HTTPS verification fails because waglock.d2sci.co has no DNS record. Google CLI reauthentication is required before inspecting/deploying hosting; requested from owner. Hosting, Apple CDN delivery and real provider multi-entry/decoy UAT remain unverified. See docs/release/evidence/autofill-build59/README.md.

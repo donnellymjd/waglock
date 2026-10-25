@@ -393,18 +393,21 @@ struct ChangePasswordView: View {
                     SecureField(
                         String(localized: "settings.changePassword.current"), text: $currentPassword
                     ).accessibilityIdentifier("passwordChange.current")
+                    .textContentType(.password)
                     .keyboardType(keyboard.keyboardType)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     SecureField(
                         String(localized: "settings.changePassword.new"), text: $newPassword
                     ).accessibilityIdentifier("passwordChange.new")
+                    .textContentType(.newPassword)
                     .keyboardType(keyboard.keyboardType)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     SecureField(
                         String(localized: "settings.changePassword.confirm"), text: $confirmPassword
                     ).accessibilityIdentifier("passwordChange.confirm")
+                    .textContentType(.newPassword)
                     .submitLabel(.done).onSubmit { hideKeyboard() }
                     .keyboardType(keyboard.keyboardType)
                     .textInputAutocapitalization(.never)

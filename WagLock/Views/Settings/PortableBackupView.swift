@@ -46,8 +46,8 @@ private struct ScopedPortableBackupView: View {
                     }.pickerStyle(.segmented).accessibilityIdentifier("backup.method")
                     if method == "password" {
                         PasswordKeyboardPicker(selection: $keyboard)
-                        passwordField("New backup password", text: $password, identifier: "backup.password")
-                        passwordField("Confirm backup password", text: $confirmation, identifier: "backup.confirm")
+                        passwordField("New backup password", text: $password, identifier: "backup.password", contentType: .newPassword)
+                        passwordField("Confirm backup password", text: $confirmation, identifier: "backup.confirm", contentType: .newPassword)
                         PasswordStrengthView(password: password)
                         Text("Use at least 12 characters, preferably several random words. This password protects the copy; it does not change your WagLock password.")
                             .font(.footnote)
@@ -70,11 +70,12 @@ private struct ScopedPortableBackupView: View {
                                 Text(album.name).font(.headline)
                                 passwordField(album.policy == .faceIDOnly ? "New export password" : "Current album password",
                                     text: Binding(get: { albumPasswords[album.id] ?? "" }, set: { albumPasswords[album.id] = $0 }),
-                                    identifier: "backup.album." + album.id.uuidString)
+                                    identifier: "backup.album." + album.id.uuidString,
+                                    contentType: album.policy == .faceIDOnly ? .newPassword : .password)
                                 if album.policy == .faceIDOnly {
                                     passwordField("Confirm export password",
                                         text: Binding(get: { albumConfirmations[album.id] ?? "" }, set: { albumConfirmations[album.id] = $0 }),
-                                        identifier: "backup.album.confirm." + album.id.uuidString)
+                                        identifier: "backup.album.confirm." + album.id.uuidString, contentType: .newPassword)
                                     Text("Choose at least 12 characters. Face ID will authorize this album's export. The copy will use this separate password; this phone's album protection stays unchanged.").font(.footnote)
                                     PasswordStrengthView(password: albumPasswords[album.id] ?? "")
                                 }
@@ -147,8 +148,9 @@ private struct ScopedPortableBackupView: View {
         password = ""; confirmation = ""; albumPasswords = [:]; albumConfirmations = [:]
     }
 
-    private func passwordField(_ title: String, text: Binding<String>, identifier: String) -> some View {
-        SwitchablePasswordField(title: title, text: text, keyboard: keyboard, identifier: identifier,
+    private func passwordField(_ title: String, text: Binding<String>, identifier: String,
+                               contentType: UITextContentType = .password) -> some View {
+        SwitchablePasswordField(title: title, text: text, keyboard: keyboard, contentType: contentType, identifier: identifier,
             submitTitle: "Done", onSubmit: { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) })
             .frame(minHeight: 36)
     }

@@ -1,0 +1,9 @@
+{
+  "domain": "waglock.d2sci.co",
+  "applicationIdentifier": "Z3B45KM866.com.d2sci.waglock",
+  "localContract": "passed",
+  "liveHTTPS": "not checked",
+  "signedDeviceApp": "passed",
+  "passwordManagerDeviceUAT": "required",
+  "readyForRelease": false
+}

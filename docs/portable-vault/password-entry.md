@@ -35,3 +35,11 @@ Owner confirmed build 30 keyboard switching, input preservation, scoring and exi
 Device inventory confirms build 31. Automatic launch was declined because the phone was locked; the owner can open the installed app normally. No reconnect or launch retry is required for this UI-only follow-up.
 
 Owner subsequently confirmed build 31 on the phone: “ok that worked.” The password-entry follow-up is accepted; D2S-127 can close. Independent alternative-vault work remains in D2S-115.
+
+## October25 — D2S-175 prepared Password AutoFill association
+
+Login, album unlock, file unlock and biometric-confirmation fields request existing-password AutoFill. Main/secondary setup already requested new-password handling; main password changes, new album passwords, new backup passwords and new Face ID-only album export passwords now consistently use `.newPassword`. Existing protected-album backup credentials remain `.password`. The shared UIKit field preserves its content type on updates, keyboard selection, visibility, binding bytes and live editing callbacks; no credential or storage policy changes. The app does not trigger an automatic unlock merely because a provider filled a field.
+
+The separate opt-in configuration and static hosting package are described in [AutoFill hosting and verification](../../hosting/autofill/README.md). The association identifies WagLock, not an individual vault. Providers may suggest multiple entries; the app cannot enforce decoy secrecy inside their UI. No fake username, primary/secondary label, active-vault-specific domain, automatic save prompt or provider API receives a password from WagLock. Password-manager use and its cloud synchronization are the user's choice.
+
+The production App ID and explicit Associated Domains provisioning were verified in opt-in signed build59. Hosting/DNS activation and real-provider phone UAT remain pending Google reauthentication. Installed build58 and the default AppStore configuration remain unchanged until those gates pass. Compile success and a signed entitlement alone do not establish automatic suggestions.

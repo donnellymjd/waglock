@@ -14,6 +14,7 @@ WagLock is an independent fork of [SealedPocket / ZeroNet Space](https://github.
 - [Document preview boundary](document-preview-boundary.md): build 33 revocation and rejection of late PDF/text results.
 - [Shared-album discovery](shared-albums.md): two-person E2E sharing, mutual consent, revocation limits, transport options and prototype gates (D2S-139).
 - [Session-bound exports](export-session-boundary.md): build 32 operation-owned plaintext output, revocation, safe filenames and cleanup isolation.
+- [Password-manager association preparation](../../hosting/autofill/README.md): dedicated release-only webcredentials, signed build59 preview, Google hosting reauthentication and provider/decoy UAT pending.
 - [Password entry and strength](password-entry.md): builds 30–31 shared main/guest rules, switchable login keyboards and advisory scoring only when setting/changing passwords.
 - [Authenticated library boundary](authenticated-library-boundary.md): build 29 session-bound database mounting, stale-login rejection and disposable metadata-transition rehearsal.
 - [WagLock branding and video thumbnails](waglock-branding-and-thumbnails.md): build 28 rename, stable installed identity, persisted-model compatibility and proportional previews.

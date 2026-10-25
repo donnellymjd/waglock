@@ -49,6 +49,7 @@ struct SwitchablePasswordField: UIViewRepresentable {
     @Binding var text: String
     let keyboard: PasswordKeyboard
     var secure = true
+    var contentType: UITextContentType = .password
     var identifier: String?
     var submitTitle = "Unlock"
     var onSubmit: () -> Void
@@ -59,7 +60,7 @@ struct SwitchablePasswordField: UIViewRepresentable {
         field.placeholder = title
         field.accessibilityLabel = title
         field.accessibilityIdentifier = identifier ?? title
-        field.textContentType = .password
+        field.textContentType = contentType
         field.autocapitalizationType = .none
         field.autocorrectionType = .no
         field.spellCheckingType = .no
@@ -77,6 +78,7 @@ struct SwitchablePasswordField: UIViewRepresentable {
 
     func updateUIView(_ field: UITextField, context: Context) {
         context.coordinator.parent = self
+        field.textContentType = contentType
         field.isEnabled = context.environment.isEnabled
         let changedKeyboard = field.keyboardType != keyboard.keyboardType
         let changedSecurity = field.isSecureTextEntry != secure

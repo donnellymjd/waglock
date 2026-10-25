@@ -1,0 +1,16 @@
+{
+  "build": 59,
+  "status": "prepared, not activated",
+  "localAssociation": "passed",
+  "unsafeJSONCasesRejected": 4,
+  "redirectAndWrongMIMERejected": 2,
+  "releaseSimulatorBuild": "passed",
+  "signedArchive": "passed",
+  "signedAssociationAndExplicitProfile": "passed",
+  "releasePasswordChangeAndPersistenceUI": "passed",
+  "liveHTTPS": "blocked: domain DNS not configured; Google reauthentication required",
+  "providerDeviceUAT": "pending",
+  "phoneInstallationPerformed": false,
+  "installedBuildUnchanged": 58,
+  "appStoreSubmissionPerformed": false
+}

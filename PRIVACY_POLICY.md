@@ -1,6 +1,6 @@
 # WagLock privacy policy
 
-Updated October 23, 2026. This describes the first-release candidate and distinguishes older development storage. The App Store package is still being validated; no submission or independent security certification is implied.
+Updated October 25, 2026. This describes the first-release candidate and distinguishes older development storage. The App Store package is still being validated; no submission or independent security certification is implied.
 
 WagLock is an independent open-source fork of SealedPocket / ZeroNet Space. It is not the official upstream app. [Source and notices](https://github.com/donnellymjd/waglock).
 
@@ -19,6 +19,7 @@ Imported media and file contents are encrypted on your device. Password verifica
 - **Ordinary sharing/export:** destinations you choose receive decrypted copies. Recipient apps and people control those copies afterward.
 - **Encrypted backups:** you can explicitly create a password- or recipient-key-encrypted backup and save it through the iOS Files interface, including a cloud provider you have configured. Separately protected albums retain their required export passwords. Keep passwords/recovery keys separately; WagLock cannot reset them for you. There is no automatic two-way vault sync.
 - **System services:** Photos, Files and installed providers may download selected content or upload saved copies. iOS device backups and diagnostics depend on Apple's settings and services. The independent recovery method described here is the explicit encrypted-backup export. Device-only Keychain credentials and Face ID registrations must not be assumed to transfer with an iOS device backup or reinstallation.
+- **Password AutoFill (prepared opt-in configuration):** iOS may fetch a public app-association file through Apple’s services from the dedicated `waglock.d2sci.co` domain. Hosting/Apple may receive ordinary request metadata. The static site has no password form, telemetry or vault API and receives no vault content, credentials or keys. Your selected password manager handles credential storage, suggestions and authentication under its own settings and privacy terms. Enabling AutoFill does not create a WagLock online account. Configuration is not active in installed build58; live hosting, signed association and device verification remain required.
 - **External links:** opening source, support or recovery links contacts the external website through iOS. That site applies its own privacy practices.
 
 These actions do not send your library to a WagLock-operated service. Apple and the providers or recipients you choose may process information under their own terms. A provider accepting a file does not prove a remote upload has finished.

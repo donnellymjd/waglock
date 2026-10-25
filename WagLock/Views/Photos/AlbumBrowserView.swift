@@ -371,8 +371,12 @@ struct AlbumConfigurationView: View {
                     if protection.requiresPassword {
                         SecureField("New album password (6+ characters)", text: $password)
                             .accessibilityIdentifier("album.password")
+                            .textContentType(.newPassword)
+                            .textInputAutocapitalization(.never).autocorrectionDisabled()
                         SecureField("Confirm album password", text: $confirmation)
                             .accessibilityIdentifier("album.password.confirm")
+                            .textContentType(.newPassword)
+                            .textInputAutocapitalization(.never).autocorrectionDisabled()
                     }
                     Text("Parent protection always applies. Album contents, filenames and thumbnails are encrypted separately; album names and hierarchy remain visible.")
                         .font(.footnote).foregroundStyle(.secondary)
