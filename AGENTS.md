@@ -67,3 +67,8 @@ Track D2S-165–172 and docs/portable-vault/audits/build53-owner-review.md. Buil
 ## October25 security completion
 
 Owner authorized D2S-162/169/170/173 before UAT. Follow [the accepted design](docs/portable-vault/security-completion-design.md) and [build57 evidence](docs/release/evidence/build-57/README.md). Preserve ciphertext binding on every production native read/write/share/backup path and revoke registries on lock. Do not rebaseline a library with an enrolled file policy. Preserve encrypted recovery deltas and per-library Keychain commit stamps; older/different authentic copies must not silently re-enroll. Verify the entire target inventory before finalizing pending anchors. Authenticated older primary/album wrapper upgrades preserve data keys/policy; secondary formats remain modern-only. Old primary Face ID requires one password upgrade first. No reset, Cryptomator conversion, exact constant-time or forensic-deniability claim is authorized.
+
+
+## Build58 Face ID ownership compatibility
+
+An authenticated protected biometric grant is authoritative for its own target. Reconcile the device-only ownership marker only after successful grant authentication/validation and generation checks, before publishing the session. Missing/stale ownership from pre-marker enrollments must not hide the unlocked vault's own disable control. Password-entered secondary sessions must still not inspect/replace/remove primary enrollment. Cancellation, malformed grants and stale sessions must not repair markers. See docs/release/evidence/build-58/README.md and D2S-167.

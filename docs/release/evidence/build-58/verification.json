@@ -1,0 +1,12 @@
+{
+  "build": 58,
+  "reproducedBeforeFix": true,
+  "unitSecurityPassed": 334,
+  "unitSecurityFailures": 0,
+  "unitSecuritySkipped": 0,
+  "releaseUI": "passed",
+  "packageSignature": "passed",
+  "phoneInstall": "success",
+  "ownerUAT": "pending",
+  "appStoreSubmitted": false
+}

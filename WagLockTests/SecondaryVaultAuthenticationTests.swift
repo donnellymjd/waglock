@@ -151,6 +151,41 @@ final class SecondaryVaultAuthenticationTests: XCTestCase {
         await auth.loginWithBiometrics()
         XCTAssertFalse(auth.isAuthenticated); XCTAssertNil(auth.sessionPassword)
     }
+    func testVerifiedFaceIDRestoresOwnControlsForMissingOrStaleEnrollmentOwner() async throws {
+        let previous = UserDefaults.standard.object(forKey: "vaultito.faceID.enabled")
+        defer { UserDefaults.standard.set(previous, forKey: "vaultito.faceID.enabled") }
+        for staleOwner in [false, true] {
+            let (auth, keychain, bio, _) = try fixture()
+            try await login(auth, "PUBLIC-primary-password")
+            try auth.provisionSecondaryVault(password: "PUBLIC-secondary-password")
+            auth.logout()
+            try await login(auth, "PUBLIC-secondary-password")
+            let id = try XCTUnwrap(auth.secondaryVaultID)
+            try await auth.enableBiometricUnlock(password: "PUBLIC-secondary-password")
+            let grant = bio.values[BiometricSecretStore.vaultAccount]
+            if staleOwner { try keychain.setBiometricOwner("primary") }
+            else { keychain.clearBiometricOwner() }
+            auth.logout()
+            bio.cancelled = true
+            await auth.loginWithBiometrics()
+            XCTAssertFalse(auth.isAuthenticated)
+            XCTAssertEqual(try keychain.biometricOwner(), staleOwner ? "primary" : nil)
+            bio.cancelled = false
+            await auth.loginWithBiometrics()
+            XCTAssertTrue(auth.isAuthenticated)
+            XCTAssertEqual(auth.secondaryVaultID, id)
+            XCTAssertTrue(auth.canManageBiometricUnlock)
+            XCTAssertEqual(try keychain.biometricOwner(), id.uuidString)
+            XCTAssertEqual(bio.values[BiometricSecretStore.vaultAccount], grant)
+            auth.disableBiometricUnlock()
+            XCTAssertFalse(auth.isBiometricUnlockEnabled)
+            XCTAssertNil(bio.values[BiometricSecretStore.vaultAccount])
+            XCTAssertNil(try keychain.biometricOwner())
+            XCTAssertTrue(keychain.verifyPassword("PUBLIC-primary-password"))
+            auth.logout()
+        }
+    }
+
     func testSecondaryPasswordCollisionNeverSelectsOrChangesThePrimaryVault() async throws {
         let (auth, keychain, _, _) = try fixture()
         defer { auth.logout() }

@@ -423,6 +423,12 @@ final class AuthenticationViewModel: ObservableObject {
             if independentVaultsEnabled, target == nil, try keychainService.ownerWrappingRequiresUpgrade() {
                 throw VaultAccessError.locked // One password unlock is required to upgrade an older wrapper.
             }
+            // The successfully authenticated protected grant is authoritative. Older
+            // enrollments can lack the later ownership marker; repair it only here,
+            // never from a password-entered secondary session or cancelled Face ID.
+            if independentVaultsEnabled {
+                try keychainService.setBiometricOwner(target?.uuidString ?? "primary")
+            }
             sessionPasswordData = SecureBytes(dataPassword)
             secondaryVaultID = target
             isAuthenticated = true

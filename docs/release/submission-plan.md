@@ -1,3 +1,5 @@
+> **Build58 UAT follow-up:** fixes hidden Face ID controls for an authenticated pre-ownership enrollment. See [evidence](evidence/build-58/README.md); owner confirmation is pending. Older candidate status below is historical.
+
 > **Current candidate: build57, awaiting owner UAT.** Remaining security engineering and limits are recorded in [build57 evidence](evidence/build-57/README.md). Historical build53/55 packages below must not be used for this candidate. No App Store submission has occurred.
 
 # First App Store submission
