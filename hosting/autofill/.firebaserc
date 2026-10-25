@@ -1,5 +1,14 @@
 {
   "projects": {
     "default": "d2sci-website"
+  },
+  "targets": {
+    "d2sci-website": {
+      "hosting": {
+        "waglock-autofill": [
+          "d2sci-waglock"
+        ]
+      }
+    }
   }
 }

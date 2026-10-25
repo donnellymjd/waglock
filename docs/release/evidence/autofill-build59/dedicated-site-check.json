@@ -1,0 +1,6 @@
+{
+  "dedicatedSiteHTTPS": "passed",
+  "associationExact": "passed",
+  "redirects": false,
+  "url": "https://d2sci-waglock.web.app/.well-known/apple-app-site-association"
+}

@@ -1,6 +1,6 @@
 {
   "build": 59,
-  "status": "prepared, not activated",
+  "status": "dedicated site deployed; custom DNS/TLS and device UAT pending",
   "localAssociation": "passed",
   "unsafeJSONCasesRejected": 4,
   "redirectAndWrongMIMERejected": 2,
@@ -8,9 +8,12 @@
   "signedArchive": "passed",
   "signedAssociationAndExplicitProfile": "passed",
   "releasePasswordChangeAndPersistenceUI": "passed",
-  "liveHTTPS": "blocked: domain DNS not configured; Google reauthentication required",
+  "liveHTTPS": "pending: Squarespace DNS records requested",
   "providerDeviceUAT": "pending",
   "phoneInstallationPerformed": false,
   "installedBuildUnchanged": 58,
-  "appStoreSubmissionPerformed": false
+  "appStoreSubmissionPerformed": false,
+  "googleAuthentication": "restored",
+  "dedicatedSiteHTTPS": "passed",
+  "companyDefaultSiteModified": false
 }

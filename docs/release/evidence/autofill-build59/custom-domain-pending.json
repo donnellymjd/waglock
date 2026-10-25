@@ -1,0 +1,39 @@
+{
+  "name": "projects/d2sci-website/sites/d2sci-waglock/customDomains/waglock.d2sci.co",
+  "createTime": "2026-10-25T14:26:35.307216359Z",
+  "hostState": "HOST_UNHOSTED",
+  "ownershipState": "OWNERSHIP_MISSING",
+  "requiredDnsUpdates": {
+    "desired": [
+      {
+        "domainName": "waglock.d2sci.co",
+        "records": [
+          {
+            "domainName": "waglock.d2sci.co",
+            "type": "CNAME",
+            "rdata": "d2sci-waglock.web.app",
+            "requiredAction": "ADD"
+          }
+        ]
+      }
+    ],
+    "checkTime": "2026-10-25T14:26:35.451604735Z"
+  },
+  "certificateState": "CERT_VALIDATING",
+  "certificateDNSUpdates": [
+    {
+      "domainName": "_acme-challenge.waglock.d2sci.co",
+      "records": [
+        {
+          "domainName": "_acme-challenge.waglock.d2sci.co",
+          "type": "TXT",
+          "rdata": "uZgHq1oBUXxKbggNaaAPs7grsXqVI5Q-6kHAJnEMPPg",
+          "requiredAction": "ADD"
+        }
+      ]
+    }
+  ],
+  "dnsProvider": "Squarespace Domains",
+  "recordsSavedByOwner": "pending",
+  "phoneInstallationPerformed": false
+}

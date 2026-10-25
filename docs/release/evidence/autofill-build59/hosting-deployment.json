@@ -1,0 +1,19 @@
+{
+  "site": "d2sci-waglock",
+  "project": "d2sci-website",
+  "defaultUrl": "https://d2sci-waglock.web.app",
+  "version": "sites/d2sci-waglock/versions/ee6185fe44e67a27",
+  "release": "sites/d2sci-waglock/releases/1792938368839000",
+  "releaseTime": "2026-10-25T14:26:08.839Z",
+  "files": {
+    "/index.html": {
+      "gzipSHA256": "ef30c4938cfd72e818090a37536e9c8f6e650b225a2b4e7064ead1bd2de64089",
+      "sourceSHA256": "ef016ad4cfb30610714f25f88005e7e3e6dec727bd0676d3d24940e246da5d60"
+    },
+    "/.well-known/apple-app-site-association": {
+      "gzipSHA256": "f2a06791e34ff94587dc669010660c5128dd583da1514e20bd6ed6cd4518e396",
+      "sourceSHA256": "f7011ae5e6748eecf22054f9a3fb520e7996bd596fa2d0112b94bcee21484b07"
+    }
+  },
+  "companyDefaultSiteModified": false
+}
