@@ -10,6 +10,7 @@ struct PortableExportSnapshot: Equatable {
         let ciphertextBytes: Int64
         let modifiedAt: Date
         let fileNumber: UInt64
+        var ciphertextDigest: Data? = nil
     }
     struct Asset: Equatable {
         let id: UUID
@@ -304,7 +305,8 @@ final class PortableExportSnapshotService {
               url.resolvingSymlinksInPath().path == root.appendingPathComponent(url.lastPathComponent).path,
               let size = attributes[.size] as? NSNumber, let number = attributes[.systemFileNumber] as? NSNumber,
               let modified = attributes[.modificationDate] as? Date else { throw Failure.invalidInventory }
-        return .init(url: url, ciphertextBytes: size.int64Value, modifiedAt: modified, fileNumber: number.uint64Value)
+        return .init(url: url, ciphertextBytes: size.int64Value, modifiedAt: modified, fileNumber: number.uint64Value,
+            ciphertextDigest: try storage.expectedCiphertextDigest(path: path))
     }
 
     static func drafts(keychain: KeychainService, defaults: UserDefaults) throws -> [PortableExportSnapshot.Draft] {

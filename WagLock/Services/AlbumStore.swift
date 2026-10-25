@@ -22,6 +22,7 @@ final class AlbumStore: ObservableObject {
     private let biometrics: any BiometricSecretStoring
     private let attemptStorage: any KeychainStorage
     private let attemptElapsedTime: (() -> Double)?
+    private let upgradeLegacyEnvelopes: Bool
     private let attemptNow: () -> Date
     private let crypto = EncryptionService.shared
     private let storage: FileStorageService
@@ -31,6 +32,7 @@ final class AlbumStore: ObservableObject {
     init(biometrics: any BiometricSecretStoring = BiometricSecretStore.shared,
          attemptStorage: (any KeychainStorage)? = nil, attemptNow: @escaping () -> Date = Date.init,
          attemptElapsedTime: (() -> Double)? = nil,
+         upgradeLegacyEnvelopes: Bool = LibraryStoragePolicy.encryptedMetadata,
          storage: FileStorageService = .shared, mediaLoader: MediaLoaderService = .shared,
          thumbnails: ThumbnailImageLoader = .shared) {
         self.storage = storage
@@ -38,6 +40,7 @@ final class AlbumStore: ObservableObject {
         self.thumbnails = thumbnails
         self.biometrics = biometrics
         self.attemptStorage = attemptStorage ?? SystemKeychainStorage(service: AppConstants.bundleIdentifier + ".album-attempts")
+        self.upgradeLegacyEnvelopes = upgradeLegacyEnvelopes
         self.attemptElapsedTime = attemptElapsedTime
         self.attemptNow = attemptNow
     }
@@ -172,7 +175,9 @@ final class AlbumStore: ObservableObject {
             guard factor != nil else { throw VaultAccessError.locked }
             reservation = try limiter.reserve()
         } else { reservation = nil }
-        var envelope = try crypto.decrypt(encryptedData: album.wrappedKey, password: parentSecret)
+        let originalWrapper = album.wrappedKey
+        var envelope = try crypto.decrypt(encryptedData: originalWrapper, password: parentSecret)
+        let upgrade = upgradeLegacyEnvelopes && protection != .inherited && PasswordEnvelope.needsUpgrade(envelope)
         if protection != .inherited {
             guard let factor, protection != .faceIDOnly || useBiometrics else { throw VaultAccessError.locked }
             do { envelope = try PasswordEnvelope.open(envelope, password: factor, context: "album:" + album.id.uuidString) }
@@ -184,6 +189,20 @@ final class AlbumStore: ObservableObject {
         // Validate catalog before granting access; an invalid wrapper never creates an unlocked session.
         _ = try JSONDecoder().decode([AlbumAsset].self, from: crypto.decrypt(
             encryptedData: album.encryptedCatalog, password: secret))
+        if upgrade {
+            guard let factor, let context = album.modelContext, generation == token,
+                  album.wrappedKey == originalWrapper else { throw VaultAccessError.invalidData }
+            let inner = try PasswordEnvelope.seal(envelope, password: factor, context: "album:" + album.id.uuidString)
+            let replacement = try crypto.encrypt(data: inner, password: parentSecret)
+            guard try PasswordEnvelope.open(inner, password: factor, context: "album:" + album.id.uuidString) == envelope else { throw VaultAccessError.invalidData }
+            _ = try parentKey(for: album, albums: albums)
+            album.wrappedKey = replacement
+            do { try LibraryWriteCoordinator.save(context) }
+            catch {
+                if LibraryWriteCoordinator.mayDiscardUncommittedResources(in: context) { album.wrappedKey = originalWrapper }
+                throw error
+            }
+        }
         if let reservation { try limiter.recordSuccess(reservation) }
         albumKeys[album.id]?.wipe()
         albumKeys[album.id] = SecureBytes(secret)

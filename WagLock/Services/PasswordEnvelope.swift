@@ -11,6 +11,8 @@ nonisolated enum PasswordEnvelope {
     private static let headerSize = 25
     enum Failure: Error { case invalidEnvelope, derivation, random }
 
+    static func needsUpgrade(_ data: Data) -> Bool { !data.starts(with: prefix) }
+
     static func seal(_ plaintext: Data, password: String, context: String) throws -> Data {
         guard !password.isEmpty, plaintext.count <= 65_536 else { throw Failure.invalidEnvelope }
         var salt = Data(count: 16)

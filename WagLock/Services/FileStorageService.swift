@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import CryptoKit
 
 /// 文件存储错误类型
 enum FileStorageError: Error {
@@ -61,6 +62,8 @@ nonisolated class FileStorageService: @unchecked Sendable {
 
     // 存储目录URL
     private let storageDirectory: URL
+    private let bindingLock = NSLock()
+    private var bindings: CiphertextBindings?
     private let availableCapacity: @Sendable (URL) throws -> Int64
 
     // MARK: - Initialization
@@ -84,6 +87,29 @@ nonisolated class FileStorageService: @unchecked Sendable {
         createStorageDirectoryIfNeeded()
     }
 
+    func installBindings(_ registry: CiphertextBindings) {
+        bindingLock.lock(); let old = bindings; bindings = registry; bindingLock.unlock(); old?.revoke()
+    }
+    private func currentBindings() -> CiphertextBindings? {
+        bindingLock.lock(); defer { bindingLock.unlock() }; return bindings
+    }
+    func expectedCiphertextDigest(path: String) throws -> Data? {
+        try currentBindings()?.digest(getFileURL(for: path).lastPathComponent)
+    }
+    func bindingSnapshot() throws -> [String: Data] {
+        var result: [String: Data] = [:]
+        for path in getAllEncryptedFiles() {
+            let url = try getFileURL(for: path), file = try FileHandle(forReadingFrom: url)
+            defer { try? file.close() }
+            var hash = SHA256()
+            while let data = try file.read(upToCount: 1024 * 1024), !data.isEmpty {
+                try Task.checkCancellation(); hash.update(data: data)
+            }
+            result[url.lastPathComponent] = Data(hash.finalize())
+        }
+        return result
+    }
+
     // MARK: - Public Methods
 
     /// 保存加密数据
@@ -93,6 +119,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
     /// - Returns: 保存后的相对文件路径（仅文件名）
     /// - Throws: FileStorageError
     func saveEncrypted(data: Data, originalFileName: String? = nil) throws -> String {
+        let registry = currentBindings()
         // 检查文件大小
         guard data.count <= AppConstants.maxFileSize else {
             throw FileStorageError.fileTooLarge
@@ -108,6 +135,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
         // 保存文件
         do {
             try data.write(to: fileURL, options: [.atomic, .completeFileProtection])
+            try registry?.register(fileName, digest: Data(SHA256.hash(data: data)))
             // 返回相对路径（仅文件名），而不是绝对路径
             return fileName
         } catch {
@@ -121,6 +149,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
         password: String,
         originalFileName: String? = nil
     ) throws -> String {
+        let registry = currentBindings()
         let attributes = try fileManager.attributesOfItem(atPath: sourceURL.path)
         let fileSize = attributes[.size] as? Int64 ?? 0
         // Budget framing overhead before starting; actual write errors still propagate.
@@ -133,7 +162,13 @@ nonisolated class FileStorageService: @unchecked Sendable {
         let destinationURL = try getFileURL(for: fileName)
 
         do {
-            try encryptionService.encryptFile(inputURL: sourceURL, to: destinationURL, password: password)
+            var digest: Data?
+            try encryptionService.encryptFile(inputURL: sourceURL, to: destinationURL, password: password,
+                ciphertextDigest: { digest = $0 })
+            if let registry {
+                guard let digest else { throw EncryptionError.dataCorrupted }
+                try registry.register(fileName, digest: digest)
+            }
         } catch {
             try? fileManager.removeItem(at: destinationURL)
             throw error
@@ -156,7 +191,9 @@ nonisolated class FileStorageService: @unchecked Sendable {
 
         // 读取文件
         do {
+            let expected = try expectedCiphertextDigest(path: path)
             let data = try Data(contentsOf: fileURL)
+            if let expected, Data(SHA256.hash(data: data)) != expected { throw EncryptionError.dataCorrupted }
             return data
         } catch {
             throw FileStorageError.fileNotFound
@@ -391,7 +428,8 @@ nonisolated extension FileStorageService {
             try encryptionService.decryptFile(
                 inputURL: sourceURL,
                 to: tempURL,
-                password: password
+                password: password,
+                expectedCiphertextDigest: try expectedCiphertextDigest(path: path)
             )
 
             // 明文临时文件必须使用最高文件保护级别，防止锁屏后被读取

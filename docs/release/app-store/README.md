@@ -1,3 +1,5 @@
+> **Current candidate: build57, awaiting owner UAT.** Remaining security engineering and limits are recorded in [build57 evidence](../evidence/build-57/README.md). Historical build53/55 packages below must not be used for this candidate. No App Store submission has occurred.
+
 > **Submission hold — October24 follow-up:** build53 must not be submitted while the second security review is remediated (D2S-165–172). Known listing fields may be prepared/saved. Do not submit, release or infer acceptance of build54 from historical build53 tests.
 
 # WagLock 1.0 build53 submission handoff

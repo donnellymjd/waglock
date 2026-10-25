@@ -1,3 +1,5 @@
+> **Current candidate: build57, awaiting owner UAT.** Remaining security engineering and limits are recorded in [build57 evidence](evidence/build-57/README.md). Historical build53/55 packages below must not be used for this candidate. No App Store submission has occurred.
+
 # First App Store submission
 
 > October24 follow-up: **submission hold** for build53. Track D2S-165–172 and [build55 remediation](../portable-vault/security-review-build55.md). Prior engineering/phone acceptance below does not accept the new changes.

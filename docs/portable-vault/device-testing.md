@@ -231,3 +231,10 @@ The final development-signed build53 archive/package/signature checks pass. Eigh
 ## October24 — security candidate55 installed
 
 Final signed package1.0(55), com.d2sci.waglock, installed successfully over WagLock after owner confirmed ready. Both vaults and the separate Dev app are preserved.317 unit/security tests and both final actual-release UI flows pass. Owner requested checks: both existing passcodes/samples, primary Face ID assignment followed by hidden app-unlock Face ID controls/status in secondary, neutral secondary text, guest password change/relaunch/separation, biometric cancellation and note/PDF background lifecycle. Physical acceptance pending; no passwords/private files requested. Safari form-entry task canceled by owner, no forms changed. [Review and evidence](security-review-build55.md). No upload or submission.
+
+
+## October25 — build57 installed, owner UAT pending
+
+Signed WagLock1.0(57), com.d2sci.waglock, installed successfully over the public release app via devicectl; no reset/uninstall/library migration. The separate WagLock Dev identity remains unchanged. The signed archive is /private/tmp/WagLock-1.0-build57-security.xcarchive. Package/signature/encrypted-library checks pass. Owner acceptance of build53 and earlier does not cover this candidate.
+
+UAT with disposable samples: unlock both existing libraries by passcode; confirm distinct photos/notes/protected albums persist after relaunch; test album password success/failure and changing primary/album passwords; test Face ID success/cancel from each eligible assignment and hidden unavailable biometric settings in the secondary vault; review secondary Settings/backup/errors for ordinary neutral wording; test backgrounded unfinished note/PDF/video, active recording blocking, share/cancel, and separate readable age backups recovered on Mac. A previously older primary wrapper can require one password unlock before Face ID resumes. Do not send passwords or private content.

@@ -32,3 +32,8 @@ Final development-signed archive: `/private/tmp/WagLock-1.0-build55-security.xca
 The broader whole-library rollback follow-up has its own issue [D2S-173](https://linear.app/d2sci/issue/D2S-173). Memory and screenshot limits retain their existing scoped D2S-161/164 records.
 
 Exact final source: `f37ebb9a6bf58572370e102a7c59e2c7c6105a2a`, tag `candidate-1.0-build55`. Final installed-release UI result: `/private/tmp/waglock-build55-review-release-ui.xcresult`, both workflows passed. Matching source/evidence is linked in [the build55 receipt](../release/evidence/build-55/verification.json).
+
+
+## October25 — build57 supersedes prior engineering status
+
+The owner requested completing remaining security engineering before UAT. D2S-162/169/170/173 are implemented with scoped protections and limitations in [build57 evidence](../release/evidence/build-57/README.md) and [the accepted design](security-completion-design.md). Prior build53/55 statements above are historical. Physical acceptance of the new candidate remains pending; no submission/upload is authorized by test success alone.

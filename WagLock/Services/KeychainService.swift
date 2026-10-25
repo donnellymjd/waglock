@@ -38,7 +38,7 @@ enum KeychainError: Error {
 /// Owner verification and data-secret wrapping share one authenticated record.
 /// Legacy salted SHA-256 credentials remain readable until successful promotion.
 /// 安全级别：kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-class KeychainService: LibraryIdentityAnchor {
+class KeychainService: LibraryIdentityAnchor, LibraryCommitAnchor {
     // Avoid the isolated-deinit back-deployment path when a scoped instance is released
     // from a SwiftUI property graph on older iOS. No credential work belongs in teardown.
     nonisolated deinit {}
@@ -100,6 +100,13 @@ class KeychainService: LibraryIdentityAnchor {
     private let isDisguiseSetAccount = "isDisguisePasswordSet"
 
     private let encryptionService = EncryptionService.shared
+
+    func loadCommitAnchor() throws -> Data? { try optionalItem(account: "waglock.library-commit.v1") }
+    func saveCommitAnchor(_ data: Data, replacing expected: Data?) throws {
+        guard try loadCommitAnchor() == expected else { throw KeychainError.invalidData }
+        try storage.write(account: "waglock.library-commit.v1", data: data, createOnly: expected == nil)
+        guard try loadCommitAnchor() == data else { throw KeychainError.invalidData }
+    }
 
     func loadLibraryIdentity() throws -> Data? {
         do { return try storage.read(account: "waglock.library-identity.v1") }
@@ -260,6 +267,25 @@ class KeychainService: LibraryIdentityAnchor {
     private func optionalItem(account: String) throws -> Data? {
         do { return try readFromKeychain(account: account) }
         catch KeychainError.itemNotFound { return nil }
+    }
+
+    func ownerWrappingRequiresUpgrade() throws -> Bool {
+        guard let source = try optionalItem(account: ownerAccount) else { return true }
+        return PasswordEnvelope.needsUpgrade(source)
+    }
+
+    /// Explicit authenticated wrapping upgrade. Login must select this vault first.
+    /// Atomically replaces one record; data secrets and passwords remain unchanged.
+    func upgradeAuthenticatedOwnerWrapping(using password: String) throws {
+        guard let source = try optionalItem(account: ownerAccount), PasswordEnvelope.needsUpgrade(source) else { return }
+        let plain = try PasswordEnvelope.open(source, password: password, context: "owner:" + service)
+        let value = try JSONDecoder().decode(OwnerCredentials.self, from: plain)
+        guard value.version == 1, value.service == service, !value.dataPassword.isEmpty else { throw KeychainError.invalidData }
+        let replacement = try PasswordEnvelope.seal(plain, password: password, context: "owner:" + service)
+        guard try PasswordEnvelope.open(replacement, password: password, context: "owner:" + service) == plain,
+              try optionalItem(account: ownerAccount) == source else { throw KeychainError.invalidData }
+        try storage.write(account: ownerAccount, data: replacement, createOnly: false)
+        guard try storage.read(account: ownerAccount) == replacement else { throw KeychainError.invalidData }
     }
 
     private func encodeOwnerCredentials(_ secret: String, using password: String) throws -> Data {

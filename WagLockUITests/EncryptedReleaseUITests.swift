@@ -121,7 +121,13 @@ final class EncryptedReleaseUITests: XCTestCase {
         let password = app.secureTextFields["backup.password"]
         XCTAssertTrue(password.waitForExistence(timeout: 5)); password.tap(); password.typeText("PUBLIC*release._backup-password")
         app.secureTextFields["backup.confirm"].tap(); app.secureTextFields["backup.confirm"].typeText("PUBLIC*release._backup-password\n")
-        let create = app.buttons["backup.create"]; reveal(app, create); create.tap()
+        // Repeated runs retain the public protected album created below. Supply its
+        // fixture password rather than expecting backup to bypass album protection.
+        for field in app.secureTextFields.matching(NSPredicate(format: "identifier BEGINSWITH %@", "backup.album.")).allElementsBoundByIndex {
+            reveal(app, field); replace(field, with: "PUBLIC-album-password\n")
+        }
+        let create = app.buttons["backup.create"]; reveal(app, create)
+        XCTAssertTrue(create.isEnabled, app.debugDescription); create.tap()
         let save = app.buttons["backup.save"]; XCTAssertTrue(save.waitForExistence(timeout: 45), app.debugDescription)
         app.buttons["backup.filename.clear"].tap()
         XCTAssertFalse(save.isEnabled)
@@ -146,6 +152,11 @@ final class EncryptedReleaseUITests: XCTestCase {
             }
             XCTAssertTrue(app.staticTexts[name].firstMatch.waitForExistence(timeout: 10)); app.staticTexts[name].firstMatch.tap()
             if app.buttons["Open Album"].waitForExistence(timeout: 1) { app.buttons["Open Album"].tap() }
+            let locked = app.secureTextFields["album.unlock.password"]
+            if locked.exists {
+                replace(locked, with: "PUBLIC-album-password")
+                app.buttons["Unlock with Password"].tap()
+            }
         }
         album("Trips"); album("Weekend")
         app.buttons["album.actions"].tap(); app.buttons["Album Security"].tap()

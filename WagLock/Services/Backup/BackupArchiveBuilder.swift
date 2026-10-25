@@ -22,6 +22,7 @@ nonisolated struct BackupWorkPlan: Sendable {
         let sourceBytes: Int64
         let key: String
         let thumbnail: Data?
+        var ciphertextDigest: Data? = nil
     }
     struct Domain: Sendable {
         let id: String
@@ -147,7 +148,8 @@ nonisolated enum BackupArchiveBuilder {
                     if magic != Data("ZNSC".utf8), asset.sourceBytes > 64 * 1024 * 1024 { throw Failure.legacyFileTooLarge }
                     let plaintext = directory.appendingPathComponent("working-media")
                     do {
-                        try EncryptionService.shared.decryptFile(inputURL: asset.source, to: plaintext, password: asset.key)
+                        try EncryptionService.shared.decryptFile(inputURL: asset.source, to: plaintext, password: asset.key,
+                            expectedCiphertextDigest: asset.ciphertextDigest)
                         try lease.check()
                         entries.append(try tar.add(file: plaintext, path: "media/" + asset.id.uuidString))
                         try FileManager.default.removeItem(at: plaintext)

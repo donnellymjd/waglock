@@ -28,6 +28,13 @@ final class EncryptedMetadataStore {
         "CREATE TABLE buckets (id INTEGER PRIMARY KEY CHECK(id>=0 AND id<256), body BLOB NOT NULL)",
         "CREATE TABLE records (token BLOB PRIMARY KEY NOT NULL, body BLOB NOT NULL) WITHOUT ROWID"
     ]
+    private var commitProtection: LibraryCommitProtection?
+    private let indexRoot: URL
+    private struct RecoveryChange: Codable { let token: Data?; let slot: Int?; let body: Data? }
+    private struct RecoveryJournal: Codable {
+        let version: Int; let domain: Domain; let from: LibraryCommitStamp; let to: LibraryCommitStamp
+        let changes: [RecoveryChange]; let head: Data
+    }
     private let domain: Domain
     private let connection: MetadataSQLiteConnection
     private let owner = UUID()
@@ -122,7 +129,7 @@ final class EncryptedMetadataStore {
     }
 
     private init(file: URL, domain: Domain, key: Data) throws {
-        self.domain = domain
+        self.domain = domain; self.indexRoot = file.deletingLastPathComponent()
         let input = SymmetricKey(data: key)
         let salt = Data((domain.libraryID.uuidString + ":" + domain.vaultID.uuidString).utf8)
         encryptionKey = HKDF<SHA256>.deriveKey(inputKeyMaterial: input, salt: salt,
@@ -136,6 +143,80 @@ final class EncryptedMetadataStore {
         try execute("PRAGMA fullfsync=ON")
         try execute("PRAGMA temp_store=MEMORY")
         try execute("PRAGMA mmap_size=0")
+    }
+
+    private func stamp() throws -> LibraryCommitStamp {
+        let head = try readHead()
+        return LibraryCommitStamp(revision: head.revision,
+            digest: Data(SHA256.hash(data: try blob("SELECT body FROM head WHERE id=0", maximum: Self.maximumHeadBytes))))
+    }
+    func enableRollbackProtection(_ anchor: any LibraryCommitAnchor) throws {
+        let guardState = LibraryCommitProtection(anchor: anchor, journalURL: indexRoot.appendingPathComponent("commit-recovery.v1"))
+        let actual = try transaction(access()) { try stamp() }
+        if let trusted = try guardState.state() {
+            if let pending = trusted.pending {
+                if actual == pending.to {
+                    try verifyAll(access())
+                    try guardState.finish(actual)
+                }
+                else {
+                    guard actual == pending.from else { throw LibraryCommitProtection.Failure.rollback }
+                    let bytes = try guardState.readJournal()
+                    guard Data(SHA256.hash(data: bytes)) == pending.journalHash else { throw LibraryCommitProtection.Failure.recoveryRequired }
+                    let journal = try decodeJournal(bytes)
+                    guard journal.from == pending.from, journal.to == pending.to else { throw LibraryCommitProtection.Failure.recoveryRequired }
+                    try replay(journal)
+                    try guardState.finish(pending.to)
+                }
+            } else {
+                guard trusted.committed == actual else { throw LibraryCommitProtection.Failure.rollback }
+            }
+        } else {
+            guard !FileManager.default.fileExists(atPath: guardState.journalURL.path) else { throw LibraryCommitProtection.Failure.recoveryRequired }
+            try guardState.enroll(actual)
+        }
+        try verifyAll(access())
+        // A crash after finalizing the anchor can leave a matching, authenticated journal.
+        if FileManager.default.fileExists(atPath: guardState.journalURL.path) {
+            let bytes = try guardState.readJournal(), journal = try decodeJournal(bytes)
+            guard let current = try guardState.state(), current.pending == nil,
+                  journal.to == current.committed || journal.from == current.committed else { throw LibraryCommitProtection.Failure.recoveryRequired }
+            try guardState.removeJournal(matching: Data(SHA256.hash(data: bytes)))
+        }
+        commitProtection = guardState
+    }
+    private func decodeJournal(_ bytes: Data) throws -> RecoveryJournal {
+        let plain = try open(bytes, purpose: "commit-recovery")
+        let journal = try JSONDecoder().decode(RecoveryJournal.self, from: plain)
+        guard try encode(journal) == plain else { throw Failure.corrupt }
+        guard journal.version == 1, journal.domain == domain, journal.from.revision < UInt64.max,
+              journal.to.revision == journal.from.revision + 1,
+              journal.from.digest.count == 32, journal.to.digest.count == 32,
+              Data(SHA256.hash(data: journal.head)) == journal.to.digest,
+              journal.changes.count <= 100_000 else { throw Failure.corrupt }
+        return journal
+    }
+    private func replay(_ journal: RecoveryJournal) throws {
+        try transaction(access()) {
+            guard try stamp() == journal.from else { throw LibraryCommitProtection.Failure.rollback }
+            do {
+                for change in journal.changes {
+                    if let token = change.token {
+                        guard token.count == 32, change.slot == nil else { throw Failure.corrupt }
+                        if let body = change.body {
+                            guard body.count <= Self.maximumRecordBytes + 64 else { throw Failure.tooLarge }
+                            try execute("INSERT OR REPLACE INTO records VALUES (?,?)", [.bytes(token), .bytes(body)])
+                        } else { try execute("DELETE FROM records WHERE token=?", [.bytes(token)]) }
+                    } else if let slot = change.slot, (0..<256).contains(slot), let body = change.body {
+                        guard body.count <= Self.maximumBucketBytes + 64 else { throw Failure.tooLarge }
+                        try execute("UPDATE buckets SET body=? WHERE id=?", [.bytes(body), .integer(Int64(slot))])
+                    } else { throw Failure.corrupt }
+                }
+                try execute("UPDATE head SET body=? WHERE id=0", [.bytes(journal.head)])
+                guard try stamp() == journal.to else { throw Failure.corrupt }
+                try verifyInventory()
+            } catch { try? execute("ROLLBACK"); throw error }
+        }
     }
 
     func access() -> Access { Access(owner: owner, epoch: epoch) }
@@ -190,21 +271,20 @@ final class EncryptedMetadataStore {
     }
 
     /// Full ciphertext inventory verification; required before accepting a staged transition.
-    func verifyAll(_ access: Access) throws {
-        try transaction(access) {
-            let head = try readHead()
-            var count = 0
-            for index in 0..<256 {
-                let bucket = try readBucket(index, head: head)
-                for (encoded, hash) in bucket.entries {
-                    guard let token = Data(base64Encoded: encoded), token.count == 32, token.first == UInt8(index) else { throw Failure.corrupt }
-                    let bytes = try blob("SELECT body FROM records WHERE token=?", [.bytes(token)], maximum: Self.maximumRecordBytes + 64)
-                    guard Data(SHA256.hash(data: bytes)) == hash else { throw Failure.corrupt }
-                    count += 1
-                }
+    func verifyAll(_ access: Access) throws { try transaction(access) { try verifyInventory() } }
+    private func verifyInventory() throws {
+        let head = try readHead()
+        var count = 0
+        for index in 0..<256 {
+            let bucket = try readBucket(index, head: head)
+            for (encoded, hash) in bucket.entries {
+                guard let token = Data(base64Encoded: encoded), token.count == 32, token.first == UInt8(index) else { throw Failure.corrupt }
+                let bytes = try blob("SELECT body FROM records WHERE token=?", [.bytes(token)], maximum: Self.maximumRecordBytes + 64)
+                guard Data(SHA256.hash(data: bytes)) == hash else { throw Failure.corrupt }
+                count += 1
             }
-            guard count == head.count else { throw Failure.corrupt }
         }
+        guard count == head.count else { throw Failure.corrupt }
     }
 
     @discardableResult
@@ -215,8 +295,10 @@ final class EncryptedMetadataStore {
         busy = true
         defer { busy = false; if encryptionKey == nil { connection.close() } }
         try execute("BEGIN IMMEDIATE")
-        var commitAttempted = false, committed = false
+        var commitAttempted = false, committed = false, protectionAttempted = false
         do {
+            let previousStamp = try stamp()
+            var changes: [RecoveryChange] = []
             var head = try readHead()
             guard head.revision == revision, head.revision < UInt64.max else { throw Failure.stale }
             var buckets: [Int: Bucket] = [:], touched = Set<Data>()
@@ -232,6 +314,7 @@ final class EncryptedMetadataStore {
                     ciphertext = try seal(bytes, purpose: "record", token: token)
                 case .remove(let kind, let id): token = try self.token(kind: kind, id: id); ciphertext = nil
                 }
+                changes.append(RecoveryChange(token: token, slot: nil, body: ciphertext))
                 guard touched.insert(token).inserted, let first = token.first else { throw Failure.corrupt }
                 let slot = Int(first), name = token.base64EncodedString()
                 if buckets[slot] == nil { buckets[slot] = try readBucket(slot, head: head) }
@@ -258,19 +341,31 @@ final class EncryptedMetadataStore {
                 let encoded = try encode(bucket)
                 guard encoded.count <= Self.maximumBucketBytes else { throw Failure.tooLarge }
                 let ciphertext = try seal(encoded, purpose: "bucket-\(slot)")
+                changes.append(RecoveryChange(token: nil, slot: slot, body: ciphertext))
                 head.buckets[slot] = Data(SHA256.hash(data: ciphertext))
                 try execute("UPDATE buckets SET body=? WHERE id=?", [.bytes(ciphertext), .integer(Int64(slot))])
             }
             head.revision += 1
-            try execute("UPDATE head SET body=? WHERE id=0", [.bytes(try seal(encode(head), purpose: "head"))])
+            let headCiphertext = try seal(encode(head), purpose: "head")
+            try execute("UPDATE head SET body=? WHERE id=0", [.bytes(headCiphertext)])
             guard try scalar("SELECT count(*) FROM records") == Int64(head.count) else { throw Failure.corrupt }
+            let target = LibraryCommitStamp(revision: head.revision, digest: Data(SHA256.hash(data: headCiphertext)))
+            if let protection = commitProtection {
+                let journal = RecoveryJournal(version: 1, domain: domain, from: previousStamp, to: target, changes: changes, head: headCiphertext)
+                let plain = try encode(journal)
+                guard plain.count <= 128 * 1024 * 1024 - 64 else { throw Failure.tooLarge }
+                let bytes = try seal(plain, purpose: "commit-recovery")
+                protectionAttempted = true
+                try protection.prepare(from: previousStamp, to: target, journal: bytes)
+            }
             try checkpoint(.beforeCommit); try check(access)
             commitAttempted = true; try execute("COMMIT"); committed = true
             try checkpoint(.afterCommit); try check(access)
+            try commitProtection?.finish(target)
             return State(revision: head.revision, count: head.count)
         } catch {
             if !committed { try? execute("ROLLBACK") }
-            if commitAttempted {
+            if commitAttempted || protectionAttempted {
                 // The caller must reopen/reconcile; never infer permission to delete media.
                 revoke(); throw Failure.uncertainCommit
             }
@@ -297,7 +392,7 @@ final class EncryptedMetadataStore {
     }
     private func token(kind: String, id: UUID) throws -> Data {
         guard let key = tokenKey else { throw Failure.locked }
-        guard ["media", "note", "album", "draft", "settings", "retained-key", "transition"].contains(kind) else { throw Failure.corrupt }
+        guard ["media", "note", "album", "draft", "settings", "retained-key", "transition", "file-binding", "file-policy"].contains(kind) else { throw Failure.corrupt }
         return Data(HMAC<SHA256>.authenticationCode(for: Data((kind + ":" + id.uuidString).utf8), using: key))
     }
     private func aad(_ purpose: String, _ token: Data) -> Data {

@@ -59,7 +59,7 @@ enum FreshEncryptedLibrary {
             try bindIdentity(root, material: material, anchor: anchor, expected: expectedIdentity, authorized: authorized)
             try check(authorized)
             return try EncryptedLibraryRepository.open(at: root.appendingPathComponent("index"), domain: material.domain,
-                                                       key: material.key, authorized: authorized)
+                                                       key: material.key, authorized: authorized, commitAnchor: anchor as? any LibraryCommitAnchor)
         }
         if !exists(pending) {
             guard mkdir(pending.path, S_IRWXU) == 0 else { throw Failure.storage }
@@ -112,7 +112,7 @@ enum FreshEncryptedLibrary {
         try checkpoint(.afterPublication); try check(authorized)
         try bindIdentity(root, material: material, anchor: anchor, expected: expectedIdentity, authorized: authorized)
         return try EncryptedLibraryRepository.open(at: root.appendingPathComponent("index"), domain: material.domain,
-                                                   key: material.key, authorized: authorized)
+                                                   key: material.key, authorized: authorized, commitAnchor: anchor as? any LibraryCommitAnchor)
     }
     private static func bindIdentity(_ root: URL, material: KeyMaterial, anchor: any LibraryIdentityAnchor,
                                      expected: Data?, authorized: () -> Bool) throws {

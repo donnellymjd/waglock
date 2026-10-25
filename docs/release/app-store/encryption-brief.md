@@ -1,6 +1,6 @@
 # WagLock 1.0 encryption review brief
 
-Updated October 24, 2026 for com.d2sci.waglock, build53, source candidate-1.0-build53. These are implementation facts for the account holder's Apple questionnaire; no exemption, export classification, French declaration, CCATS or compliance code has been asserted or filed.
+Updated October 25, 2026 for com.d2sci.waglock, build57, source candidate-1.0-build57. These are implementation facts for the account holder's Apple questionnaire; no exemption, export classification, French declaration, CCATS or compliance code has been asserted or filed.
 
 ## Purpose and delivery
 
@@ -11,7 +11,7 @@ WagLock is an offline encrypted personal photo/video/file/note library. No hoste
 | Operation | Actual implementation |
 | --- | --- |
 | Native media and new release metadata | AES-GCM using Apple CryptoKit, SHA-256/HMAC/HKDF where used by authenticated records and inventories; PBKDF2-HMAC-SHA256 via Apple CommonCrypto for native derivation. Native envelopes and chunk/record authentication are app format code. |
-| Password and key storage | Apple Security/Keychain and optional LocalAuthentication for biometrics. Modern primary/secondary release credentials wrap independent random data secrets using versioned PBKDF2-HMAC-SHA256 password wrapping (600,000 iterations for new records). Existing authenticated modern records remain readable; fast legacy SHA256 verifier slots are refused by the public release. No biometrics leave Apple's APIs. |
+| Password and key storage | Apple Security/Keychain and optional LocalAuthentication for biometrics. Modern primary/secondary release credentials wrap independent random data secrets using versioned PBKDF2-HMAC-SHA256 password wrapping (600,000 iterations for new records). Older primary/album wrappers are strengthened only after successful authentication, preserving data secrets; fast legacy SHA256 verifier slots are refused by the public release. No biometrics leave Apple's APIs. |
 | Standard age-format backup | Apple CryptoKit X25519, HKDF-SHA256, HMAC-SHA256 and ChaCha20-Poly1305. Independently implemented public age v1 envelope/stream; not a proprietary cipher. Each protected domain has independent wrapping. |
 | Password backup derivation outside system implementation | Original BSD-2-Clause Tarsnap scrypt C core, N=262144, r=8, p=1; Apple CommonCrypto adapter. This is bundled source and must be disclosed rather than describing the entire implementation as OS-only. |
 | Recovery tools | Official age is obtained independently on the computer; not embedded in iOS. The GPL helper verifies archives and creates a readable Library directory. |
@@ -28,4 +28,6 @@ In App Store Connect, select the app, then App Information > App Encryption Docu
 
 The app review contact was already supplied by the owner; keep it in Apple's private fields. The public publisher/copyright field and actual account agreements remain account-holder entries. No account password, API private key or device vault password belongs in this repository or a public issue.
 
-Public build53 rejects legacy native v1 stream reads and native .encrypted imports. Explicit legacy Dev/recovery readers remain in source; no native format conversion or migration occurs. This does not refer to age v1, the separate supported standard backup format.
+Public build57 rejects legacy native v1 stream reads and native .encrypted imports. Explicit legacy Dev/recovery readers remain in source; no native format conversion or migration occurs. This does not refer to age v1, the separate supported standard backup format.
+
+Build57 authenticates native ciphertext SHA256 digests in the encrypted metadata index and uses device-only Keychain commit stamps plus encrypted recovery deltas to detect post-enrollment filesystem rollback. No new cryptographic primitive or change to the standard age backup format is introduced. These facts do not determine an export classification or exemption.

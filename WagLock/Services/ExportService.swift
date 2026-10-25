@@ -67,7 +67,8 @@ final class ExportService: ObservableObject {
             if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
         }
         self.decrypt = decrypt ?? { source, destination, password in
-            try EncryptionService.shared.decryptFile(inputURL: source, to: destination, password: password)
+            try EncryptionService.shared.decryptFile(inputURL: source, to: destination, password: password,
+                expectedCiphertextDigest: try storage.expectedCiphertextDigest(path: source.path))
         }
     }
 

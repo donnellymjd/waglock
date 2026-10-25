@@ -53,11 +53,11 @@ WagLock currently uses its inherited custom encryption format, extended with aut
 
 Important boundaries in the current build:
 
-- Fresh release libraries encrypt metadata, thumbnails, notes/drafts and album names/hierarchy. Existing development libraries retain their legacy plaintext metadata; no automatic conversion is performed. Whole authentic database rollback remains an open limitation.
+- Fresh release libraries encrypt metadata, thumbnails, notes/drafts and album names/hierarchy. Existing development libraries retain their legacy plaintext metadata; no automatic conversion is performed. Build57 detects post-enrollment database rollback using a device-only Keychain anchor; this depends on that anchor remaining intact.
 - Copying encrypted media alone is not a supported recovery procedure. Device-bound Keychain material can be required, especially after password changes. Do not rely on WagLock as the only copy of a library.
 - Face ID-only albums have no album-password fallback. Losing their device-bound biometric factor can permanently prevent access. Password-or-Face-ID albums retain a password path.
 - The build52 public candidate provides independent alternative vaults with the requested phone/recovery checks passed. The separately installed WagLock Dev44 retains legacy presentation-only Guest Mode. Neither promises forensic deniability.
-- Native v2 framing does not bind ciphertext to a specific metadata entry; same-vault ciphertext substitution by a filesystem writer and whole-copy rollback remain open hardening work. Swift/OS memory copies cannot be completely zeroized.
+- The encrypted release index binds native ciphertext digests to owned filenames, rejecting same-vault file substitution before plaintext publication. Existing pre-release files are enrolled once; earlier tampering cannot be detected retrospectively. Swift/OS memory copies cannot be completely zeroized. See [build57 protection and evidence](docs/release/evidence/build-57/README.md).
 - Local cleanup cannot retract a copy already handed to another app. PDFKit, QuickLook, decoder caches and other preview paths remain part of the ongoing audit; no secure-deletion guarantee is made.
 
 Read the [architecture/security audit](docs/portable-vault/audits/D2S-105.md), [album key boundaries](docs/portable-vault/albums-and-biometrics.md) and [recovery requirements](docs/portable-vault/requirements.md) before testing with meaningful data.

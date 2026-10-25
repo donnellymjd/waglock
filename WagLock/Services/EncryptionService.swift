@@ -291,7 +291,8 @@ nonisolated class EncryptionService: @unchecked Sendable {
         inputURL: URL,
         to outputURL: URL,
         password: String,
-        preferredChunkSize: Int? = nil
+        preferredChunkSize: Int? = nil,
+        ciphertextDigest: ((Data) -> Void)? = nil
     ) throws {
         guard !password.isEmpty else { throw EncryptionError.invalidPassword }
         try ensureDifferentFiles(inputURL, outputURL)
@@ -308,8 +309,10 @@ nonisolated class EncryptionService: @unchecked Sendable {
 
         let reader = try FileHandle(forReadingFrom: inputURL)
         defer { try? reader.close() }
+        var hash = SHA256()
         try withAtomicOutput(to: outputURL) { writer in
-            try writer.write(contentsOf: header)
+            func write(_ bytes: Data) throws { hash.update(data: bytes); try writer.write(contentsOf: bytes) }
+            try write(header)
             var index: UInt64 = 0
             while true {
                 try Task.checkCancellation()
@@ -321,10 +324,10 @@ nonisolated class EncryptionService: @unchecked Sendable {
                     let authenticated = header + index.bigEndianData + length
                     let sealed = try AES.GCM.seal(chunk, using: key,
                         nonce: AES.GCM.Nonce(data: iv), authenticating: authenticated)
-                    try writer.write(contentsOf: length)
-                    try writer.write(contentsOf: iv)
-                    try writer.write(contentsOf: sealed.tag)
-                    try writer.write(contentsOf: sealed.ciphertext)
+                    try write(length)
+                    try write(iv)
+                    try write(sealed.tag)
+                    try write(sealed.ciphertext)
                     return chunk.isEmpty
                 }
                 if finished { break }
@@ -333,20 +336,22 @@ nonisolated class EncryptionService: @unchecked Sendable {
                 index = next
             }
         }
+        ciphertextDigest?(Data(hash.finalize()))
     }
 
     /// Retains buffered and ZNSC v1 readers. No destination is published until all
     /// available authentication/framing checks pass; any existing output survives failure.
     func decryptFile(inputURL: URL, to outputURL: URL, password: String,
-                     allowLegacyStreams: Bool = !LibraryStoragePolicy.encryptedMetadata) throws {
+                     allowLegacyStreams: Bool = !LibraryStoragePolicy.encryptedMetadata,
+                     expectedCiphertextDigest: Data? = nil) throws {
         guard !password.isEmpty else { throw EncryptionError.invalidPassword }
         try ensureDifferentFiles(inputURL, outputURL)
-        let reader = try FileHandle(forReadingFrom: inputURL)
+        let reader = try CiphertextReader(inputURL)
         defer { try? reader.close() }
         let magic = try reader.read(upToCount: chunkMagic.count) ?? Data()
         guard magic == chunkMagic else {
-            try reader.seek(toOffset: 0)
-            let encrypted = try reader.readToEnd() ?? Data()
+            let encrypted = magic + (try reader.readToEnd() ?? Data())
+            try reader.verify(expectedCiphertextDigest)
             let plaintext = try decrypt(encryptedData: encrypted, password: password)
             try withAtomicOutput(to: outputURL) { try $0.write(contentsOf: plaintext) }
             return
@@ -402,6 +407,27 @@ nonisolated class EncryptionService: @unchecked Sendable {
                 guard !overflow else { throw EncryptionError.invalidData }
                 index = next
             }
+            try reader.verify(expectedCiphertextDigest)
+        }
+    }
+
+    private final class CiphertextReader {
+        private let file: FileHandle
+        private var hash = SHA256()
+        init(_ url: URL) throws { file = try FileHandle(forReadingFrom: url) }
+        func read(upToCount count: Int) throws -> Data? {
+            let data = try file.read(upToCount: count)
+            if let data { hash.update(data: data) }; return data
+        }
+        func readToEnd() throws -> Data? {
+            let data = try file.readToEnd()
+            if let data { hash.update(data: data) }; return data
+        }
+        func close() throws { try file.close() }
+        func verify(_ expected: Data?) throws {
+            if let expected {
+                guard expected.count == 32, Data(hash.finalize()) == expected else { throw EncryptionError.dataCorrupted }
+            }
         }
     }
 
@@ -412,7 +438,7 @@ nonisolated class EncryptionService: @unchecked Sendable {
         }
     }
 
-    private func readExactly(_ count: Int, from reader: FileHandle) throws -> Data {
+    private func readExactly(_ count: Int, from reader: CiphertextReader) throws -> Data {
         var result = Data()
         while result.count < count {
             guard let bytes = try reader.read(upToCount: count - result.count), !bytes.isEmpty else {
@@ -423,7 +449,7 @@ nonisolated class EncryptionService: @unchecked Sendable {
         return result
     }
 
-    private func requireEndOfFile(_ reader: FileHandle) throws {
+    private func requireEndOfFile(_ reader: CiphertextReader) throws {
         guard (try reader.read(upToCount: 1) ?? Data()).isEmpty else { throw EncryptionError.dataCorrupted }
     }
 

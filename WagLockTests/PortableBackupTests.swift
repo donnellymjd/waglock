@@ -78,6 +78,24 @@ final class PortableBackupTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: source), original)
     }
 
+    func testBackupRejectsValidSameKeyCiphertextWhenBoundDigestDoesNotMatch() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("bound-backup-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("cipher")
+        let original = try EncryptionService.shared.encrypt(data: Data("PUBLIC original".utf8), password: "PUBLIC key")
+        let substituted = try EncryptionService.shared.encrypt(data: Data("PUBLIC different".utf8), password: "PUBLIC key")
+        try substituted.write(to: source)
+        let asset = BackupWorkPlan.Asset(id: UUID(), source: source, sourceBytes: Int64(substituted.count), key: "PUBLIC key",
+            thumbnail: nil, ciphertextDigest: Data(SHA256.hash(data: original)))
+        let plan = BackupWorkPlan(domains: [.init(id: "root", children: [], metadata: Data("{}".utf8), assets: [asset],
+            credential: .recipient("age1zvkyg2lqzraa2lnjvqej32nkuu0ues2s82hzrye869xeexvn73equnujwj"))], requiredBytes: 1024)
+        let output = root.appendingPathComponent("owned-job")
+        XCTAssertThrowsError(try BackupArchiveBuilder.build(plan, directory: output, lease: BackupLease()))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.path))
+        XCTAssertEqual(try Data(contentsOf: source), substituted)
+    }
+
     func testTarRecordIsAcceptedByStandardHeaderLayoutAndRejectsUnsafeNames() throws {
         var data = Data()
         let tar = BackupTarWriter(sink: { data.append($0) }, check: {})

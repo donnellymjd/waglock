@@ -63,7 +63,8 @@ enum BackupPlanFactory {
             var work: [BackupWorkPlan.Asset] = []
             for asset in domain.assets {
                 let key = try asset.albumID.map { try albumStore.sourceKeyForBackup(albumID: $0, albums: albums, expectedRevision: revision) } ?? rootKey
-                work.append(.init(id: asset.id, source: asset.source.url, sourceBytes: asset.source.ciphertextBytes, key: key, thumbnail: asset.thumbnail))
+                work.append(.init(id: asset.id, source: asset.source.url, sourceBytes: asset.source.ciphertextBytes, key: key, thumbnail: asset.thumbnail,
+                    ciphertextDigest: asset.source.ciphertextDigest))
                 let bytes = asset.source.ciphertextBytes
                 guard bytes >= 0, bytes < Int64.max / 2 else { throw Failure.capacity }
                 try charge(bytes + bytes / 4096 + 4096 + Int64(asset.thumbnail?.count ?? 0), copies: depth + 1)

@@ -1,0 +1,8 @@
+{
+  "absentMedianSeconds": 0.093091792,
+  "constantTimeClaim": false,
+  "publicFixturesOnly": true,
+  "samplesPerPath": 8,
+  "validMedianSeconds": 0.092338708,
+  "wrongMedianSeconds": 0.093681708
+}

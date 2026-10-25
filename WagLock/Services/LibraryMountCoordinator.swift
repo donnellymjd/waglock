@@ -101,6 +101,7 @@ final class LibraryMountCoordinator: ObservableObject {
                 let repository = try FreshEncryptedLibrary.open(at: encryptedRoot, dataPassword: dataPassword, anchor: anchor,
                     legacySources: legacySources, authorized: { [weak self] in self?.generation == token && isAuthorized() })
                 encryptedRepository = repository
+                if LibraryStoragePolicy.encryptedMetadata { try await repository.bindStorage(storage) }
                 container = repository.container
             } else {
                 container = try await factory(request.scope)

@@ -1,0 +1,21 @@
+{
+  "build": 57,
+  "unitSecurity": {
+    "passed": 333,
+    "failed": 0,
+    "skipped": 0
+  },
+  "releaseUI": {
+    "independentVaultWorkflow": "passed",
+    "passwordChangePreservesLibrary": "passed",
+    "mediaDraftBackupNestedAlbumWorkflow": "passed on corrected fixture repeat",
+    "initialMixedBundle": "failed: system picker cell not hittable",
+    "firstStoreRepeat": "failed: test omitted retained protected album password"
+  },
+  "signedArchive": "passed",
+  "packageAndSignature": "passed",
+  "officialAgeColdRecovery": "passed",
+  "phoneInstalledBuild": 57,
+  "ownerUAT": "pending",
+  "uploadedOrSubmitted": false
+}

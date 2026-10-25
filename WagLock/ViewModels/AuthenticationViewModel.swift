@@ -263,6 +263,7 @@ final class AuthenticationViewModel: ObservableObject {
                     else { dataPassword = try await loadDataPassword(inputPassword) }
                     guard token == authenticationGeneration, !Task.isCancelled else { return }
 
+                    if independentVaultsEnabled { try keychainService.upgradeAuthenticatedOwnerWrapping(using: inputPassword) }
                     try attemptLimiter.recordSuccess(reservation)
                     sessionPasswordData = SecureBytes(dataPassword)
                     secondaryVaultID = nil
@@ -282,8 +283,9 @@ final class AuthenticationViewModel: ObservableObject {
                     errorMessage = String(localized: "auth.error.loadKeyFailed")
                 }
             } else if let independentGuest {
-                do { try attemptLimiter.recordSuccess(reservation) }
-                catch { errorMessage = "Unable to complete login protection. Try again."; return }
+                do {
+                    try attemptLimiter.recordSuccess(reservation)
+                } catch { errorMessage = "Unable to complete login protection. Try again."; return }
                 sessionPasswordData = SecureBytes(independentGuest.dataPassword)
                 secondaryVaultID = independentGuest.vaultID
                 isAuthenticated = true
@@ -418,6 +420,9 @@ final class AuthenticationViewModel: ObservableObject {
                 }
                 target = grant.secondaryID; dataPassword = grant.secret
             } else { target = nil; dataPassword = secret } // Existing enrollment remains primary-only.
+            if independentVaultsEnabled, target == nil, try keychainService.ownerWrappingRequiresUpgrade() {
+                throw VaultAccessError.locked // One password unlock is required to upgrade an older wrapper.
+            }
             sessionPasswordData = SecureBytes(dataPassword)
             secondaryVaultID = target
             isAuthenticated = true
@@ -511,7 +516,10 @@ final class AuthenticationViewModel: ObservableObject {
         if let id = secondaryVaultID {
             valid = (try? keychainService.unlockIndependentGuest(password: password).vaultID) == id
         } else { valid = keychainService.verifyPassword(password) }
-        if valid { try limiter.recordSuccess(reservation) }
+        if valid {
+            if independentVaultsEnabled, isPrimaryVault { try keychainService.upgradeAuthenticatedOwnerWrapping(using: password) }
+            try limiter.recordSuccess(reservation)
+        }
         return valid
     }
 

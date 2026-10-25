@@ -1,0 +1,6 @@
+{
+  "fixtureOnly": true,
+  "build": 57,
+  "test": "PortableExportSnapshotTests/testEncryptedLibraryBackupFixtureForIndependentRecovery",
+  "sha256": "85117e4969374126f9be55bc822b571aa43ded419d8b4b5c09b9f45567f93b98"
+}
