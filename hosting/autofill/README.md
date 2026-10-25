@@ -1,6 +1,6 @@
 # Dedicated WagLock AutoFill site
 
-Tracked as D2S-175. Dedicated site deployed October25,2026; **custom hostname DNS/TLS and device UAT pending**. This directory is separate from the company's existing Firebase site. Verified public existing project: `d2sci-website`; Google access is restored. DNS is managed in Squarespace Domains; the Google Cloud DNS API is not enabled in this project and was not enabled by this work. Never deploy to that project's default/company site.
+Tracked as D2S-175. Dedicated site deployed October25,2026; **custom HTTPS and Apple CDN association verified; build59 installed; provider UAT pending**. This directory is separate from the company's existing Firebase site. Verified public existing project: `d2sci-website`; Google access is restored. DNS is managed in Squarespace Domains; the Google Cloud DNS API is not enabled in this project and was not enabled by this work. Never deploy to that project's default/company site.
 
 The proposed custom domain is `waglock.d2sci.co`. The only credential association is `Z3B45KM866.com.d2sci.waglock`, verified from the actual signed release app. No Dev app, wildcard App ID, universal links, credential form, analytics SDK or vault endpoint is included. `public/.well-known/apple-app-site-association` must be deployed; do not add Firebase's usual `**/.*` ignore rule, which would exclude it.
 
@@ -12,7 +12,7 @@ The proposed custom domain is `waglock.d2sci.co`. The only credential associatio
 4. Add `waglock.d2sci.co` as a custom domain on that dedicated site. Obtain the required DNS records from Firebase's domain wizard/API and change only those records in the authoritative DNS provider. Retain existing company/mail records. Wait for certificate issuance; do not guess address records or use a redirect from the association URL.
 5. Verify from the repository root: `python3 tools/check_autofill_association.py --online`. Requires valid HTTPS, HTTP200 with no redirects, JSON content type and the exact production-only association. Apple's CDN can cache previous failures; live-origin success does not prove device delivery.
 
-Before activation, `config/PasswordAutoFill.xcconfig` remains opt-in. The normal AppStore configuration and installed build58 do not gain this domain automatically. A development-signed opt-in build59 has been prepared with the explicit App ID capability/profile and actual signed entitlement verified; no App Store upload/submission. After hosting and device checks, make the accepted association part of the release configuration and update release/privacy status.
+`config/PasswordAutoFill.xcconfig` remains opt-in while the real-provider device check is pending. The development-signed opt-in build59 is installed with the explicit App ID capability/profile and actual signed entitlement verified. Custom-domain HTTPS and Apple CDN delivery pass. The normal AppStore configuration remains unchanged; no App Store upload/submission. After device acceptance, make the association part of the release configuration.
 
 ## App build and verification
 
@@ -47,3 +47,13 @@ Registered the custom domain on that site. Firebase currently reports HOST_UNHOS
 | TXT | _acme-challenge.waglock | uZgHq1oBUXxKbggNaaAPs7grsXqVI5Q-6kHAJnEMPPg |
 
 Use default TTL. Keep existing company/mail records. After DNS is saved, verify resolution, Firebase certificate status and the custom-domain HTTPS association before installing the signed preview; do not claim that verification on the web.app address establishes the custom-domain association. Provider device UAT and multiple-entry behavior remain pending.
+
+
+### DNS saved and verified
+
+Owner confirmed the two Squarespace records were saved. Authoritative ns-cloud-a1.googledomains.com returns exactly the requested CNAME and certificate TXT. Firebase still reports CERT_VALIDATING and currently serves a certificate not yet valid for waglock.d2sci.co; the live verifier correctly refuses that TLS connection. No insecure TLS bypass or device installation was performed. Wait for certificate issuance, then repeat custom-domain and Apple delivery checks. No further DNS edit is indicated by these observations.
+
+
+### Final live verification and installation
+
+The earlier pending-DNS/certificate notes above are historical. Firebase now reports active hostname/ownership/certificate, strict custom-domain HTTPS verification passes, and Apple's association CDN serves the exact release App ID. Build59 installed successfully with vaults and Dev44 preserved. Receipts: docs/release/evidence/autofill-build59. Owner password-manager and two-entry/decoy UAT remain pending; default release activation is not inferred from an HTTP check.

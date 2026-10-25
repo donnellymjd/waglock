@@ -1,0 +1,19 @@
+{
+  "installSucceeded": true,
+  "resetOrUninstallPerformed": false,
+  "apps": [
+    {
+      "name": "WagLock",
+      "bundleIdentifier": "com.d2sci.waglock",
+      "bundleVersion": "59",
+      "version": "1.0"
+    },
+    {
+      "name": "WagLock Dev",
+      "bundleIdentifier": "com.d2sci.vaultito.dev",
+      "bundleVersion": "44",
+      "version": "1.3.8"
+    }
+  ],
+  "providerOwnerAcceptance": "pending"
+}

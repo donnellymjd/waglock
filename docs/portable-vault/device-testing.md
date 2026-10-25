@@ -243,3 +243,8 @@ UAT with disposable samples: unlock both existing libraries by passcode; confirm
 ## October25 — build58 Face ID settings follow-up
 
 Signed1.0(58) installed successfully over WagLock, preserving both vaults and the biometric grant. Corrects missing own-vault Face ID settings when an older authenticated grant lacked or disagreed with its newer ownership marker. Full334 unit/security tests pass; the regression fails before correction and passes after. No vault reset/re-enrollment needed. Owner check: unlock through Face ID after update, open Settings → Security & access → Face ID and tap Disable Face ID, then lock and confirm normal passcode entry still opens the same library. The control remains hidden from a different vault's password session.
+
+
+## October25 — AutoFill preview59 installed
+
+After owner Google sign-in and Squarespace DNS changes, verified Firebase active hostname/ownership/certificate, strict custom-origin HTTPS and Apple's exact public association CDN record. Installed signed opt-in WagLock1.0(59) over the existing public app without reset/uninstall; device inventory confirms Dev44 remains. Exact source tag autofill-preview-build59, archive /private/tmp/WagLock-1.0-build59-autofill.xcarchive. Provider UAT pending: save https://waglock.d2sci.co as the disposable credential's website and verify suggestion/fill, correct library, cancellation, keyboard/visibility and lock. Test two disposable entries for provider-side disclosure; no guarantee the provider hides the other entry. Default AppStore association activation waits for acceptance.

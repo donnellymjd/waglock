@@ -1,0 +1,17 @@
+{
+  "checkedAtUTC": "2026-10-25T14:32:35.206929+00:00",
+  "authoritativeServer": "ns-cloud-a1.googledomains.com",
+  "ownerReportedSaved": true,
+  "answers": {
+    "waglock.d2sci.co": {
+      "type": "CNAME",
+      "answer": "d2sci-waglock.web.app."
+    },
+    "_acme-challenge.waglock.d2sci.co": {
+      "type": "TXT",
+      "answer": "\"uZgHq1oBUXxKbggNaaAPs7grsXqVI5Q-6kHAJnEMPPg\""
+    }
+  },
+  "certificate": "pending Firebase issuance",
+  "appInstallPerformed": false
+}

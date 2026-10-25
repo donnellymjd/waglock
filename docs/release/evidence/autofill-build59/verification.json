@@ -1,6 +1,6 @@
 {
   "build": 59,
-  "status": "dedicated site deployed; custom DNS/TLS and device UAT pending",
+  "status": "live association verified; installed59; provider UAT pending",
   "localAssociation": "passed",
   "unsafeJSONCasesRejected": 4,
   "redirectAndWrongMIMERejected": 2,
@@ -8,12 +8,17 @@
   "signedArchive": "passed",
   "signedAssociationAndExplicitProfile": "passed",
   "releasePasswordChangeAndPersistenceUI": "passed",
-  "liveHTTPS": "pending: Squarespace DNS records requested",
+  "liveHTTPS": "passed",
   "providerDeviceUAT": "pending",
-  "phoneInstallationPerformed": false,
-  "installedBuildUnchanged": 58,
+  "phoneInstallationPerformed": true,
   "appStoreSubmissionPerformed": false,
   "googleAuthentication": "restored",
   "dedicatedSiteHTTPS": "passed",
-  "companyDefaultSiteModified": false
+  "companyDefaultSiteModified": false,
+  "dns": "CNAME and TXT verified authoritatively",
+  "firebaseHost": "HOST_ACTIVE",
+  "firebaseOwnership": "OWNERSHIP_ACTIVE",
+  "firebaseCertificate": "CERT_ACTIVE",
+  "appleAssociationCDN": "passed",
+  "installedBuild": 59
 }
