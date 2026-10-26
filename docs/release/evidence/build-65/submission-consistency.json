@@ -4,16 +4,6 @@
   "screenshotsVerified": 8,
   "remainingGates": [
     {
-      "id": "security-review",
-      "status": "pending",
-      "evidence": "D2S-151 report checked in;179\u2013182 fixed,363/363 tests and three actual-release UI checks pass. Owner explicitly accepted material limits on October26; focused65 phone UAT remains."
-    },
-    {
-      "id": "candidate65-final-checks",
-      "status": "pending",
-      "evidence": "363 tests, three actual-release UI checks, eight reviewed native captures, matching source, signed archive and local distribution export pass.65 installed/launched preserving both libraries/Dev44; focused phone UAT pending."
-    },
-    {
       "id": "encryption-and-territories",
       "status": "pending",
       "evidence": "Complete Apple questionnaire/determination and any required documentation; no classification/code invented."

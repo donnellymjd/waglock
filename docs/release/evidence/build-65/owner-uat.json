@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-26",
+  "acceptedBy": "Michael Donnelly",
+  "candidate": "WagLock 1.0(65)",
+  "sourceTag": "candidate-1.0-build65",
+  "sourceCommit": "1996670df487d71539ee6cb0a7289badbba13a9f",
+  "ownerReply": "passed",
+  "method": "Owner-reported physical iPhone checks with disposable samples; no private content supplied or read",
+  "passedScope": [
+    "Both vault passcodes and assigned Face ID open the expected library; cancellation stays locked",
+    "Protected-album photo/video/PDF previews survive background/lock and reopening",
+    "Files audio import in the alternative vault survives relaunch/reopening; a new backup recovers on the Mac",
+    "Password confirmation and album Face ID setup/cancellation"
+  ],
+  "doesNotAuthorize": [
+    "upload",
+    "submission",
+    "public release"
+  ],
+  "independentHumanAuditClaim": false
+}

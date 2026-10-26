@@ -1,4 +1,4 @@
-> **Release candidate under review:** D2S-151 found four reproducible issues in build64. Corrected build65 passes automated/package checks and is installed for focused phone acceptance. See the [adversarial review and dispositions](docs/portable-vault/audits/D2S-151.md) and [release ledger](docs/release/prelaunch-status.md).
+> **Release candidate verified:** D2S-151 found four reproducible issues in build64. Corrected build65 passes automated/package checks and owner phone acceptance. External submission gates remain. See the [adversarial review and dispositions](docs/portable-vault/audits/D2S-151.md) and [release ledger](docs/release/prelaunch-status.md).
 
 <p align="center">
   <img src="WagLock/Assets.xcassets/AppIcon.appiconset/Icon.png" width="112" alt="WagLock app icon">
@@ -33,7 +33,7 @@ The app also includes notes and audio import/playback. New audio recording is de
 
 As of **October 26, 2026**, the separate WagLock1.0 release app encrypts library metadata, thumbnails, notes and drafts, uses independent primary/alternative libraries, and preserves data keys across password changes. Main-vault settings exclusively manage alternative credentials, with both current passwords required and matching passwords rejected. The owner passed build63 security, real1Password, cloud-backup recovery and reminder checks. WagLock Dev remains a separate legacy app; no migration or deletion is implied.
 
-Build64 added dated editable backup names and passed355 tests plus actual-release backup, decoy and erase UI checks. Its local Apple Distribution export and AutoFill entitlement checks pass. The final adversarial review then reproduced four missed paths: album-preview ciphertext substitution, Unicode confirmation mismatch, generic Files audio choosing primary storage, and album biometric enrollment continuing after lock. Build65 corrects all four and passes363 tests plus three actual-release UI workflows; focused phone acceptance remains. **Build64 must not be submitted.** See [D2S-151](docs/portable-vault/audits/D2S-151.md) for impact, evidence and limits.
+Build64 added dated editable backup names and passed355 tests plus actual-release backup, decoy and erase UI checks. Its local Apple Distribution export and AutoFill entitlement checks pass. The final adversarial review then reproduced four missed paths: album-preview ciphertext substitution, Unicode confirmation mismatch, generic Files audio choosing primary storage, and album biometric enrollment continuing after lock. Build65 corrects all four and passes363 tests plus three actual-release UI workflows; the owner passed the focused phone/recovery checklist on October26. **Build64 must not be submitted.** See [D2S-151](docs/portable-vault/audits/D2S-151.md) for impact, evidence and limits.
 
 The immediate target is a first submission with manual release. The [submission handoff](docs/release/app-store/README.md) and [current ledger](docs/release/prelaunch-status.md) retain phone acceptance, account, encryption/territory and source/distribution decisions. This project has not received an independent human cryptographic audit. No App Store submission or public-release approval is announced.
 
@@ -153,11 +153,10 @@ The [export experiment instructions](spikes/cryptomator/RECOVERY.md) separately 
 
 The current order is:
 
-1. Verify the final adversarial-review fixes, focused phone UAT and documented residual-risk acceptance.
-2. Complete remaining App Store account, encryption/territory and distribution/source decisions for a manual first release.
-3. Expand independent security review, format/decoder fuzzing and hardware coverage.
-4. Add encrypted Trash with restore, configurable retention and a seven-day default.
-5. Develop full in-app restore, Markdown editing, encrypted local file search and optional consent-controlled shared albums.
+1. Complete remaining App Store account, encryption/territory and distribution/source decisions for a manual first release; build65 review fixes, phone UAT and residual-risk acceptance are recorded.
+2. Expand independent security review, format/decoder fuzzing and hardware coverage.
+3. Add encrypted Trash with restore, configurable retention and a seven-day default.
+4. Develop full in-app restore, Markdown editing, encrypted local file search and optional consent-controlled shared albums.
 
 Unlock-camera capture and an optional repeated-wrong-password self-destruct lock are also tracked. Destructive behavior needs a concrete reviewed design and explicit opt-in; it is not enabled today. These are development priorities, not committed release dates.
 

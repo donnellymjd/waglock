@@ -4,9 +4,9 @@
 
 | Gate | Evidence / remaining action |
 | --- | --- |
-| D2S-151 confirmed findings |179–182 fixed in1996670: album-preview bindings, exact UTF-8 confirmation, selected-vault Files audio and session-authorized album biometric enrollment.363 tests pass, zero failures/skips. [Evidence](evidence/build-65/README.md). |
+| D2S-151 confirmed findings |D2S-151 complete:179–182 fixed in1996670: album-preview bindings, exact UTF-8 confirmation, selected-vault Files audio and session-authorized album biometric enrollment.363 tests pass, zero failures/skips. [Evidence](evidence/build-65/README.md). |
 | Owner acceptance of material review limits | Owner explicitly accepted the disclosed limits for1.0 on October26; [receipt](evidence/build-65/owner-risk-acceptance.json). No upload/release authorization follows. |
-| Physical candidate acceptance | 65 installed/launched over64, Dev44 retained. Focused65 check pending; existing owner63 checks remain accepted for their scope. No reset/migration. |
+| Physical candidate acceptance | 65 installed/launched over64, Dev44 retained. Owner replied “passed” to the full focused65 authentication, album preview/lifecycle, alternative Files audio/recovery and confirmation/Face ID checklist on October26; [receipt](evidence/build-65/owner-uat.json). No reset/migration. |
 | Critical password collision / provider setup | D2S-178 Done, owner63 passed both-vault/collision checks; real1Password confirmation/relaunch, current-vault-password cloud backup plus independent recovery, reminder frequency/Off and own Face ID Disable accepted. [Receipt](evidence/prelaunch-2026-10-26/provider-acceptance.json). |
 | Independent cold backup recovery | Official age1.3.2 recovers seven real-format public payloads, metadata/notes/drafts/Unicode and nested domains; two wrong-parent and two damage/truncation cases rejected.16 recovery/layout and11 bootstrap tests pass. Writer/helper bytes unchanged by65. [Evidence](evidence/prelaunch-2026-10-26/independent-recovery.json). |
 | Actual release UI and screenshots |Three actual65 confirmation/management/backup checks and eight fresh native iPhone/iPad captures pass; all images visually checked.64 captures remain historical. |

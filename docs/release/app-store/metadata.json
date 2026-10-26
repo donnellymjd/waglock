@@ -1,5 +1,5 @@
 {
-  "status": "adversarial-review-fixes-verified-awaiting-focused-phone-UAT-and-external-gates",
+  "status": "build65-review-and-owner-UAT-passed-awaiting-external-submission-gates",
   "bundleId": "com.d2sci.waglock",
   "version": "1.0",
   "build": "65",

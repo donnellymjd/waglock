@@ -130,3 +130,8 @@ Build64 is held after four reproduced integration defects. Preserve ADR-028: alb
 ## Build65 verification and owner risk acceptance — October26
 
 D2S-179–182 fixes are frozen at candidate-1.0-build65/1996670.363 Debug-host unit/security tests and three workflows against actual Release65 pass; eight native public screenshots and local Apple Distribution export/association/profile checks pass.65 is installed/launched preserving owner libraries and Dev44. Owner explicitly accepted AI-only assurance and the documented183/184, PIN/recovery/decoy limits for1.0. Focused65 phone UAT remains pending; no upload/submission/release is authorized by risk acceptance. See build65 receipts and current release ledger. The archive post-action advances working counters/Info.plist to66; keep65 immutable and do not accidentally substitute the generated working counter into65 source receipts.
+
+
+## Build65 phone acceptance and D2S-151 closeout — October26
+
+Owner replied “passed” to the complete focused65 checklist: both vault passcodes/assigned Face ID/cancellation, protected-album photo/video/PDF background/reopen, alternative-vault Files audio/relaunch and Mac backup recovery, password confirmation and album biometric setup/cancellation. See docs/release/evidence/build-65/owner-uat.json. D2S-151 review/fix/UAT scope is complete; earlier pending65 statements are historical. D2S-183/184 retain explicitly accepted broader assurance/coverage work. Preserve immutable65 and existing libraries; no new binary, retag, upload/submission/release or external compliance clearance follows from this acceptance.

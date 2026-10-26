@@ -4,8 +4,8 @@
   "gates": [
     {
       "id": "security-review",
-      "status": "pending",
-      "evidence": "D2S-151 report checked in;179\u2013182 fixed,363/363 tests and three actual-release UI checks pass. Owner explicitly accepted material limits on October26; focused65 phone UAT remains."
+      "status": "passed",
+      "evidence": "D2S-151 review/fixes verified:179\u2013182 fixed,363/363 tests, three actual-release UI checks and focused65 phone UAT pass. Owner accepted material limits on October26. Developer-AI review, not independent certification; owner-uat.json and owner-risk-acceptance.json."
     },
     {
       "id": "provider-and-recovery",
@@ -14,8 +14,8 @@
     },
     {
       "id": "candidate65-final-checks",
-      "status": "pending",
-      "evidence": "363 tests, three actual-release UI checks, eight reviewed native captures, matching source, signed archive and local distribution export pass.65 installed/launched preserving both libraries/Dev44; focused phone UAT pending."
+      "status": "passed",
+      "evidence": "363 tests, three actual-release UI checks, eight reviewed native captures, matching source, signed archive and local distribution export pass.65 installed preserving both libraries/Dev44; owner replied passed to the full focused65 phone/recovery checklist on October26."
     },
     {
       "id": "distribution-profile",
