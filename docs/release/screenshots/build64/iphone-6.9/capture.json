@@ -1,0 +1,31 @@
+{
+  "bundle": "com.d2sci.waglock",
+  "version": "1.0",
+  "build": "64",
+  "encryptedMetadata": true,
+  "simulator": "WagLock Encrypted Release QA Store iPhone",
+  "nativeCapture": true,
+  "format": "JPEG (no alpha)",
+  "resized": false,
+  "retouched": false,
+  "publicFixturesOnly": true,
+  "workflowExitStatus": 0,
+  "screenshots": [
+    {
+      "file": "notes.jpg",
+      "sha256": "ad3d0879f50c88053f7f2aeec8ebbc766d03e23b66b9d2d8e58eca581eaa7557"
+    },
+    {
+      "file": "photos.jpg",
+      "sha256": "2378270bc4ae5358591ad8cb5b2ee66c169d85a79df8f75bf9fe9520a1ed22e6"
+    },
+    {
+      "file": "media.jpg",
+      "sha256": "fdb6e58bec37b436edb6e4df575707d5e2042c8d6877f39940a293c04695676b"
+    },
+    {
+      "file": "protected-album.jpg",
+      "sha256": "a74f75481d4733a5a6920249b813bc68dac366f578f13192db4eaae0f8e2dc86"
+    }
+  ]
+}

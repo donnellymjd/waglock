@@ -1,30 +1,22 @@
-> **October26 accepted phone candidate: build63.** [Primary-authorized password management](../evidence/build-63/README.md) passes354 security tests, actual-release UI and the owner’s phone checklist. D2S-178 is Done; the password-collision incident hold is cleared. Both libraries, hidden guest controls and Face ID/background behavior passed owner UAT. Remaining provider/backup acceptance, distribution/account/compliance and broader audit gates remain separate. No upload/submission. Older checkpoints below are historical.
+# WagLock1.0 submission package — build64 preparation
 
-> **October26 current candidate: build62.** [Vault-password backup option and private reminders](../evidence/build-62/README.md) passes349 unit/security tests, actual-release UI and independent public-fixture age/helper recovery. Installed over61 with Dev44 retained; owner UAT and account-side distribution gates remain. Older checkpoints below are historical. No upload/submission.
+Build63 is the owner-accepted security/provider baseline. Build64 adds an editable date/time-stamped backup default and uses the accepted dedicated password-manager association in the standard release configuration. Do not submit until build64 verification and the external gates below pass. [Current pre-launch ledger](../prelaunch-status.md) is authoritative; old build50/53 handoffs and screenshots are historical.
 
-> **October26 current candidate: build61.** [Explicit confirmation after password-manager fill](../evidence/build-61/README.md) passes the actual-release UI workflow and signed package/live association checks. Installed over60 with Dev44 retained; owner1Password UAT is pending. Older checkpoints below are historical. No upload/submission.
+## Exact package
 
-> **October25 current work: build60.** [Forgotten-password help and explicit erasure](../evidence/build-60/README.md) has342 passing unit/security tests plus a passing full release erase/cancel/fresh-library UI workflow; build60 is installed, with owner UAT pending. Build59 AutoFill association is live; provider UAT remains pending. Older checkpoints below are historical. No upload/submission.
+- App/bundle: WagLock1.0, `com.d2sci.waglock`, build64. Keep WagLock Dev separate.
+- Archive being verified: `/private/tmp/WagLock-1.0-build64-prelaunch.xcarchive`.
+- Intended source freeze: `candidate-1.0-build64`; create only after verification, with its source/archive receipt in build64 evidence. Never retag accepted63.
+- Copy-ready fields: [metadata](metadata.json), [description](description.txt), [review walkthrough](review-notes.txt), [release notes](release-notes.txt), [encryption facts](encryption-brief.md).
+- Current screenshots target: [build64](../screenshots/build64/README.md), once captured and visually checked; never label older captures as64.
+- Price: Free. Release: Manual. Worldwide where permitted, subject to the encryption/territory determination.
 
-> **Build58 UAT follow-up:** fixes hidden Face ID controls for an authenticated pre-ownership enrollment. See [evidence](../evidence/build-58/README.md); owner confirmation is pending. Older candidate status below is historical.
+## Remaining account/approval gates
 
-> **Current candidate: build57, awaiting owner UAT.** Remaining security engineering and limits are recorded in [build57 evidence](../evidence/build-57/README.md). Historical build53/55 packages below must not be used for this candidate. No App Store submission has occurred.
+1. Local export of63 fails because the distribution profile lacks Associated Domains. Refresh the existing App ID's distribution signing/profile with `webcredentials:waglock.d2sci.co` preserved, then export/validate64. An automatic approval review rejected provisioning updates as an unapproved persistent Apple-account change. Do not retry until the owner explicitly approves that operation. Do not remove the entitlement merely to make export pass.
+2. Complete App Store Connect's encryption questionnaire using [the inventory](encryption-brief.md); obtain any documents required for selected territories. No exemption flag or compliance code has been invented. France is not silently excluded.
+3. Confirm actual privacy/age/content answers, public copyright/publisher, account agreements and availability in the existing app record6826717664. Private App Review contact details were supplied in conversation; enter them only in Apple's private fields. There is no authenticated App Store Connect API session available to this task, and Safari scripting was declined; local text is prepared, not remotely saved.
+4. Resolve the recorded source/platform/artwork distribution determination under D2S-106. Matching GPL source, attribution and original BSD notices are prepared. GPL commercial use does not itself require a lawyer letter or monetization permission; no particular platform conflict is established by this packet.
+5. Upload the validated distribution build, select exactly1.0(64), attach the matching accurate assets/instructions, and select manual release. No upload, agreement acceptance or App Review submission has been performed by this work.
 
-> **Submission hold — October24 follow-up:** build53 must not be submitted while the second security review is remediated (D2S-165–172). Known listing fields may be prepared/saved. Do not submit, release or infer acceptance of build54 from historical build53 tests.
-
-# WagLock 1.0 build53 submission handoff
-
-Engineering preparation and the requested owner phone checks are complete for build53. This supersedes the historical build50 security hold/package. It is **prepared, not uploaded or submitted**. The broader audit remains open; the narrow launch mitigations and residual limits are recorded in [build53 evidence](../evidence/build-53/README.md).
-
-Use [description](description.txt), [review notes](review-notes.txt), [release notes](release-notes.txt), [metadata](metadata.json), [encryption facts](encryption-brief.md) and [eight current screenshots](../screenshots/build53/README.md). Review notes explicitly disclose the independent alternative-passcode library and Face ID assignment. Initial price: Free. Release control: Manual.
-
-The accepted development-signed archive is `/private/tmp/WagLock-1.0-build53-candidate.xcarchive`. It passes identity, encryption, license/source provenance, privacy-reason and signature checks. It is not an App Store distribution IPA. Local export fails with exit70 because no App Store provisioning profile for `com.d2sci.waglock` is installed; this Mac has an Apple Development identity and no distribution identity or configured App Store Connect API credential. No portal registration, profile generation, declaration, upload or submission was performed.
-
-## Account-holder steps
-
-1. In Xcode, sign into the paid Apple Developer team and establish App Store distribution signing/provisioning for `com.d2sci.waglock`. Open the prepared archive in Organizer, export/re-sign and validate it. Keep the separate WagLock Dev app installed. Resolve the account/distribution gates before approving portal changes; do not bypass them with automatic provisioning flags.
-2. Create/select the WagLock App Store Connect record. Enter the prepared copy/screenshots, confirm the public publisher/copyright field, and enter the already supplied contact in Apple's private App Review fields. No server account or supplied demo password is required; reviewers create a local library.
-3. Complete the actual privacy, age/content, encryption and worldwide-where-permitted territory questionnaires. Use the factual encryption brief; record any required documentation or supported exemption before changing declarations. Do not invent a compliance code or silently exclude France. Review the [source/platform distribution packet](../licensing-review.md); GPL commercial use does not itself require a lawyer letter or separate monetization permission.
-4. Upload the distribution-signed validated build, select it after processing, attach the assets and select **manual release** before submission. Confirm the uploaded build is 1.0(53). No release is automatic.
-
-Exact application source: `candidate-1.0-build53`. Matching source, original notices, build guidance and recovery tools are packaged as `/private/tmp/WagLock-1.0-build53-source.tar.gz`; the evidence record gives its commit and checksum. Preserve this source/binary association. Byte-identical reproducible builds and independent audit certification are not claimed. Private Apple passwords, keys and vault passwords must never be pasted into chat or committed.
+Passing package checks alone never establishes export/legal/account completion or independent security certification. Keep the current phone vaults; no reset or development-library migration is required for this handoff.

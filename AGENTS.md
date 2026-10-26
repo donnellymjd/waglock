@@ -105,3 +105,13 @@ Owner approved primary-only password management on October26. Hide Change passwo
 ## Build63 owner acceptance — October26
 
 Owner passed the physical checklist for primary-only alternative-password management, matching-password rejection, both retained libraries/samples, absence of guest management controls and Face ID/background locking. D2S-178 is Done and its incident hold is cleared; older pending/hold statements above are historical. Preserve ADR-027 boundaries and candidate-1.0-build63. This does not clear separate provider/backup acceptance, distribution/account/compliance or broader audit gates.
+
+
+## October26 final pre-launch scope
+
+Owner confirms no current external users and explicitly removes older-version compatibility as a pre-1.0 requirement. Prefer a documented fresh-release boundary over additional migration engineering when necessary; this does not authorize erasing the owner's installed vaults or silently resetting on storage/credential errors. Existing tested readers may remain when they do not block launch. Owner passed real1Password confirmation/relaunch, current-vault-password cloud backup plus independent Mac recovery, reminder frequency/Off and the Face ID Disable control after biometric entry on63. Default AppStore config now includes the already-verified public webcredentials entitlement; Dev identity remains separate. Native export still requires a distribution profile permitting Associated Domains. An automatic approval review rejected provisioning updates; do not retry that account mutation without explicit user approval.
+
+
+## Build64 launch engineering closeout — October26
+
+Current355-test suite and actual-release dated/custom-backup, decoy-copy/isolation and explicit erase/cancel/fresh-library UI pass. Eight native public iPhone/iPad captures are verified. D2S-105/116 and scoped162/167/169/170/172/173/175/176/177 implementation/evaluation tasks are Done;178 was already accepted. See docs/portable-vault/audits/launch-closeout-2026-10-26.md and docs/release/prelaunch-status.md; historical open/hold statements above are superseded only within their documented scope. Exact64 local distribution export still fails for missing Associated Domains in the store profile. Do not remove accepted AutoFill or perform provisioning changes without the explicit approval required after automatic review rejection. No independent audit certification or App Store readiness is implied.

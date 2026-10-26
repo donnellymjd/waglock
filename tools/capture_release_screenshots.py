@@ -18,7 +18,11 @@ def main():
     parser.add_argument('simulator')
     parser.add_argument('output', type=Path)
     parser.add_argument('--screenshots-only', action='store_true', help='Capture four prepared screens after the full workflow passes')
+    parser.add_argument('--runner-derived-data', type=Path, help='Reuse an already compiled current QA runner')
+    parser.add_argument('--without-building', action='store_true', help='Run that existing runner without recompiling it')
     args = parser.parse_args()
+    if args.without_building and args.runner_derived_data is None:
+        parser.error('--without-building requires --runner-derived-data')
     devices = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', '--json']))
     device = next(d for group in devices['devices'].values() for d in group if d['udid'] == args.simulator)
     if not device['name'].startswith('WagLock Encrypted Release QA Store '):
@@ -28,9 +32,9 @@ def main():
     if info.get('CFBundleIdentifier') != 'com.d2sci.waglock' or info.get('WagLockEncryptedLibrary') != 'YES':
         parser.error('The actual installed bundle must use fresh encrypted release storage')
     args.output.mkdir(parents=True, exist_ok=False)
-    command = ['xcodebuild', 'test', '-project', 'WagLock.xcodeproj', '-scheme', 'WagLock',
+    command = ['xcodebuild', 'test-without-building' if args.without_building else 'test', '-project', 'WagLock.xcodeproj', '-scheme', 'WagLock',
                '-destination', f'platform=iOS Simulator,id={args.simulator}', '-parallel-testing-enabled', 'NO',
-               '-derivedDataPath', '/private/tmp/waglock-release-ui-' + args.simulator,
+               '-derivedDataPath', str(args.runner_derived_data) if args.runner_derived_data else '/private/tmp/waglock-release-ui-' + args.simulator,
                '-resultBundlePath', str(args.output / 'Workflow.xcresult'),
                '-only-testing:WagLockUITests/EncryptedReleaseUITests/' + ('testStoreReadyScreenshots' if args.screenshots_only else 'testFreshReleasePersistenceAndScreenshots')]
     shots = []

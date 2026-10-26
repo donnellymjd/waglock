@@ -1,0 +1,12 @@
+{
+  "result": "failed and interrupted; not accepted",
+  "resultBundle": "/private/tmp/waglock-build64-security.xcresult",
+  "observations": [
+    "PDF render timeout",
+    "uncertain commit during metadata test",
+    "explicit ENOSPC in64MiB streamed backup fixture"
+  ],
+  "cleanup": "Stopped task-owned runs; removed only two new disposable simulators and obsolete preliminary63 archive; restored8GiB free.",
+  "phoneVaultsModified": false,
+  "retry": "Completed after owner freed disk space:355 passed,0 failures/skips; /private/tmp/waglock-build64-security-final.xcresult. Earlier low-disk failures remain recorded."
+}

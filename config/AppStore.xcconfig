@@ -10,3 +10,6 @@ PRODUCT_MODULE_NAME = WagLock
 
 // Fresh release libraries use password-keyed encrypted metadata; no legacy conversion.
 WAGLOCK_ENCRYPTED_LIBRARY = YES
+
+// Dedicated webcredentials association: live endpoint/profile and owner1Password UAT passed.
+CODE_SIGN_ENTITLEMENTS = config/PasswordAutoFill.entitlements

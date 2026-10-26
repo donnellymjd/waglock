@@ -1,4 +1,14 @@
-# Fresh encrypted candidate physical acceptance
+# Current physical acceptance — October 26, 2026
+
+Build 63 is accepted on the owner’s phone. Both vaults retain their samples and distinct passwords; primary-only alternative-password management rejects matching credentials, and guest management controls are absent. Face ID and background locking passed. The owner also accepted real 1Password confirmation/relaunch, vault-password backup saved through their cloud provider with independent Mac recovery, reminder settings, and the Face ID Disable control after biometric unlock.
+
+Build 64 adds dated, editable backup filenames and enables the already accepted AutoFill entitlement in the standard release configuration. After installation, only the changed filename behavior needs a short phone check. Do not repeat destructive erase testing on the owner’s phone; use the dedicated disposable simulator. Keep WagLock Dev and both installed release libraries intact.
+
+These are owner-reported checks, not an independent audit, proof of remote cloud upload completion, or App Store approval. See [current pre-launch status](prelaunch-status.md) for engineering and external submission gates.
+
+---
+
+## Historical build 50 checklist and acceptance
 
 Open **WagLock**, version1.0/build50, bundle `com.d2sci.waglock`. It is a separate fresh encrypted app. **Keep WagLock Dev installed**; no library has been migrated or deleted. Only disposable test samples are needed. Open the new app manually.
 

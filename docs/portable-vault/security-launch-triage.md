@@ -1,3 +1,5 @@
+> October26 current review: [launch closeout](audits/launch-closeout-2026-10-26.md) and [pre-launch ledger](../release/prelaunch-status.md) supersede historical build50/53 hold statements below. D2S-178 is closed after accepted63; current64 is the dated-backup follow-up. Account/export/signing gates remain separate.
+
 # Security review launch triage — build51 work
 
 Submission is on hold. Build50 archives/screenshots/source freezes remain historical and must not be submitted after this review. The owner supplied a 13-item security review and authorized the easiest safe 1.0 mitigations, explicitly including turning calculator login off. Preserve owner credentials, keys and all vault data. Do not silently replace formats, raise implicit KDF parameters, migrate legacy libraries, scan-delete unknown temporary files or add destructive lockout.

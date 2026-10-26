@@ -116,3 +116,16 @@ The [public encrypted-library fixture](../../tools/fixtures/encrypted-library-ba
 ## Backups made with the vault password
 
 When **Use this vault’s password** was selected during export, enter that vault password as it was **when the backup was created** at the outer age prompt. A later vault password change does not update older backup files. Protected albums still need their own required credentials. Short PINs are easier to guess offline; prefer a strong independent backup password or age recovery key for long-lived copies. Never post any password or backup in an issue/chat.
+
+
+## Dated default filenames — build64
+
+New exports suggest an editable UTC date/time name, for example `WagLock-Backup-2026-10-26-200000-123Z.tar.age`. The date is year-month-day; the following time includes milliseconds and `Z` means UTC. This helps distinguish repeated backups; it is not a promise that providers never request overwrite confirmation. A custom name remains available and the existing exclusive app-owned rename/path checks remain unchanged. Select the actual filename when recovering:
+
+```sh
+python3 ~/repos/WagLock/tools/backup_recovery.py \
+  ~/Downloads/WagLock-Backup-2026-10-26-200000-123Z.tar.age \
+  ~/Downloads/WagLock-Recovered-2026-10-26
+```
+
+Replace the example name with your exported file. Backup names do not change passwords, album factors, encryption formats or the requirement for a new recovery destination.

@@ -1,0 +1,9 @@
+{
+  "result": "Passed",
+  "totalTestCount": 1,
+  "passedTests": 1,
+  "failedTests": 0,
+  "skippedTests": 0,
+  "workflow": "Actual Release64; separate persistent notes, no guest/alternative/password management disclosure, neutral eligible Face ID consent and cancellation.",
+  "earlierAttempt": "Public-note setup raced initial body autofocus; runner now waits for keyboard before selecting title; app unchanged."
+}

@@ -1,3 +1,5 @@
+> Current October26 checkpoint: accepted63; candidate64 adds dated backup names without a cryptographic format change. [Pre-launch ledger](prelaunch-status.md) supersedes historical build45/50 account status below. Data Not Collected remains the engineering recommendation, not an assertion that the account-holder has filed it. Local63 export now finds a distribution profile but fails its Associated Domains entitlement check; automatic provisioning refresh was rejected and requires explicit authorization.
+
 # Privacy and encryption submission worksheet
 
 D2S-106/118/121. Prepared October 22, 2026; final answers are **not filed or approved**.

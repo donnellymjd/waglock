@@ -1,0 +1,9 @@
+{
+  "result": "Passed",
+  "totalTestCount": 1,
+  "passedTests": 1,
+  "failedTests": 0,
+  "skippedTests": 0,
+  "workflow": "Actual separately installed Release64; dated/custom filename, selected-vault password backup, Files cancel and reminder isolation.",
+  "earlierAttempt": "Failed test-only newline assertion; corrected runner, product unchanged."
+}

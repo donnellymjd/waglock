@@ -1,0 +1,9 @@
+{
+  "result": "Passed",
+  "totalTestCount": 1,
+  "passedTests": 1,
+  "failedTests": 0,
+  "skippedTests": 0,
+  "workflow": "Actual Release64 on dedicated disposable Reset simulator; cancel/background confirmation, both prior libraries retained until explicit erase, independent fresh setup, old credentials rejected.",
+  "ownerPhoneErased": false
+}

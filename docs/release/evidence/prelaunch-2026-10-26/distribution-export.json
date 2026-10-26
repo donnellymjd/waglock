@@ -1,0 +1,11 @@
+{
+  "candidateBuild": "64",
+  "localExport": "failed",
+  "uploaded": false,
+  "error": "Distribution profile for com.d2sci.waglock does not include Associated Domains capability/entitlement.",
+  "appleDevelopmentIdentities": 1,
+  "appleDistributionIdentities": 0,
+  "appStoreConnectAPICredentialConfigured": false,
+  "provisioningRefresh": "not executed: automatic approval review rejected account-resource mutation; explicit owner approval required",
+  "previousBuildSameFailure": "63"
+}

@@ -30,7 +30,7 @@ private struct ScopedPortableBackupView: View {
     @State private var keyboard = PasswordKeyboard.fullKeyboard
     @State private var handoff: BackupFile?
     @State private var saved = false
-    @State private var backupName = "WagLock-Backup"
+    @State private var backupName = PortableBackupSession.suggestedExportName()
     private struct BackupFile: Identifiable { let id = UUID(); let url: URL }
     private var request: LibraryMountCoordinator.Request { .init(sessionID: auth.librarySessionID, scope: auth.libraryScope) }
     private var biometricRows: [PortableBackupSession.AlbumRow] { session.rows.filter { $0.policy == .faceIDOnly } }
@@ -130,7 +130,7 @@ private struct ScopedPortableBackupView: View {
                             }
                         }
                     }
-                    Text("The .tar.age extension is added automatically. Choose a different name to keep earlier backups.").font(.footnote)
+                    Text("The default name includes the date and time in UTC. You can edit it; .tar.age is added automatically.").font(.footnote)
                     Button("Save to Files or cloud storage") {
                         guard let url = session.beginHandoff(filename: backupName) else { return }
                         handoff = .init(url: url)
@@ -159,7 +159,10 @@ private struct ScopedPortableBackupView: View {
         .onChange(of: useVaultPassword) { _, _ in password = ""; confirmation = ""; acknowledgedReuse = false }
         .onChange(of: method) { _, _ in clearCredentials() }
         .onChange(of: scenePhase) { _, phase in if phase == .background { session.cancel(); clearCredentials() } }
-        .onChange(of: session.readyURL) { _, url in if url != nil { password = ""; confirmation = ""; albumPasswords = [:]; albumConfirmations = [:] } }
+        .onChange(of: session.readyURL) { previous, url in
+            if url != nil { password = ""; confirmation = ""; albumPasswords = [:]; albumConfirmations = [:] }
+            if previous == nil, url != nil { backupName = PortableBackupSession.suggestedExportName() }
+        }
         .sheet(item: $handoff, onDismiss: { if session.handingOff { session.finishHandoff() } }) { file in
             SystemBackupSave(url: file.url) { success in
                 saved = success

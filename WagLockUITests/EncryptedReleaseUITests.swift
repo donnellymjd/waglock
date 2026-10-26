@@ -25,8 +25,17 @@ final class EncryptedReleaseUITests: XCTestCase {
             unlock(app, password: owner)
             if !app.buttons["photos.albums"].waitForExistence(timeout: 4), app.secureTextFields["Enter password"].exists {
                 unlock(app, password: changed)
-                XCTAssertTrue(app.buttons["photos.albums"].waitForExistence(timeout: 15), app.debugDescription)
-                changePassword(app, from: changed, to: owner)
+                if !app.buttons["photos.albums"].waitForExistence(timeout: 4),
+                   ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"]?.hasPrefix("WagLock Encrypted Release QA Reset") == true {
+                    // Reuse only the known public result of this destructive fixture's previous run.
+                    let fresh = "PUBLIC-after-erase-password"
+                    unlock(app, password: fresh)
+                    XCTAssertTrue(app.buttons["photos.albums"].waitForExistence(timeout: 15), app.debugDescription)
+                    changePassword(app, from: fresh, to: owner)
+                } else {
+                    XCTAssertTrue(app.buttons["photos.albums"].waitForExistence(timeout: 15), app.debugDescription)
+                    changePassword(app, from: changed, to: owner)
+                }
             }
         }
         XCTAssertTrue(app.buttons["photos.albums"].waitForExistence(timeout: 15), app.debugDescription)
@@ -398,6 +407,8 @@ final class EncryptedReleaseUITests: XCTestCase {
         let ownerTitle = "Primary sample " + marker, guestTitle = "Separate sample " + marker
         func note(_ title: String) {
             app.buttons["Notes"].firstMatch.tap(); app.navigationBars.buttons["New"].tap()
+            // The editor initially focuses its body; wait before selecting the title.
+            XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
             replace(app.textFields["note.title"], with: title)
             replace(app.textViews["note.content"], with: "Disposable isolated UI fixture")
             app.navigationBars.buttons["Done"].tap()
@@ -421,8 +432,11 @@ final class EncryptedReleaseUITests: XCTestCase {
         app.buttons["Settings"].firstMatch.tap(); app.buttons["settings.security"].tap()
         XCTAssertFalse(app.buttons["settings.guest.configure"].exists)
         XCTAssertFalse(app.buttons["settings.guest.changePassword"].exists)
-        XCTAssertTrue(app.buttons["settings.changePassword"].exists)
+        XCTAssertFalse(app.buttons["settings.changePassword"].exists)
         XCTAssertTrue(app.buttons["settings.faceID"].exists)
+        for phrase in ["guest vault", "secondary vault", "main vault", "primary vault", "alternative password", "alternative passcode", "another vault"] {
+            XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", phrase)).firstMatch.exists)
+        }
         app.buttons["settings.faceID"].tap()
         XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Passcodes continue")).firstMatch.exists)
         XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "assign Face ID")).firstMatch.exists)
@@ -454,6 +468,8 @@ final class EncryptedReleaseUITests: XCTestCase {
         let fresh = "PUBLIC-after-erase-password"
         func note(_ title: String) {
             app.buttons["Notes"].firstMatch.tap(); app.navigationBars.buttons["New"].tap()
+            // The editor initially focuses its body; wait before selecting the title.
+            XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
             replace(app.textFields["note.title"], with: title)
             replace(app.textViews["note.content"], with: "PUBLIC disposable erase sample")
             app.navigationBars.buttons["Done"].tap()
@@ -762,7 +778,12 @@ final class EncryptedReleaseUITests: XCTestCase {
                 reach(consent, towardTop: true); consent.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
             }
             reach(create); XCTAssertTrue(create.isEnabled); create.tap()
-            if expectSuccess { XCTAssertTrue(app.buttons["backup.save"].waitForExistence(timeout: 45), app.debugDescription) }
+            if expectSuccess {
+                XCTAssertTrue(app.buttons["backup.save"].waitForExistence(timeout: 45), app.debugDescription)
+                let filename = app.textFields["backup.filename"]; reach(filename)
+                let suggested = filename.value as? String ?? ""
+                XCTAssertNotNil(suggested.range(of: "^WagLock-Backup-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}-[0-9]{3}Z$", options: .regularExpression), suggested)
+            }
             else {
                 let error = app.staticTexts["backup.error"]; reach(error)
                 XCTAssertTrue(error.exists)
@@ -779,6 +800,11 @@ final class EncryptedReleaseUITests: XCTestCase {
         app.navigationBars.buttons.element(boundBy: 0).tap(); openBackup()
         prepare("PUBLIC wrong password", expectSuccess: false)
         prepare(primary, expectSuccess: true)
+        app.buttons["backup.filename.clear"].tap()
+        XCTAssertFalse(app.buttons["backup.save"].isEnabled)
+        replace(app.textFields["backup.filename"], with: "PUBLIC dated backup")
+        app.textFields["backup.filename"].typeText("\n")
+        XCTAssertTrue(app.buttons["backup.save"].isEnabled)
         reach(app.buttons["backup.save"]); app.buttons["backup.save"].tap()
         let cancel = app.buttons["Cancel"].firstMatch
         if !cancel.waitForExistence(timeout: 5), app.buttons["Browse"].firstMatch.exists {

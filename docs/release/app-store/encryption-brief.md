@@ -1,6 +1,6 @@
 # WagLock 1.0 encryption review brief
 
-Updated October 25, 2026 for com.d2sci.waglock, build57, source candidate-1.0-build57. These are implementation facts for the account holder's Apple questionnaire; no exemption, export classification, French declaration, CCATS or compliance code has been asserted or filed.
+Updated October26,2026 for com.d2sci.waglock, candidate64, intended source candidate-1.0-build64. These are implementation facts for the account holder's Apple questionnaire; no exemption, export classification, French declaration, CCATS or compliance code has been asserted or filed.
 
 ## Purpose and delivery
 
@@ -18,7 +18,7 @@ WagLock is an offline encrypted personal photo/video/file/note library. No hoste
 
 See [format/dependency details](../../portable-vault/age-backup-design.md), [source provenance](../../../WagLock/Support/Scrypt/PROVENANCE.md) and [compliance inventory](../compliance.md). Custom container/framing code does not by itself mean a proprietary encryption algorithm; classification must distinguish primitives from file formats.
 
-## Apple process checked October23
+## Apple process rechecked October26
 
 Apple's [documentation table](https://developer.apple.com/help/app-store-connect/reference/app-information/export-compliance-documentation-for-encryption/) distinguishes OS-only encryption, standard algorithms outside the OS, and proprietary algorithms. It identifies a French declaration for the standard/non-OS category if distributing in France. Do not silently remove France from the owner's worldwide choice; record the supported determination and any required documentation first.
 
@@ -31,3 +31,5 @@ The app review contact was already supplied by the owner; keep it in Apple's pri
 Public build57 rejects legacy native v1 stream reads and native .encrypted imports. Explicit legacy Dev/recovery readers remain in source; no native format conversion or migration occurs. This does not refer to age v1, the separate supported standard backup format.
 
 Build57 authenticates native ciphertext SHA256 digests in the encrypted metadata index and uses device-only Keychain commit stamps plus encrypted recovery deltas to detect post-enrollment filesystem rollback. No new cryptographic primitive or change to the standard age backup format is introduced. These facts do not determine an export classification or exemption.
+
+Build64 only adds date/time-stamped editable backup names and selects the already accepted webcredentials entitlement in the standard release configuration. Encryption primitives, native/age formats, independent album factors and KDF parameters are unchanged. App Store Connect questionnaire answers remain unfiled by this task. The standard/non-OS row in Apple's table currently identifies French documentation when France is selected; determine the applicable category from the complete inventory rather than assuming custom framing is a proprietary cipher. The owner requested worldwide where permitted; no territory has been silently removed.

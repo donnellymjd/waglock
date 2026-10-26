@@ -1,0 +1,8 @@
+{
+  "date": "2026-10-26",
+  "backupRecoveryAndLayoutTests": 16,
+  "ageBootstrapTests": 11,
+  "failures": 0,
+  "publicFixturesOnly": true,
+  "officialAge": "v1.3.2"
+}

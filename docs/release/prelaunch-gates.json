@@ -1,0 +1,46 @@
+{
+  "asOf": "2026-10-26",
+  "candidateBuild": "64",
+  "gates": [
+    {
+      "id": "security-review",
+      "status": "passed",
+      "evidence": "Accepted63 plus checked-in current launch closeout; current64 regression recorded separately."
+    },
+    {
+      "id": "provider-and-recovery",
+      "status": "passed",
+      "evidence": "Owner63 checklist plus official age/public-fixture recovery and27 helper tests."
+    },
+    {
+      "id": "candidate64-final-checks",
+      "status": "pending",
+      "evidence": "355 tests and actual Release64 backup/reset/decoy UI pass; eight native reviewed screenshots, signed archive and phone install complete. Source receipt binds the candidate; short phone dated-filename check pending."
+    },
+    {
+      "id": "distribution-profile",
+      "status": "blocked",
+      "evidence": "Local export lacks Associated Domains; provisioning refresh rejected by automatic approval review, explicit owner approval required."
+    },
+    {
+      "id": "encryption-and-territories",
+      "status": "pending",
+      "evidence": "Complete Apple questionnaire/determination and any required documentation; no classification/code invented."
+    },
+    {
+      "id": "source-platform-artwork-distribution",
+      "status": "pending",
+      "evidence": "D2S-106 qualified determination remains unrecorded; exact matching source and original notices prepared."
+    },
+    {
+      "id": "app-store-connect-fields",
+      "status": "pending",
+      "evidence": "Confirm live privacy/age/publisher/contact/agreements/availability and final build; no authenticated account control available here."
+    },
+    {
+      "id": "distribution-validation-and-upload",
+      "status": "pending",
+      "evidence": "Export/validate corrected signing, upload selected final candidate, choose manual release; none performed."
+    }
+  ]
+}

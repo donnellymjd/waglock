@@ -157,6 +157,16 @@ final class PortableBackupSession: ObservableObject {
         }
     }
 
+    /// Stable Gregorian/UTC text is safe on Files providers and independent of locale/calendar.
+    nonisolated static func suggestedExportName(at date: Date = Date()) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd-HHmmss-SSS'Z'"
+        return "WagLock-Backup-" + formatter.string(from: date)
+    }
+
     nonisolated static func exportFilename(_ text: String) -> String? {
         var base = text.trimmingCharacters(in: .whitespacesAndNewlines)
         for suffix in [".tar.age", ".age", ".tar"] where base.lowercased().hasSuffix(suffix) {
@@ -168,9 +178,9 @@ final class PortableBackupSession: ObservableObject {
         return base + ".tar.age"
     }
 
-    func beginHandoff(filename: String = "WagLock-Backup") -> URL? {
+    func beginHandoff(filename: String? = nil) -> URL? {
         guard !isWorking, !handingOff, let current = readyURL, let directory else { return nil }
-        guard let name = Self.exportFilename(filename) else {
+        guard let name = Self.exportFilename(filename ?? Self.suggestedExportName()) else {
             self.error = "Choose a shorter filename without slashes, colons or line breaks."; return nil
         }
         let readyURL = directory.appendingPathComponent(name)

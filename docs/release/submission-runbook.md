@@ -1,26 +1,12 @@
-# Final submission handoff — WagLock 1.0
+# WagLock1.0 submission runbook
 
-Engineering candidate: build50, separate bundle `com.d2sci.waglock`. Existing `com.d2sci.vaultito.dev` is preserved. The owner confirms the full [physical acceptance](device-acceptance.md) checklist passed October23, including independent Mac backup recovery. It is **not submitted**. Full evidence and open security limits are in [the readiness ledger](submission-plan.md).
+Use [the current package](app-store/README.md) and [pre-launch status](prelaunch-status.md). Accepted baseline63; next candidate64 adds dated backup names. This supersedes the former build50/53 handoff. No App Review upload/submission is asserted.
 
-## Account-holder decisions still needed
-
-- Phone checklist and readable independent backup recovery: owner-confirmed passed October23. The intermittent classification report remains tracked.
-- Launch preference is worldwide where permitted. Complete the corresponding territory/encryption determination; no exemption flag or compliance code has been assumed.
-- Private App Review contact name/email/phone were supplied in conversation. Enter them only in the private Apple submission fields; confirm the public copyright/publisher field separately. Do not put private contact details in this public repository.
-- Confirm privacy answers against the prepared [inventory](compliance.md), including actual diagnostics/support arrangements; complete Apple's age/content questions and account agreements.
-- Record the distribution-compliance determination for the covered source/platform terms. GPL permits commercial binaries with matching source/recipient rights; a lawyer letter or monetization permission is not a GPL requirement. The project still requests a distribution review; no particular current incompatibility has been established. See [the packet](licensing-review.md).
-
-## When those gates are satisfied
-
-1. Keep the existing development app installed. Register/select the explicit release identifier and create the WagLock App Store Connect record. Do not reuse the development ID or claim a library transfer.
-2. Build an archive from the frozen candidate source with `config/AppStore.xcconfig`, marketing1.0/build50 (or a new unique number if an uploaded build requires it). Use the approved account's distribution signing and correct entitlements. Preserve the source counter with `WAGLOCK_SKIP_BUILD_INCREMENT=YES` during verification. The current unsigned archive is packaging evidence, not a distribution archive.
-3. Run `python3 tools/verify_release_candidate.py PATH_TO_ARCHIVED_WagLock.app`. It must verify the actual public bundle, encrypted switch, notices/source hashes and manifest. Its `readyForUpload:false` is deliberate: the script cannot attest to account/legal/hardware gates. Use Organizer's distribution validation too.
-4. Publish/retain the exact matching GPL source tag/archive, build instructions, modification/dependency notices and recovery tools. No source encryption key or private credentials belong in it. The candidate tag is a source freeze, not a public binary release.
-5. Enter the [listing/review walkthrough](store-listing.md), approved contacts/countries/category/age/privacy/export answers and [actual screenshots](screenshots/build50/README.md). All local features are free; no IAP/subscription is offered. Do not advertise deferred features.
-6. Upload the distribution build; resolve Apple's validation/processing findings. Select the processed build for version1.0 and attach any required export documentation/compliance code.
-7. Select **manual release**, submit for review, and keep it unreleased after approval until the owner chooses to publish. Approval and timing are Apple's decision. Follow-up improvements can continue in a later version.
-
-No upload, agreement acceptance, export declaration, registration or submission was performed by engineering preparation. No automatic iOS restore, native-folder portability, independent audit certification or forensic deniability is promised.
-
-
-Final local preparation is complete for build50: current archive, matching source tarball, eight refreshed screenshots and [copy-ready submission files](app-store/README.md). Local App Store export is blocked by a missing App Store provisioning profile for com.d2sci.waglock; no upload occurred. See [exact evidence](evidence/build-50/submission-preparation.json). Do not mistake development signing or a generic package-verifier gate list for actual Apple distribution clearance.
+1. Verify the final candidate's own unit/security, actual-release UI, signed package and source receipts. Keep the separate WagLock Dev app and both current phone libraries intact. The owner explicitly waives pre-1.0 older-version compatibility; this is not automatic deletion permission.
+2. Confirm the real-provider acceptance already supplied on63:1Password confirmation/relaunch; vault-password cloud backup plus Mac recovery; reminder settings; Face ID's own Disable control. Record a short64 dated-name check after install. Destructive reset QA runs only on disposable fixtures.
+3. Complete D2S-106's source/platform/artwork distribution determination and the [privacy/encryption worksheet](compliance.md). Source and attribution preparation is complete; do not invent legal clearance, a CCATS, an exemption or Apple-issued compliance code.
+4. With explicit authorization for Apple-account provisioning changes, repair the distribution profile's missing Associated Domains entitlement. Preserve `webcredentials:waglock.d2sci.co`. No such repair was executed after automatic approval review rejected it. The local export options use destination export, not upload.
+5. Export/re-sign and validate `/private/tmp/WagLock-1.0-build64-prelaunch.xcarchive` with the approved account. Its development signature is not distribution clearance. Run `tools/verify_release_candidate.py` and `tools/check_autofill_association.py` against the actual distribution app too. If App Store Connect already consumed build64, use a new unique build and repeat package/source binding; do not relabel an old archive.
+6. In existing WagLock record6826717664, enter [prepared metadata](app-store/metadata.json), review notes, final screenshots, public publisher/copyright and supplied private review contact. Confirm privacy/age/territory/encryption fields and account agreements in the live account; this task cannot infer they were saved.
+7. Publish/retain exact corresponding source, original notices, self-build instructions and recovery tools for the chosen binary. Preserve the accepted source tag and checked digest; do not claim byte-identical reproducibility or publish private signing keys/passwords.
+8. Upload the validated distribution build, select the processed build for1.0, resolve Apple's processing findings and attach required encryption documentation. Select manual release, then submit for review only when remaining gates are actually cleared. Approval and timing are Apple's decision; approval does not automatically authorize publication.

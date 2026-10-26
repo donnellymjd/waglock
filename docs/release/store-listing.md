@@ -1,3 +1,5 @@
+> **Current handoff:** use [build 64 metadata and copy-ready text](app-store/README.md). The listing and screenshot references below are historical drafts. Actual account fields have not been saved or verified by this work.
+
 # WagLock first-release listing draft
 
 **Not submitted.** Validate against the final release archive and the [readiness gates](submission-plan.md). Do not copy draft qualifications into a public product description or advertise unfinished functionality. Actual release screenshots are prepared under [build50 captures](screenshots/build50/README.md); private Apple account fields and distribution/compliance steps remain pending.

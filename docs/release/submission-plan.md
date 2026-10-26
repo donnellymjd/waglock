@@ -1,3 +1,5 @@
+> **Current status, October 26:** build 63 security/provider acceptance is complete; build 64 validation is in progress. [Pre-launch status](prelaunch-status.md) and the [submission handoff](app-store/README.md) supersede the historical candidate checkpoints below. Provisioning, account and compliance gates remain; no upload/submission has occurred.
+
 > **October26 current candidate: build62.** [Vault-password backup option and private reminders](evidence/build-62/README.md) passes349 unit/security tests, actual-release UI and independent public-fixture age/helper recovery. Installed over61 with Dev44 retained; owner UAT and account-side distribution gates remain. Older checkpoints below are historical. No upload/submission.
 
 > **October26 current candidate: build61.** [Explicit confirmation after password-manager fill](evidence/build-61/README.md) passes the actual-release UI workflow and signed package/live association checks. Installed over60 with Dev44 retained; owner1Password UAT is pending. Older checkpoints below are historical. No upload/submission.

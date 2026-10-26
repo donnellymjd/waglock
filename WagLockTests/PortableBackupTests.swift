@@ -14,6 +14,18 @@ final class PortableBackupTests: XCTestCase {
         }
     }
 
+    func testSuggestedExportNameUsesGregorianUTCAndSeparatesRapidBackups() {
+        for (seconds, expected) in [(0.0, "WagLock-Backup-1970-01-01-000000-000Z"),
+            (1609459199.125, "WagLock-Backup-2020-12-31-235959-125Z"),
+            (1609459200.0, "WagLock-Backup-2021-01-01-000000-000Z")] {
+            let name = PortableBackupSession.suggestedExportName(at: Date(timeIntervalSince1970: seconds))
+            XCTAssertEqual(name, expected)
+            XCTAssertEqual(PortableBackupSession.exportFilename(name), expected + ".tar.age")
+        }
+        XCTAssertNotEqual(PortableBackupSession.suggestedExportName(at: Date(timeIntervalSince1970: 0)),
+            PortableBackupSession.suggestedExportName(at: Date(timeIntervalSince1970: 0.125)))
+    }
+
     func testScryptRFC7914AndUnsafeParametersFailClosed() throws {
         let derived = try AgeFileWriter.scrypt(password: Data(), salt: Data(), n: 16, r: 1, p: 1, length: 64)
         XCTAssertEqual(derived.map { String(format: "%02x", $0) }.joined(), "77d6576238657b203b19ca42c18a0497f16b4844e3074ae8dfdffa3fede21442fcd0069ded0948f8326a753a0fc81f17e8d3e0fb2e0d3628cf35e20c38d18906")
