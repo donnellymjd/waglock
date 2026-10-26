@@ -545,22 +545,32 @@ final class AuthenticationViewModel: ObservableObject {
         return valid
     }
 
-    /// 更新密码（重新加密后调用）
+    var canChangeVaultPasswords: Bool {
+        isAuthenticated && GuestModeManager.shared.isOwnerMode && isPrimaryVault
+            && (!independentVaultsEnabled || vaultContext?.isActive == true)
+    }
+
+    /// Main-password changes are unavailable from a secondary session, even with its password.
     func updatePassword(oldPassword: String, newPassword: String) throws {
-        guard isAuthenticated, GuestModeManager.shared.isOwnerMode else { throw VaultAccessError.locked }
+        guard canChangeVaultPasswords else { throw VaultAccessError.locked }
         guard try verifyCurrentPassword(oldPassword) else { throw VaultAccessError.invalidPassword }
-        let dataPassword: String
-        if secondaryVaultID != nil {
-            dataPassword = try keychainService.changeIndependentGuestPassword(oldPassword: oldPassword, newPassword: newPassword).dataPassword
-        } else {
-            dataPassword = try keychainService.changePassword(oldPassword: oldPassword, newPassword: newPassword)
-        }
+        let dataPassword = try keychainService.changePassword(oldPassword: oldPassword, newPassword: newPassword)
         sessionPasswordData = SecureBytes(dataPassword)
         resumeAlbumAccess()
-
-        // 密码变更同样清空明文图片缓存，只保留新会话下的解密结果
         MediaLoaderService.shared.clearCache()
         ThumbnailImageLoader.shared.clearAll()
+    }
+
+    /// Synchronous on the main actor: authorization and commit cannot straddle a scene/session change.
+    func updateSecondaryPassword(primaryPassword: String, oldPassword: String, newPassword: String,
+                                 expectedSessionID: UUID) throws {
+        guard independentVaultsEnabled, canChangeVaultPasswords,
+              librarySessionID == expectedSessionID, vaultContext?.isActive == true else {
+            throw VaultAccessError.locked
+        }
+        _ = try keychainService.changeIndependentGuestPassword(primaryPassword: primaryPassword,
+            oldPassword: oldPassword, newPassword: newPassword)
+        // Preserve the primary session, both data keys and the existing biometric assignment.
     }
 
     func provisionSecondaryVault(password: String) throws {

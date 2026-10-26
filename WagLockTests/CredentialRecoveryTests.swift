@@ -60,7 +60,7 @@ struct CredentialRecoveryTests {
         #expect(throws: (any Error).self) { try EncryptionService.shared.decrypt(encryptedData: encrypted, password: primary) }
         let restarted = KeychainService(service: "recovery-fixture", storage: storage)
         #expect(try restarted.unlockIndependentGuest(password: "secondary-password") == guest)
-        #expect(try restarted.changeIndependentGuestPassword(oldPassword: "secondary-password", newPassword: "changed-secondary") == guest)
+        #expect(try restarted.changeIndependentGuestPassword(primaryPassword: "primary-password", oldPassword: "secondary-password", newPassword: "changed-secondary") == guest)
         #expect(throws: (any Error).self) { try restarted.unlockIndependentGuest(password: "secondary-password") }
         #expect(try restarted.unlockIndependentGuest(password: "changed-secondary") == guest)
         #expect(try restarted.retrieveDataPassword(using: "primary-password") == primary)
@@ -76,8 +76,8 @@ struct CredentialRecoveryTests {
         #expect(throws: (any Error).self) { try keychain.changePassword(oldPassword: "primary-password", newPassword: "secondary-password") }
         #expect(storage.items == previous)
         let guest = try keychain.unlockIndependentGuest(password: "secondary-password")
-        #expect(try keychain.changeIndependentGuestPassword(oldPassword: "secondary-password", newPassword: "primary-password") == guest)
-        #expect(try keychain.unlockIndependentGuest(password: "primary-password") == guest)
+        #expect(throws: VaultPasswordManagementError.self) { try keychain.changeIndependentGuestPassword(primaryPassword: "primary-password", oldPassword: "secondary-password", newPassword: "primary-password") }
+        #expect(try keychain.unlockIndependentGuest(password: "secondary-password") == guest)
         #expect(keychain.verifyPassword("primary-password"))
     }
 
@@ -91,10 +91,35 @@ struct CredentialRecoveryTests {
         storage.failWrites = false
         let guest = try keychain.provisionIndependentGuest(password: "secondary-password")
         let bothItems = storage.items
-        storage.failWrites = true
-        #expect(throws: (any Error).self) { try keychain.changeIndependentGuestPassword(oldPassword: "secondary-password", newPassword: "changed-secondary") }
-        #expect(storage.items == bothItems)
+        storage.failWriteAccounts = ["waglock.secondary-credentials.v1"]
+        #expect(throws: (any Error).self) { try keychain.changeIndependentGuestPassword(primaryPassword: "primary-password", oldPassword: "secondary-password", newPassword: "changed-secondary") }
+        #expect(storage.items[ownerAccount] == bothItems[ownerAccount])
+        #expect(storage.items["waglock.secondary-credentials.v1"] == bothItems["waglock.secondary-credentials.v1"])
         #expect(try keychain.unlockIndependentGuest(password: "secondary-password") == guest)
+    }
+
+    @Test func alternativeChangeNeedsFreshPrimaryPasswordAndChecksReadback() throws {
+        let (keychain, storage) = fixture()
+        let primary = try keychain.savePassword("primary-password")
+        let guest = try keychain.provisionIndependentGuest(password: "secondary-password")
+        let ownerRecord = storage.items[ownerAccount]
+        let guestRecord = storage.items["waglock.secondary-credentials.v1"]
+        #expect(throws: (any Error).self) {
+            try keychain.changeIndependentGuestPassword(primaryPassword: "wrong-primary",
+                oldPassword: "secondary-password", newPassword: "changed-secondary")
+        }
+        #expect(storage.items[ownerAccount] == ownerRecord)
+        #expect(storage.items["waglock.secondary-credentials.v1"] == guestRecord)
+        storage.dropWriteAccounts = ["waglock.secondary-credentials.v1"]
+        #expect(throws: VaultPasswordManagementError.self) {
+            try keychain.changeIndependentGuestPassword(primaryPassword: "primary-password",
+                oldPassword: "secondary-password", newPassword: "changed-secondary")
+        }
+        #expect(try keychain.unlockIndependentGuest(password: "secondary-password") == guest)
+        #expect(try keychain.retrieveDataPassword(using: "primary-password") == primary)
+        storage.dropWriteAccounts = []
+        #expect(try keychain.changeIndependentGuestPassword(primaryPassword: "primary-password",
+            oldPassword: "secondary-password", newPassword: "changed-secondary") == guest)
     }
 
     @Test func independentGuestUnavailableOrCorruptRecordDoesNotBecomeAbsence() throws {
@@ -403,6 +428,8 @@ private final class FaultKeychainStorage: KeychainStorage {
     var writes: [String] = []
     var failReads = false
     var failWrites = false
+    var failWriteAccounts: Set<String> = []
+    var dropWriteAccounts: Set<String> = []
     var failDeletes = false
 
     func read(account: String) throws -> Data {
@@ -412,7 +439,8 @@ private final class FaultKeychainStorage: KeychainStorage {
     }
 
     func write(account: String, data: Data, createOnly: Bool) throws {
-        if failWrites { throw KeychainError.unexpectedStatus(errSecNotAvailable) }
+        if failWrites || failWriteAccounts.contains(account) { throw KeychainError.unexpectedStatus(errSecNotAvailable) }
+        if dropWriteAccounts.contains(account) { return }
         if createOnly, items[account] != nil { throw KeychainError.duplicateItem }
         items[account] = data
         writes.append(account)

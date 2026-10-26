@@ -187,6 +187,7 @@ struct GuestModeSetupView: View {
     // MARK: - Methods
 
     private func saveGuestPassword() {
+        guard !LibraryStoragePolicy.encryptedMetadata || auth.canChangeVaultPasswords else { return }
         errorMessage = nil
 
         // 1. 验证格式

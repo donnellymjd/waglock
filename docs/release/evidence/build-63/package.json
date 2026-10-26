@@ -1,0 +1,20 @@
+{
+  "bundle": "com.d2sci.waglock",
+  "version": "1.0",
+  "build": "63",
+  "encryptedMetadata": true,
+  "licenseAndOriginalSourceHashesVerified": true,
+  "privacyReasonsVerified": true,
+  "executableSHA256": "ea01af3fbd7e4aa4943484dd2a3a9ea3778061a753b2ebac1884fe3263b8d17b",
+  "signatureVerifies": true,
+  "exportDeclarationPresent": false,
+  "readyForUpload": false,
+  "remainingGates": [
+    "security launch triage and independent guest-vault acceptance",
+    "physical acceptance",
+    "distribution signing/validation",
+    "distribution compliance review",
+    "account-holder privacy/export/territory/contact declarations",
+    "App Store record and manual-release submission"
+  ]
+}

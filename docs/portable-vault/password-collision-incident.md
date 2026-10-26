@@ -10,7 +10,7 @@ The secondary change rewraps its own independent credential only; it does not ov
 
 Do not fix this by checking proposed secondary passwords against the primary password: a different result would recreate the primary-password guessing oracle identified in the second security review. Do not prefer primary during a shared-password login: that could reveal the primary under duress. Do not reset, uninstall, migrate, remove credentials or add a normal login vault selector as incident recovery.
 
-## Non-destructive recovery in the existing app
+## Historical build62 recovery (completed before upgrading)
 
 1. Unlock with the shared password. This currently opens the secondary library.
 2. In Settings → Security & access → Change password, enter that shared password as the current password. Set and confirm a completely different new password, reserved for this library. Save it safely.
@@ -21,8 +21,20 @@ This changes only the selected secondary wrapper and preserves both data keys. F
 
 ## Regression evidence and remaining gate
 
-`SecondaryVaultAuthenticationTests.testSecondaryPasswordCollisionNeverSelectsOrChangesThePrimaryVault` now exercises two encrypted disposable samples: enable primary Face ID, change the secondary password to the primary password, confirm ordinary login stays secondary, confirm Face ID still targets primary, remove Face ID from primary, confirm ordinary login still selects secondary, change the secondary password to a distinct value, and verify both libraries' original data keys, storage roots, secondary identity and decrypted sample bytes survive.
+The pre-fix regression `SecondaryVaultAuthenticationTests.testSecondaryPasswordCollisionNeverSelectsOrChangesThePrimaryVault` exercised two encrypted disposable samples: enable primary Face ID, change the secondary password to the primary password, confirm ordinary login stays secondary, confirm Face ID still targets primary, remove Face ID from primary, confirm ordinary login still selects secondary, change the secondary password to a distinct value, and verify both libraries' original data keys, storage roots, secondary identity and decrypted sample bytes survive.
 
 The existing collision regression already checked moving the secondary password away restores primary routing. The expanded case covers the reported Face ID sequence and encrypted content preservation. All5 `SecondaryVaultAuthenticationTests` pass with0 failures in `/private/tmp/waglock-collision-recovery-final.xcresult`, including the expanded recovery regression. `git diff --check` passes. No production authentication behavior is changed by these regression tests.
 
 Main-vault phone access recovery is owner-confirmed. D2S-178 remains open until a reviewed collision/recoverability UX is chosen and validated. A generic instruction to use a unique password is insufficient evidence that recurrence has been prevented. Any proposed behavior must address accidental owner lockout, the secondary-password oracle and ordinary decoy-login confidentiality together.
+
+## Owner-approved prevention — build63
+
+On October26 the owner approved primary-only login-password management. Alternative sessions omit Change password and all alternative-management wording. Both authentication methods reject alternative-session password changes before any credential or attempt-budget reads. The obsolete secondary-authenticated rewrap service API is removed. Selected-vault password verification for backups and Face ID remains available and scoped; album passwords are unaffected.
+
+The main security screen retains Change password and adds Change alternative password. The latter requires the current main password, current alternative password, and a new confirmed alternative password. Face ID is not sufficient. Both current credentials have independent durable settings attempt budgets, reserved before verification. Fresh verification of the main password authorizes comparing the new alternative password against its exact UTF-8 bytes; a transient extra verifier read cannot accidentally permit a match. Main-password changes authenticate the current main password before checking against the alternative credential. Both directions reject a collision.
+
+Management is synchronous on the main actor, with the originating active primary session checked before the secondary operation. The form clears passwords and dismisses on background, logout or session replacement. Only the alternative credential wrapper is replaced; its source bytes and the primary source record are rechecked, and exact saved bytes are read back. No key changes, record deletion, rollback, biometric retargeting, file migration or reset occurs. An uncertain write reports failure without restoring stale credentials or deleting either key.
+
+Existing collision login still selects the alternative library. There is no new login selector, primary bypass or automatic credential rewrite. The owner's build62 collision was resolved and main access confirmed before this update. Recovery instructions above describe build62; they must not be offered as a guest-session password-change feature in build63. A preexisting collision with no primary biometric access needs separate recovery planning before upgrade.
+
+Verification and phone acceptance for build63 are recorded in [the candidate evidence](../release/evidence/build-63/README.md) when complete. The submission hold remains until this new management flow passes owner UAT.

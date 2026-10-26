@@ -7,9 +7,11 @@ import XCTest
 final class InMemoryAttemptStorage: KeychainStorage {
     nonisolated deinit { }
     var values: [String: Data] = [:]
+    var reads: [String] = []
     var unavailable = false
     var failWrites = false
     func read(account: String) throws -> Data {
+        reads.append(account)
         if unavailable { throw KeychainError.unexpectedStatus(errSecInteractionNotAllowed) }
         guard let value = values[account] else { throw KeychainError.itemNotFound }; return value
     }

@@ -34,6 +34,16 @@ enum KeychainError: Error {
     }
 }
 
+enum VaultPasswordManagementError: LocalizedError {
+    case matchingPasswords, credentialsChanged
+    var errorDescription: String? {
+        switch self {
+        case .matchingPasswords: return "Use different passwords for the main and alternative libraries."
+        case .credentialsChanged: return "The credential update could not be confirmed. Lock and unlock with the new password before retrying. Do not erase the library."
+        }
+    }
+}
+
 /// Keychain密码管理服务
 /// Owner verification and data-secret wrapping share one authenticated record.
 /// Legacy salted SHA-256 credentials remain readable until successful promotion.
@@ -205,8 +215,10 @@ class KeychainService: LibraryIdentityAnchor, LibraryCommitAnchor {
     @discardableResult
     func changePassword(oldPassword: String, newPassword: String) throws -> String {
         guard Self.validatePasswordStrength(newPassword).isValid else { throw KeychainError.invalidData }
-        guard !verifyGuestPassword(newPassword), !(try matchesIndependentGuestPassword(newPassword)) else { throw KeychainError.invalidData }
         let dataPassword = try readDataPassword(using: oldPassword)
+        guard !verifyGuestPassword(newPassword), !(try matchesIndependentGuestPassword(newPassword)) else {
+            throw VaultPasswordManagementError.matchingPasswords
+        }
         let record = try encodeOwnerCredentials(dataPassword, using: newPassword)
         // The only required mutation: verifier and wrapped key cannot diverge.
         try storage.write(account: ownerAccount, data: record, createOnly: false)
@@ -481,14 +493,39 @@ extension KeychainService {
         return credential
     }
 
+    /// Primary-only management: no secondary-authenticated password-change API exists.
+    /// Fresh primary verification is budgeted even when the caller entered through Face ID.
     @discardableResult
-    func changeIndependentGuestPassword(oldPassword: String, newPassword: String) throws -> IndependentGuestCredential {
+    func changeIndependentGuestPassword(primaryPassword: String, oldPassword: String,
+                                        newPassword: String) throws -> IndependentGuestCredential {
+        let ownerLimiter = passwordAttemptLimiter(scope: "settings:primary")
+        let ownerAttempt = try ownerLimiter.reserve()
+        _ = try readDataPassword(using: primaryPassword)
+        try ownerLimiter.recordSuccess(ownerAttempt)
         guard Self.validatePasswordStrength(newPassword).isValid else { throw KeychainError.invalidData }
-        // Never inspect the primary credential from a secondary password-change request.
-        // Login gives a matching secondary credential precedence, including a collision.
-        let credential = try unlockIndependentGuest(password: oldPassword)
-        let record = try encodeIndependentGuest(credential, password: newPassword)
-        try storage.write(account: independentGuestAccount, data: record, createOnly: false)
+        let original = try storage.read(account: independentGuestAccount)
+        let originalOwner = try storage.read(account: ownerAccount)
+        let record = try decodeIndependentGuestRecord(original)
+        let guestLimiter = passwordAttemptLimiter(scope: "settings:" + record.vaultID.uuidString)
+        let guestAttempt = try guestLimiter.reserve()
+        let credential = try openIndependentGuest(record, password: oldPassword)
+        try guestLimiter.recordSuccess(guestAttempt)
+        // This comparison is reachable only after freshly authenticating the primary owner.
+        // Compare exact UTF-8 against the freshly verified password; do not turn a failed
+        // extra Keychain read into a false "different password" result.
+        guard !newPassword.utf8.elementsEqual(primaryPassword.utf8) else {
+            throw VaultPasswordManagementError.matchingPasswords
+        }
+        let replacement = try encodeIndependentGuest(credential, password: newPassword)
+        guard try storage.read(account: independentGuestAccount) == original,
+              try storage.read(account: ownerAccount) == originalOwner else {
+            throw VaultPasswordManagementError.credentialsChanged
+        }
+        try storage.write(account: independentGuestAccount, data: replacement, createOnly: false)
+        // An uncertain write must not trigger rollback or key deletion.
+        guard try storage.read(account: independentGuestAccount) == replacement else {
+            throw VaultPasswordManagementError.credentialsChanged
+        }
         return credential
     }
 

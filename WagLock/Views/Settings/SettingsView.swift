@@ -28,6 +28,7 @@ struct SettingsView: View {
     @State private var showChangePasswordSheet = false
     @State private var showAboutSheet = false
     @State private var showGuestModeSetup = false
+    @State private var showAlternativePasswordChange = false
     @State private var showGuestModeDisableConfirmation = false
     @State private var storageInfo: StorageInfo?
     @State private var isLoadingStorage = false
@@ -46,7 +47,7 @@ struct SettingsView: View {
                             List { securitySection }.wagLockList().navigationTitle("Security & access")
                                 .navigationBarTitleDisplayMode(.inline)
                         } label: {
-                            settingsCard("lock.shield", "Security & access", LibraryStoragePolicy.encryptedMetadata ? (authViewModel.canManageBiometricUnlock ? "Face ID, password and auto-lock" : "Password and auto-lock") : "Face ID, password and Guest Mode")
+                            settingsCard("lock.shield", "Security & access", LibraryStoragePolicy.encryptedMetadata ? (authViewModel.canManageBiometricUnlock ? "Face ID and auto-lock" : "Auto-lock") : "Face ID, password and Guest Mode")
                         }.accessibilityIdentifier("settings.security")
                     }
                     VStack(alignment: .leading, spacing: 8) {
@@ -101,8 +102,15 @@ struct SettingsView: View {
             Text(String(localized: "settings.logout.message"))
         }
         .sheet(isPresented: $showChangePasswordSheet) {
-            ChangePasswordView()
-                .environmentObject(authViewModel)
+            if authViewModel.canChangeVaultPasswords {
+                ChangePasswordView().environmentObject(authViewModel)
+            }
+        }
+        .sheet(isPresented: $showAlternativePasswordChange) {
+            if authViewModel.canChangeVaultPasswords {
+                AlternativePasswordChangeView(sessionID: authViewModel.librarySessionID)
+                    .environmentObject(authViewModel)
+            }
         }
         .sheet(isPresented: $showAboutSheet) {
             AboutView()
@@ -199,9 +207,11 @@ struct SettingsView: View {
                         securityRow("faceid", "Face ID", authViewModel.isBiometricUnlockEnabled ? "Enabled" : "Disabled")
                     }.accessibilityIdentifier("settings.faceID").wagLockCardRow()
                     }
-                    Button { showChangePasswordSheet = true } label: {
-                        securityRow("key", "Change password", "Verify your current password")
-                    }.accessibilityIdentifier("settings.changePassword").wagLockCardRow()
+                    if authViewModel.canChangeVaultPasswords {
+                        Button { showChangePasswordSheet = true } label: {
+                            securityRow("key", "Change password", "Verify your current password")
+                        }.accessibilityIdentifier("settings.changePassword").wagLockCardRow()
+                    }
                 }
                 if LibraryStoragePolicy.encryptedMetadata {
                     securityRow("lock.rotation", "Auto-lock", "Immediately when you leave the app")
@@ -228,7 +238,9 @@ struct SettingsView: View {
             Section {
                 if LibraryStoragePolicy.encryptedMetadata && authViewModel.isPrimaryVault {
                     if authViewModel.hasSecondaryVault {
-                        Text("Alternative passcode configured").foregroundStyle(.secondary)
+                        Button { showAlternativePasswordChange = true } label: {
+                            securityRow("key.horizontal", "Change alternative password", "Verify both current passwords")
+                        }.accessibilityIdentifier("settings.guest.changePassword").wagLockCardRow()
                     } else {
                         Button { showGuestModeSetup = true } label: {
                             securityRow("eye.slash", "Set up alternative passcode", "Open a separate encrypted library")
@@ -498,32 +510,93 @@ struct ChangePasswordView: View {
     }
 
     private func changePassword() {
-        errorMessage = nil
+        guard isValid, !isChanging else { return }
+        errorMessage = nil; isChanging = true
+        defer { isChanging = false }
+        do {
+            try authViewModel.updatePassword(oldPassword: currentPassword, newPassword: newPassword)
+            clearPasswordInputs(); dismiss()
+        } catch {
+            clearPasswordInputs()
+            errorMessage = (error as? VaultPasswordManagementError)?.errorDescription
+                ?? "The password could not be changed. Check your current password and try again. Repeated incorrect attempts require a wait."
+        }
+    }
 
-        // 开始修改密码
-        isChanging = true
+}
 
-        Task {
-            do {
-                try authViewModel.updatePassword(
-                    oldPassword: currentPassword,
-                    newPassword: newPassword
-                )
+// MARK: - Primary-authorized alternative password management
 
-                await MainActor.run {
-                    isChanging = false
-                    dismiss()
+struct AlternativePasswordChangeView: View {
+    let sessionID: UUID
+    @EnvironmentObject private var auth: AuthenticationViewModel
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var keyboard: PasswordKeyboard = .fullKeyboard
+    @State private var primaryPassword = ""
+    @State private var currentPassword = ""
+    @State private var newPassword = ""
+    @State private var confirmation = ""
+    @State private var errorMessage: String?
+    @State private var isChanging = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Authorize this change") {
+                    Text("Enter your main password and the current alternative password. Face ID alone cannot authorize this change.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                    PasswordKeyboardPicker(selection: $keyboard).onChange(of: keyboard) { _, _ in hideKeyboard() }
+                    passwordField("Main password", text: $primaryPassword, id: "alternativeChange.primary", content: .password)
+                    passwordField("Current alternative password", text: $currentPassword, id: "alternativeChange.current", content: .password)
                 }
-
-            } catch {
-                await MainActor.run {
-                    isChanging = false
-                    errorMessage = String(
-                        format: String(localized: "settings.changePassword.error.generic"),
-                        error.localizedDescription
-                    )
+                Section("New alternative password") {
+                    passwordField("New password", text: $newPassword, id: "alternativeChange.new", content: .newPassword)
+                    passwordField("Confirm new password", text: $confirmation, id: "alternativeChange.confirm", content: .newPassword)
+                    PasswordConfirmationButton(password: newPassword, confirmation: $confirmation,
+                        identifier: "alternativeChange.confirmEntered")
+                    PasswordStrengthView(password: newPassword)
+                    Text("Use a different password from your main library. This changes the alternative login password; both libraries and their contents are preserved.")
+                        .font(.footnote).foregroundStyle(.secondary)
                 }
-            }
+                if let errorMessage { Section { Text(errorMessage).foregroundStyle(.red).accessibilityIdentifier("alternativeChange.error") } }
+                Section {
+                    Button("Change alternative password", action: save)
+                        .accessibilityIdentifier("alternativeChange.save")
+                        .disabled(isChanging || !isValid || !auth.canChangeVaultPasswords)
+                }
+            }.wagLockList().scrollDismissesKeyboard(.interactively)
+                .navigationTitle("Alternative password").navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        }
+        .onDisappear { clear() }
+        .onChange(of: scenePhase) { _, phase in if phase == .background { clear(); dismiss() } }
+        .onChange(of: auth.librarySessionID) { _, _ in clear(); dismiss() }
+        .onChange(of: auth.isAuthenticated) { _, value in if !value { clear(); dismiss() } }
+    }
+
+    private func passwordField(_ title: String, text: Binding<String>, id: String,
+                               content: UITextContentType) -> some View {
+        SecureField(title, text: text).textContentType(content).keyboardType(keyboard.keyboardType)
+            .textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier(id)
+    }
+    private var isValid: Bool {
+        !primaryPassword.isEmpty && !currentPassword.isEmpty && newPassword.utf8.elementsEqual(confirmation.utf8)
+            && KeychainService.validatePasswordStrength(newPassword).isValid
+    }
+    private func clear() { primaryPassword = ""; currentPassword = ""; newPassword = ""; confirmation = ""; errorMessage = nil }
+    private func save() {
+        guard isValid, !isChanging else { return }
+        hideKeyboard(); isChanging = true; errorMessage = nil
+        defer { isChanging = false }
+        do {
+            try auth.updateSecondaryPassword(primaryPassword: primaryPassword, oldPassword: currentPassword,
+                newPassword: newPassword, expectedSessionID: sessionID)
+            clear(); dismiss()
+        } catch {
+            clear()
+            errorMessage = (error as? VaultPasswordManagementError)?.errorDescription
+                ?? "The password could not be changed. Check both current passwords and try again. Repeated incorrect attempts require a wait. If the change was interrupted, try the new password before retrying."
         }
     }
 }

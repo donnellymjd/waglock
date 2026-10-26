@@ -89,3 +89,8 @@ The owner authorized the complete export work, cryptographic options and optiona
 ## Owner follow-up — October26,2026: D2S-177
 
 Offer explicit verified reuse of the selected vault password for backup. Warn about offline guessing and creation-time passwords for older exports; keep independent password/recovery-key options and protected-album factors. Enable monthly backup reminders by default with frequency/off settings. Build62 implements private reminders only after unlock, separate per vault, with no notification or automatic upload. [Contract/evidence](backup-password-and-reminders.md).
+
+
+### October26 collision prevention — D2S-178
+
+Owner-approved1.0 scope: main settings manage both login passwords; alternative settings omit password changes and must not reveal another library. Existing alternative-password changes require fresh main and current alternative password verification, independently durable attempt limits and the originating active primary session. Reject collisions in both directions without a secondary-session primary-password check. Preserve keys, independent stores, biometric ownership and selected-vault album/backup verification. [Accepted design and recovery history](password-collision-incident.md). Phone acceptance is a release gate.
