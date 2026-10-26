@@ -1,4 +1,4 @@
-> **October25 build60:** forgotten-password help and explicit erase/start-over are verified by342 unit/security tests and the full actual-release simulator workflow. [Evidence and deliberate hardware test](../release/evidence/build-60/README.md). Signed candidate60 is ready; phone installation/UAT is pending connection. Nothing has been erased on the phone. Earlier build notes below are historical.
+> **October25 build60:** forgotten-password help and explicit erase/start-over are verified by342 unit/security tests and the full actual-release simulator workflow. [Evidence and deliberate hardware test](../release/evidence/build-60/README.md). Signed candidate60 installed successfully over59; installed inventory confirms60 and retained Dev44. Owner UAT is pending. Nothing has been erased on the phone. Earlier build notes below are historical.
 
 # WagLock development build and phone testing
 

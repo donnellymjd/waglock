@@ -1,4 +1,4 @@
-> **October25 current work: build60.** [Forgotten-password help and explicit erasure](../evidence/build-60/README.md) has342 passing unit/security tests plus a passing full release erase/cancel/fresh-library UI workflow; phone installation/UAT is pending. Build59 AutoFill association is live; provider UAT remains pending. Older checkpoints below are historical. No upload/submission.
+> **October25 current work: build60.** [Forgotten-password help and explicit erasure](../evidence/build-60/README.md) has342 passing unit/security tests plus a passing full release erase/cancel/fresh-library UI workflow; build60 is installed, with owner UAT pending. Build59 AutoFill association is live; provider UAT remains pending. Older checkpoints below are historical. No upload/submission.
 
 > **Build58 UAT follow-up:** fixes hidden Face ID controls for an authenticated pre-ownership enrollment. See [evidence](../evidence/build-58/README.md); owner confirmation is pending. Older candidate status below is historical.
 
