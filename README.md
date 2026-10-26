@@ -178,7 +178,7 @@ Start with [AGENTS.md](AGENTS.md) and the [development documentation](docs/porta
 
 For bug reports, include the build number, device/iOS version and steps using disposable samples. Do not include passwords, recovery material or private media. Security-sensitive reports should omit exploit details from public issues until a private reporting route is agreed.
 
-Older upstream guides, store copy and changelogs may describe historical behavior. Use the WagLock development docs and current implementation evidence as the source of truth.
+Upstream-era guides and store copy have been removed; the historical upstream README is kept under `docs/portable-vault/provenance/`. Use the WagLock development docs and current implementation evidence as the source of truth. See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 ## License and attribution
 
