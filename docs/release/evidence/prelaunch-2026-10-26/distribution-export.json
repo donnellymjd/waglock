@@ -1,11 +1,21 @@
 {
   "candidateBuild": "64",
-  "localExport": "failed",
+  "localExport": "passed",
+  "ownerApproval": "Explicitly approved refreshing/creating distribution signing resources for existing WagLock App ID on October26",
+  "provisioningRefresh": "Executed through Xcode -allowProvisioningUpdates with destination export",
+  "previousAttempt": {
+    "candidateBuild": "64",
+    "localExport": "failed",
+    "uploaded": false,
+    "error": "Distribution profile for com.d2sci.waglock does not include Associated Domains capability/entitlement.",
+    "appleDevelopmentIdentities": 1,
+    "appleDistributionIdentities": 0,
+    "appStoreConnectAPICredentialConfigured": false,
+    "provisioningRefresh": "not executed: automatic approval review rejected account-resource mutation; explicit owner approval required",
+    "previousBuildSameFailure": "63"
+  },
+  "verificationReceipt": "../build-64/distribution-signing.json",
   "uploaded": false,
-  "error": "Distribution profile for com.d2sci.waglock does not include Associated Domains capability/entitlement.",
-  "appleDevelopmentIdentities": 1,
-  "appleDistributionIdentities": 0,
-  "appStoreConnectAPICredentialConfigured": false,
-  "provisioningRefresh": "not executed: automatic approval review rejected account-resource mutation; explicit owner approval required",
-  "previousBuildSameFailure": "63"
+  "submitted": false,
+  "appStoreServerValidation": "not performed"
 }

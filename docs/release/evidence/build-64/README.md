@@ -14,6 +14,6 @@ Actual Release64 reset and decoy UI also pass, one test each with zero failures/
 
 ## External gates
 
-Local export of this exact64 archive fails because the existing distribution profile lacks Associated Domains. No provisioning updates or upload were performed. Automatic approval review rejected a provisioning refresh as an unapproved persistent Apple-account change; explicit owner approval is required. Preserve the accepted AutoFill entitlement.
+The first local export failed because its distribution profile lacked Associated Domains. After explicit owner approval, Xcode provisioning refresh/export succeeded. The IPA is `/private/tmp/waglock-build64-store-export-refreshed/WagLock.ipa`; distribution-package.json, distribution-association.json and distribution-signing.json verify the actual Apple Distribution signature, App Store profile, disabled debugger entitlement, exact association and IPA digest. Existing credentials were not explicitly revoked/deleted. No upload/submission or App Store server validation was performed.
 
 The [current ledger](../../prelaunch-status.md) records account fields, encryption/territories and source/platform distribution decisions still required before submission. Passing engineering checks is not an independent audit or App Store approval.

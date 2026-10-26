@@ -9,11 +9,6 @@
       "evidence": "355 tests and actual Release64 backup/reset/decoy UI pass; eight native reviewed screenshots, signed archive and phone install complete. Source receipt binds the candidate; short phone dated-filename check pending."
     },
     {
-      "id": "distribution-profile",
-      "status": "blocked",
-      "evidence": "Local export lacks Associated Domains; provisioning refresh rejected by automatic approval review, explicit owner approval required."
-    },
-    {
       "id": "encryption-and-territories",
       "status": "pending",
       "evidence": "Complete Apple questionnaire/determination and any required documentation; no classification/code invented."
@@ -31,7 +26,7 @@
     {
       "id": "distribution-validation-and-upload",
       "status": "pending",
-      "evidence": "Export/validate corrected signing, upload selected final candidate, choose manual release; none performed."
+      "evidence": "Local distribution export/signature/profile checks pass. App Store server validation/upload and selected final build/manual release remain; no upload/submission authorized or performed in this signing step."
     }
   ],
   "readyForSubmission": false,

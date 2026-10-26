@@ -1,5 +1,5 @@
 {
-  "status": "engineering-verified-build64-awaiting-phone-name-check-and-external-gates",
+  "status": "engineering-and-local-distribution-signing-verified-awaiting-phone-name-check-and-external-gates",
   "bundleId": "com.d2sci.waglock",
   "version": "1.0",
   "build": "64",

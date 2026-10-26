@@ -1,4 +1,4 @@
-> Current October26 checkpoint: accepted63; candidate64 adds dated backup names without a cryptographic format change. [Pre-launch ledger](prelaunch-status.md) supersedes historical build45/50 account status below. Data Not Collected remains the engineering recommendation, not an assertion that the account-holder has filed it. Local63 export now finds a distribution profile but fails its Associated Domains entitlement check; automatic provisioning refresh was rejected and requires explicit authorization.
+> Current October26 checkpoint: accepted63; candidate64 adds dated backup names without a cryptographic format change. [Pre-launch ledger](prelaunch-status.md) supersedes historical build45/50 account status below. Data Not Collected remains the engineering recommendation, not an assertion that the account-holder has filed it. After explicit owner approval, provisioning refresh and local64 distribution export/signature/AutoFill checks pass. App Store server validation and account declarations remain.
 
 # Privacy and encryption submission worksheet
 

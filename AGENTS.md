@@ -115,3 +115,8 @@ Owner confirms no current external users and explicitly removes older-version co
 ## Build64 launch engineering closeout — October26
 
 Current355-test suite and actual-release dated/custom-backup, decoy-copy/isolation and explicit erase/cancel/fresh-library UI pass. Eight native public iPhone/iPad captures are verified. D2S-105/116 and scoped162/167/169/170/172/173/175/176/177 implementation/evaluation tasks are Done;178 was already accepted. See docs/portable-vault/audits/launch-closeout-2026-10-26.md and docs/release/prelaunch-status.md; historical open/hold statements above are superseded only within their documented scope. Exact64 local distribution export still fails for missing Associated Domains in the store profile. Do not remove accepted AutoFill or perform provisioning changes without the explicit approval required after automatic review rejection. No independent audit certification or App Store readiness is implied.
+
+
+## Build64 distribution signing approval and completion — October26
+
+Owner explicitly approved refreshing/creating distribution signing resources for the existing WagLock App ID, preserving existing credentials, without upload/submission. Xcode -allowProvisioningUpdates local export succeeded. The exported IPA verifies Apple Distribution signing, an App Store profile, no debugger entitlement and the exact accepted webcredentials association. See docs/release/evidence/build-64/distribution-signing.json. Prior blocked-provisioning statements are historical for this approved repair. No credential revocation/deletion was requested, no upload/submission occurred, and broader account/compliance gates remain. Preserve immutable candidate-1.0-build64; signing receipts do not require recompiling or retagging source.

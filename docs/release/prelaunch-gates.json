@@ -19,8 +19,8 @@
     },
     {
       "id": "distribution-profile",
-      "status": "blocked",
-      "evidence": "Local export lacks Associated Domains; provisioning refresh rejected by automatic approval review, explicit owner approval required."
+      "status": "passed",
+      "evidence": "Owner-authorized Xcode provisioning refresh and local64 export succeeded. Apple Distribution signature, App Store profile, no debugger entitlement and exact AutoFill domain verified; distribution-signing.json."
     },
     {
       "id": "encryption-and-territories",
@@ -40,7 +40,7 @@
     {
       "id": "distribution-validation-and-upload",
       "status": "pending",
-      "evidence": "Export/validate corrected signing, upload selected final candidate, choose manual release; none performed."
+      "evidence": "Local distribution export/signature/profile checks pass. App Store server validation/upload and selected final build/manual release remain; no upload/submission authorized or performed in this signing step."
     }
   ]
 }
