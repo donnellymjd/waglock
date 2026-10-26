@@ -1,9 +1,9 @@
-# 音频备忘录
+# Audio memos
 
-用户已确认：底部 Tab 为相片、视频、音频、文件、记事本；设置改为各主页右上角入口。
+Confirmed by the user: the bottom tabs are Photos, Videos, Audio, Files and Notes; Settings moves to a top-right entry on each main screen.
 
-音频页提供文件导入、录音、暂停/继续、实时音量波形、保存/取消、播放/暂停、拖动进度、重命名和确认删除。沿用 SwiftData MediaItem，增加 audio 类型，保持原有 rawValue 兼容。旧版本作为文档导入的音频在音频页兼容显示，不做全量数据库迁移。
+The Audio screen offers file import, recording, pause/resume, a live level waveform, save/cancel, play/pause, scrubbing, rename and confirmed delete. It reuses the SwiftData MediaItem model with a new audio type, keeping existing rawValue compatibility. Audio previously imported as documents in older versions is shown on the Audio screen for compatibility, without a full database migration.
 
-保存采用现有流式加密，不引入网络和新依赖。录音临时目录启用完整文件保护；保存成功或取消时删除明文。进入后台结束并保存录音，播放停止并清除解密文件；退出认证取消未完成操作。短暂系统中断暂停录音，由用户手动继续。失败显示错误，前台保存失败可重试。访客模式不展示真实音频、不允许录音或导入。音频遵守原有免费条目限制。
+Saving uses the existing streaming encryption, with no networking and no new dependencies. The recording temporary directory uses complete file protection; plaintext is deleted after a successful save or a cancel. Going to the background ends and saves the recording, and playback stops and deletes the decrypted file; leaving the authenticated session cancels unfinished work. Brief system interruptions pause recording, and the user resumes manually. Failures show an error, and a failed foreground save can be retried. Guest mode shows no real audio and allows no recording or import. Audio follows the existing free item limit.
 
-首版不含剪辑、语音转写、云同步、后台持续录音。验证包括类型兼容、真实音频加密往返、无效文件拒绝、取消清理、构建及模拟器 UI；麦克风硬件与来电场景保留真机验收。
+The first version excludes editing, transcription, cloud sync and continuous background recording. Verification covers type compatibility, a real audio encryption round trip, rejection of invalid files, cleanup on cancel, the build and simulator UI; microphone hardware and incoming-call scenarios remain for physical-device acceptance.

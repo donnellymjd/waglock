@@ -2,17 +2,17 @@
 //  AppConstants.swift
 //  WagLock
 //
-//  全局常量配置
+//  Global constants
 //
 
 import Foundation
 
-/// 应用全局常量
+/// App-wide constants
 nonisolated enum AppConstants {
 
     // MARK: - App Info
 
-    /// 应用名称
+    /// App name
     static let appName = "WagLock"
 
     /// Presentation language for the English-only beta; never normalize user content.
@@ -20,12 +20,12 @@ nonisolated enum AppConstants {
     static let tagline = "We Always Guard"
     static let developmentNotice = "Early test build. Use sample media only. Portable recovery and security hardening are still in development."
 
-    /// 应用版本（从 Info.plist 读取，跟随 MARKETING_VERSION，避免手写过期）
+    /// App version (read from Info.plist; follows MARKETING_VERSION so it never goes stale)
     static var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.8"
     }
 
-    /// 构建号（跟随 CURRENT_PROJECT_VERSION）
+    /// Build number (follows CURRENT_PROJECT_VERSION)
     static var buildNumber: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "21"
     }
@@ -33,88 +33,88 @@ nonisolated enum AppConstants {
     /// Bundle Identifier
     static let bundleIdentifier = Bundle.main.bundleIdentifier ?? "com.d2sci.vaultito.dev"
 
-    /// GitHub仓库地址
+    /// GitHub repository URL
     static let githubRepositoryURL = "https://github.com/donnellymjd/waglock"
     static let privacyPolicyURL = URL(string: "https://github.com/donnellymjd/waglock/blob/main/PRIVACY_POLICY.md")!
     static let supportURL = URL(string: "https://github.com/donnellymjd/waglock/blob/main/docs/release/support.md")!
 
     // MARK: - Security
 
-    /// 最小密码长度
+    /// Minimum password length
     static let minPasswordLength = 6
 
-    /// 最大密码长度
+    /// Maximum password length
     static let maxPasswordLength = 128
 
-    /// 密码验证延迟（防暴力破解，秒）
+    /// Password verification delay (brute-force mitigation, seconds)
     static let passwordVerificationDelay: Double = 0.5
 
-    /// PBKDF2迭代次数（密钥派生）
+    /// PBKDF2 iteration count (key derivation)
     static let pbkdf2Iterations = 100_000
 
-    /// 盐值长度（字节）
+    /// Salt length (bytes)
     static let saltLength = 16
 
-    /// AES-GCM IV长度（字节）
+    /// AES-GCM IV length (bytes)
     static let ivLength = 12
 
-    /// AES-GCM 标签长度（字节）
+    /// AES-GCM tag length (bytes)
     static let tagLength = 16
 
     // MARK: - Storage
 
-    /// 加密文件存储目录名
+    /// Encrypted file storage directory name
     static let encryptedMediaDirectory = "EncryptedMedia"
 
-    /// 加密文件扩展名
+    /// Encrypted file extension
     static let encryptedFileExtension = ".encrypted"
 
-    /// 缩略图最大尺寸（像素）
+    /// Maximum thumbnail size (pixels)
     static let thumbnailMaxSize: CGFloat = 300
 
-    /// 预览图片解码上限，避免高像素照片在翻页时造成内存和主线程压力
+    /// Preview decode limit, so high-resolution photos don't strain memory and the main thread while paging
     static let previewImageMaxPixelSize: CGFloat = 3_072
 
-    /// 缩略图JPEG压缩质量（0.0-1.0）
+    /// Thumbnail JPEG compression quality (0.0-1.0)
     static let thumbnailCompressionQuality: CGFloat = 0.7
 
-    /// 最大文件大小（字节，500MB）
+    /// Maximum file size (bytes, 500 MB)
     static let maxFileSize: Int64 = 500 * 1024 * 1024
 
     // MARK: - UI
 
-    /// 网格列数（默认）
+    /// Grid column count (default)
     static let defaultGridColumns = 3
 
-    /// 网格列数范围
+    /// Grid column count range
     static let gridColumnsRange = 2...4
 
-    /// 网格间距
+    /// Grid spacing
     static let gridSpacing: CGFloat = 8
 
-    /// 动画时长
+    /// Animation duration
     static let animationDuration: Double = 0.3
 
     // MARK: - Media
 
-    /// 支持的图片格式
+    /// Supported image formats
     static let supportedImageFormats = ["jpg", "jpeg", "png", "heic", "heif", "gif", "bmp", "tiff"]
 
-    /// 支持的视频格式
+    /// Supported video formats
     static let supportedVideoFormats = ["mp4", "mov", "m4v", "avi", "mkv"]
 
-    /// 视频缩略图时间点（秒）
+    /// Video thumbnail time offset (seconds)
     static let videoThumbnailTime: Double = 1.0
 
     // MARK: - Notifications
 
-    /// 媒体导入完成通知
+    /// Media import finished notification
     static let mediaImportedNotification = "MediaImportedNotification"
 
-    /// 媒体删除通知
+    /// Media deleted notification
     static let mediaDeletedNotification = "MediaDeletedNotification"
 
-    /// 存储空间不足通知
+    /// Storage full notification
     static let storageFullNotification = "StorageFullNotification"
 }
 
@@ -122,35 +122,35 @@ nonisolated enum AppConstants {
 
 extension AppConstants {
 
-    /// UserDefaults键
+    /// UserDefaults keys
     enum UserDefaultsKeys {
-        /// 排序方式
+        /// Sort order
         static let sortOrder = "sortOrder"
 
-        /// 网格列数
+        /// Grid column count
         static let gridColumns = "gridColumns"
 
-        /// 首次启动
+        /// First launch
         static let isFirstLaunch = "isFirstLaunch"
 
-        /// 最后访问时间
+        /// Last access time
         static let lastAccessTime = "lastAccessTime"
 
-        /// 伪装模式启用状态
+        /// Disguise (calculator) mode enabled
         static let disguiseModeEnabled = "disguiseModeEnabled"
 
-        /// 伪装模式密码序列
+        /// Disguise (calculator) mode password sequence
         static let disguisePasswordSequence = "disguisePasswordSequence"
 
-        /// 是否已解锁无限导入
+        /// Whether unlimited imports were unlocked
 
-        /// 访客模式启用状态
+        /// Guest mode enabled
         static let guestModeEnabled = "guestModeEnabled"
 
-        /// 离开后自动锁定时长（秒）
+        /// Auto-lock delay after leaving the app (seconds)
         static let autoLockTimeout = "autoLockTimeout"
 
-        /// 应用已完成初始化（用于检测卸载重装）
+        /// App has finished initialization (used to detect uninstall/reinstall)
         static let appInitialized = "appInitialized"
     }
 }
@@ -159,7 +159,7 @@ extension AppConstants {
 
 extension AppConstants {
 
-    /// 错误消息
+    /// Error messages
     enum ErrorMessages {
         static var passwordTooShort: String {
             String(

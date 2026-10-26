@@ -3,8 +3,8 @@
 //  SecretNote.swift
 //  WagLock
 //
-//  隐藏空间笔记数据模型
-//  支持Markdown格式的私密笔记
+//  Secret space note data model
+//  Private notes with Markdown support
 //
 
 import Foundation
@@ -15,25 +15,25 @@ final class SecretNote {
 
     // MARK: - Properties
 
-    /// 笔记唯一标识符
+    /// Note unique identifier
     var id: UUID
 
-    /// 笔记标题
+    /// Note title
     var title: String
 
-    /// 笔记内容 (Markdown格式)
+    /// Note content (Markdown)
     var content: String
 
-    /// 创建时间
+    /// Creation time
     var createdAt: Date
 
-    /// 最后修改时间
+    /// Last modified time
     var modifiedAt: Date
 
-    /// 是否收藏
+    /// Whether the note is a favorite
     var isFavorite: Bool
 
-    /// 标签 (可选,用于分类)
+    /// Tags (optional, for categorization)
     var tags: [String]
 
     // MARK: - Initialization
@@ -55,7 +55,7 @@ final class SecretNote {
 
     // MARK: - Computed Properties
 
-    /// 格式化的创建时间
+    /// Formatted creation date
     var formattedCreatedDate: String {
         let formatter = DateFormatter()
         formatter.locale = AppConstants.presentationLocale
@@ -64,7 +64,7 @@ final class SecretNote {
         return formatter.string(from: createdAt)
     }
 
-    /// 格式化的修改时间
+    /// Formatted modification date
     var formattedModifiedDate: String {
         let formatter = DateFormatter()
         formatter.locale = AppConstants.presentationLocale
@@ -73,7 +73,7 @@ final class SecretNote {
         return formatter.string(from: modifiedAt)
     }
 
-    /// 笔记预览 (前100个字符)
+    /// Note preview (first 100 characters)
     var preview: String {
         let cleanContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
         if cleanContent.isEmpty {
@@ -82,7 +82,7 @@ final class SecretNote {
         return String(cleanContent.prefix(100))
     }
 
-    /// 字数统计
+    /// Word count
     var wordCount: Int {
         return content.count
     }

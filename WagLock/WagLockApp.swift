@@ -3,7 +3,7 @@
 //  WagLock
 //
 //  Created by WangQiao on 2025/11/5.
-//  Modified: 添加认证流程和MediaItem数据模型
+//  Modified: Added the authentication flow and the MediaItem data model
 //
 
 import SwiftData
@@ -31,11 +31,11 @@ struct WagLockApp: App {
     @State private var showLaunchScreen = true
     @State private var screenCaptured = UIScreen.main.isCaptured
 
-    // App 级 scenePhase 是所有 scene 的聚合状态。当前未开启 iPad 多窗口
-    // （无 UIApplicationSupportsMultipleScenes），单 scene 下与窗口状态等价；
-    // 若日后启用多窗口，隐私遮罩/自动锁定需下沉到 scene 级别
+    // The app-level scenePhase aggregates all scenes. iPad multi-window is not enabled
+    // (no UIApplicationSupportsMultipleScenes), so with a single scene it matches the window state;
+    // if multi-window is enabled later, the privacy cover and auto-lock must move to the scene level
     @Environment(\.scenePhase) private var scenePhase
-    /// 最近一次进入后台的时间（用于自动锁定判定）
+    /// Time the app last went to the background (used for auto-lock)
     @State private var lastBackgroundedAt: Date?
 
     // MARK: - Scene
@@ -43,7 +43,7 @@ struct WagLockApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                // 根据认证状态显示不同界面
+                // Show a different screen depending on authentication state
                 Group {
                     if screenCaptured {
                         VStack(spacing: 16) {
@@ -60,7 +60,7 @@ struct WagLockApp: App {
                     } else if authViewModel.isAuthenticated
                         && guestModeManager.currentMode != .unauthenticated
                     {
-                        // 已认证且模式不为未认证状态 - 显示主应用
+                        // Authenticated and not in the unauthenticated mode - show the main app
                         Group {
                             if let services = authViewModel.vaultContext {
                                 AuthenticatedLibraryView(services: services, library: authViewModel.makeSelectedLibraryMount())
@@ -71,14 +71,14 @@ struct WagLockApp: App {
                             .environmentObject(authViewModel)
                             .environmentObject(guestModeManager)
                     } else {
-                        // 未认证 - 显示认证界面
+                        // Not authenticated - show the authentication screen
                         // Calculator login is retired; stale preferences cannot change authentication.
                         if authViewModel.isPasswordSet {
                             LoginView()
                                 .environmentObject(authViewModel)
                                 .environmentObject(guestModeManager)
                         } else {
-                            // 未设置密码 - 显示设置密码界面
+                            // No password set - show password setup
                             SetupPasswordView()
                                 .environmentObject(authViewModel)
                                 .environmentObject(guestModeManager)
@@ -87,20 +87,20 @@ struct WagLockApp: App {
                 }
                 .accessibilityHidden(showLaunchScreen)
                 .onAppear {
-                    // 应用启动时检查密码状态
+                    // Check password status at launch
                     authViewModel.checkPasswordStatus()
                     if screenCaptured { revokeCapturedSession() }
                 }
 
-                // 启动页
+                // Launch screen
                 if showLaunchScreen {
                     LaunchScreenView()
                         .transition(.opacity)
                         .zIndex(1)
                 }
 
-                // 隐私遮罩：离开前台时盖住已解密内容，
-                // 防止系统为多任务切换器截取的快照泄露隐私
+                // Privacy cover: hide decrypted content when leaving the foreground
+                // so the snapshot the system takes for the app switcher doesn't leak anything
                 if authViewModel.isAuthenticated && scenePhase != .active && !showLaunchScreen {
                     LaunchScreenView()
                         .transition(.opacity)
@@ -111,7 +111,7 @@ struct WagLockApp: App {
             .tint(ColorTheme.accent)
             .environment(\.locale, AppConstants.presentationLocale)
             .task {
-                // 显示启动页1.5秒
+                // Show the launch screen for 1.5 seconds
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
                 withAnimation(.easeOut(duration: 0.5)) {
                     showLaunchScreen = false
@@ -151,13 +151,13 @@ struct WagLockApp: App {
 
     // MARK: - Auto Lock
 
-    /// 回到前台时按"离开后自动锁定"设置决定是否登出。
-    /// 只在真正进过后台（.background）后计时；短暂的 .inactive
-    /// （如下拉通知中心、来电）不触发锁定，但隐私遮罩仍会覆盖
+    /// On returning to the foreground, decide whether to log out based on the auto-lock setting.
+    /// The timer starts only after a real trip to the background (.background); a brief .inactive
+    /// (e.g. pulling down Notification Center, an incoming call) doesn't lock, though the privacy cover still applies
     private func autoLockIfNeeded() {
         defer { lastBackgroundedAt = nil }
 
-        // 正在录音或存在未保存录音时，不执行自动锁定，确保长时间后台录音稳定不被销毁
+        // Don't auto-lock while recording or while an unsaved recording exists, so long background recordings aren't destroyed
         guard !(authViewModel.vaultContext?.audio.hasRecording ?? false) else { return }
 
         guard authViewModel.isAuthenticated,

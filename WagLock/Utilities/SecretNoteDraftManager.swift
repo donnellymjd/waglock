@@ -6,8 +6,8 @@ struct SecretNoteDraft: Codable {
     let updatedAt: Date
 }
 
-/// 草稿属于未落库的私密内容，存 Keychain（仅本机、设备解锁后可用），
-/// 不能明文写入 UserDefaults（明文 plist 会进入未加密备份）
+/// Drafts are unsaved private content, so they live in the Keychain (this device only, available after unlock),
+/// never in plaintext UserDefaults (a plaintext plist would end up in unencrypted backups)
 final class SecretNoteDraftManager {
     nonisolated deinit { }
     static let shared = SecretNoteDraftManager()

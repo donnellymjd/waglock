@@ -2,7 +2,7 @@ import ImageIO
 import CryptoKit
 import UIKit
 
-/// 在后台完成缩略图解码，并在不同列表视图之间共享结果。
+/// Decodes thumbnails in the background and shares the results across list views.
 nonisolated final class ThumbnailImageLoader: @unchecked Sendable {
     static let shared = ThumbnailImageLoader()
 
@@ -43,7 +43,7 @@ nonisolated final class ThumbnailImageLoader: @unchecked Sendable {
         return image
     }
 
-    /// 清空全部缓存。
+    /// Clear all caches.
     ///
     /// Rejects pending results too; memory zeroization of UIKit pixels is not guaranteed.
     func clearAll() {

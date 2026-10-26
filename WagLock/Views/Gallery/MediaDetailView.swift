@@ -2,8 +2,8 @@
 //  MediaDetailView.swift
 //  WagLock
 //
-//  媒体详情视图
-//  全屏查看照片、播放视频、预览文件
+//  Media detail view
+//  Full-screen photo viewing, video playback and file preview
 //
 
 import AVKit
@@ -48,15 +48,15 @@ struct MediaDetailView: View {
     @State private var imageScale: CGFloat = 1.0
     @State private var imageOffset: CGSize = .zero
 
-    // 视频播放器和临时文件管理
+    // Video player and temporary file management
     @State private var videoPlayer: AVPlayer?
     @State private var videoTempURL: URL?
     @State private var showFullScreenVideoPlayer = false
 
-    // 文档临时文件管理（用于QuickLook预览）
+    // Document temporary file management (for QuickLook preview)
     @State private var documentTempURL: URL?
 
-    // 分享功能
+    // Sharing
     @State private var showShareSheet = false
     @State private var exportedURLs: [URL] = []
     @State private var isExporting = false
@@ -192,7 +192,7 @@ struct MediaDetailView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
-            // 重试按钮
+            // Retry button
             Button {
                 retryLoad()
             } label: {
@@ -212,10 +212,10 @@ struct MediaDetailView: View {
     @ViewBuilder
     private func mediaContentView(data: Data) -> some View {
         VStack(spacing: 0) {
-            // 媒体内容
+            // Media content
             mediaContent(data: data)
 
-            // 信息栏
+            // Info bar
             mediaInfoBar
         }
     }
@@ -231,7 +231,7 @@ struct MediaDetailView: View {
     private func mediaContent(data: Data) -> some View {
         switch mediaItem.type {
         case .photo:
-            // 照片已在后台降采样解码为 decryptedImage，避免主线程解码全分辨率大图
+            // The photo was already downsampled and decoded in the background into decryptedImage, so the main thread never decodes the full-resolution image
             if let image = decryptedImage {
                 photoView(image: image)
             }
@@ -317,9 +317,9 @@ struct MediaDetailView: View {
                 }
             }
 
-            // 全屏播放按钮
+            // Full-screen playback button
             Button {
-                // 暂停当前内嵌播放器，打开全屏播放器
+                // Pause the inline player and open the full-screen player
                 videoPlayer?.pause()
                 showFullScreenVideoPlayer = true
             } label: {
@@ -362,7 +362,7 @@ struct MediaDetailView: View {
     // MARK: - PDF Document View
 
     private func pdfDocumentView(data: Data) -> some View {
-        // PDF阅读器全屏显示，不添加额外的信息栏
+        // The PDF reader is full-screen, with no extra info bar
         PDFReaderView(data: data, onShare: shareMedia)
             .ignoresSafeArea()
     }
@@ -437,7 +437,7 @@ struct MediaDetailView: View {
 
     private var mediaInfoBar: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // 详细信息
+            // Details
             HStack {
                 Label(mediaItem.formattedFileSize, systemImage: "doc")
 
@@ -454,7 +454,7 @@ struct MediaDetailView: View {
             .font(.caption)
             .foregroundColor(ColorTheme.secondaryText)
 
-            // 导入日期
+            // Import date
             Text(mediaItem.formattedCreatedDate)
                 .font(.caption2)
                 .foregroundColor(.white.opacity(0.6))
@@ -475,7 +475,7 @@ struct MediaDetailView: View {
 
     // MARK: - Private Methods
 
-    /// 重新尝试加载并解密媒体（加载失败时使用）
+    /// Retry loading and decrypting the media (used after a load failure)
     private func retryLoad() {
         isLoading = true
         errorMessage = nil
@@ -509,7 +509,7 @@ struct MediaDetailView: View {
         }
 
         do {
-            // 获取用户密码（临时方案）
+            // Get the user's password (temporary approach)
             guard let password = getSessionPassword() else {
                 errorMessage = String(localized: "media.error.noPassword")
                 isLoading = false
@@ -517,9 +517,9 @@ struct MediaDetailView: View {
             }
 
 
-            // 读取加密文件
+            // Read the encrypted file
 
-            // 检查文件是否存在（使用FileStorageService的方法，会自动处理相对路径）
+            // Check that the file exists (FileStorageService resolves relative paths)
             let fileExists = storageService.fileExists(path: mediaItem.encryptedPath)
 
             if !fileExists {
@@ -552,7 +552,7 @@ struct MediaDetailView: View {
 
             guard isCurrentSession, vaultServices.isActive, !Task.isCancelled else { return }
 
-            // 照片在后台降采样解码，避免主线程解码 12MP+ 大图造成卡顿
+            // Photos are downsampled and decoded in the background so decoding 12MP+ images on the main thread doesn't stutter
             if mediaItem.type == .photo {
                 let image = await vaultServices.thumbnails.image(
                     for: mediaItem.id.uuidString,
@@ -589,7 +589,7 @@ struct MediaDetailView: View {
         }
     }
 
-    /// 分享媒体
+    /// Share media
     private func shareMedia() {
         guard isCurrentSession, !isExporting else { return }
         guard let password = authViewModel.sessionPassword, !password.isEmpty else {
@@ -616,22 +616,22 @@ struct MediaDetailView: View {
         }
     }
 
-    /// 删除媒体
+    /// Delete media
     private func deleteMedia() {
         guard isCurrentSession else { return }
         Task {
             do {
-                // 如果是视频，先清理播放器资源
+                // For videos, release the player resources first
                 if mediaItem.type == .video {
                     await MainActor.run {
                         cleanupVideoPlayer()
                     }
-                    // 等待资源释放
-                    try await Task.sleep(nanoseconds: 100_000_000)  // 0.1秒
+                    // Wait for resources to be released
+                    try await Task.sleep(nanoseconds: 100_000_000)  // 0.1 seconds
                 }
 
-                // 先提交数据库删除，成功后再删文件，
-                // 避免 save 失败时留下指向已删除文件的记录
+                // Commit the database deletion first and delete files only after it succeeds,
+                // so a failed save never leaves records pointing at deleted files
                 guard isCurrentSession, !Task.isCancelled else { return }
                 let encryptedPath = mediaItem.encryptedPath
                 modelContext.delete(sourceItem)
@@ -642,7 +642,7 @@ struct MediaDetailView: View {
                 } catch {
                 }
 
-                // 返回上一页
+                // Go back to the previous screen
                 await MainActor.run {
                     dismiss()
                 }
@@ -658,11 +658,11 @@ struct MediaDetailView: View {
         }
     }
 
-    /// 设置视频播放器
+    /// Set up the video player
     private func setupVideoPlayer(url: URL) {
         videoTempURL = url
         videoPlayer = AVPlayer(url: url)
-        // 激活音频会话，保证静音开关打开时内嵌预览也有声音
+        // Activate the audio session so the inline preview has sound even with the silent switch on
         AVAudioSession.activateForVideoPlayback()
     }
 
@@ -673,22 +673,22 @@ struct MediaDetailView: View {
         cleanupDocumentTempFile()
     }
 
-    /// 清理视频播放器资源
+    /// Release video player resources
     private func cleanupVideoPlayer() {
-        // 停止播放
+        // Stop playback
         videoPlayer?.pause()
         videoPlayer?.replaceCurrentItem(with: nil)
         videoPlayer = nil
         AVAudioSession.deactivateAfterVideoPlayback()
 
-        // 删除临时文件
+        // Delete the temporary file
         if let tempURL = videoTempURL {
             try? FileManager.default.removeItem(at: tempURL)
             videoTempURL = nil
         }
     }
 
-    /// 清理文档临时文件
+    /// Delete the document temporary file
     private func cleanupDocumentTempFile() {
         if let tempURL = documentTempURL {
             try? FileManager.default.removeItem(at: tempURL)
@@ -696,9 +696,9 @@ struct MediaDetailView: View {
         }
     }
 
-    /// 保存临时文件（用于文档预览）
+    /// Save a temporary file (for document preview)
     private func prepareDocumentTempFile(data: Data) async {
-        // 避免重复创建
+        // Avoid creating it twice
         guard isCurrentSession, vaultServices.isActive, !Task.isCancelled else { return }
         if documentTempURL != nil {
             return
@@ -706,7 +706,7 @@ struct MediaDetailView: View {
 
         do {
             let tempURL = try ProtectedTemporaryFiles.fileURL(preferredExtension: mediaItem.fileExtension)
-            // 明文文档临时文件使用最高文件保护级别，防止锁屏后被读取
+            // Plaintext document temporary files use the strongest file protection so they can't be read while the device is locked
             try data.write(to: tempURL, options: [.atomic, .completeFileProtection])
             await MainActor.run {
                 guard isCurrentSession, vaultServices.isActive, !Task.isCancelled else {
@@ -719,7 +719,7 @@ struct MediaDetailView: View {
         }
     }
 
-    /// 获取会话密码
+    /// Get the session password
     private func getSessionPassword() -> String? {
         return authViewModel.sessionPassword
     }

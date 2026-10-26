@@ -2,7 +2,7 @@
 //  LaunchScreenView_Bundle.swift
 //  WagLock
 //
-//  启动页视图 - 使用Bundle资源（备用方案）
+//  Launch screen view using bundle resources (fallback approach)
 //
 
 import SwiftUI
@@ -12,7 +12,7 @@ struct LaunchScreenView_Bundle: View {
 
     var body: some View {
         ZStack {
-            // 方式1: 从Bundle加载图片
+            // Option 1: load the image from the bundle
             if let uiImage = UIImage(named: "launch_screen") {
                 Image(uiImage: uiImage)
                     .resizable()
@@ -20,7 +20,7 @@ struct LaunchScreenView_Bundle: View {
                     .ignoresSafeArea()
                     .opacity(isAnimating ? 1.0 : 0.0)
             } else {
-                // 如果图片加载失败，显示后备视图
+                // If the image fails to load, show the fallback view
                 FallbackLaunchView()
             }
         }
@@ -32,16 +32,16 @@ struct LaunchScreenView_Bundle: View {
     }
 }
 
-// 后备启动视图（如果图片加载失败）
+// Fallback launch view (if the image fails to load)
 struct FallbackLaunchView: View {
     var body: some View {
         ZStack {
-            // 渐变背景（匹配你的图片色调）
+            // Gradient background (matches the image's palette)
             LinearGradient(
                 colors: [
-                    Color(red: 0.66, green: 0.71, blue: 0.90),  // 浅薰衣草紫
-                    Color(red: 0.48, green: 0.56, blue: 0.82),  // 长春花蓝
-                    Color(red: 0.18, green: 0.24, blue: 0.44),  // 深海军蓝
+                    Color(red: 0.66, green: 0.71, blue: 0.90),  // Light lavender
+                    Color(red: 0.48, green: 0.56, blue: 0.82),  // Periwinkle blue
+                    Color(red: 0.18, green: 0.24, blue: 0.44),  // Deep navy
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -51,15 +51,15 @@ struct FallbackLaunchView: View {
             VStack(spacing: 24) {
                 Spacer()
 
-                // 断链图标（简化版）
+                // Broken-chain icon (simplified)
                 ZStack {
-                    // 左半链条
+                    // Left half of the chain
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color.white.opacity(0.9))
                         .frame(width: 60, height: 24)
                         .offset(x: -20, y: 0)
 
-                    // 右半链条
+                    // Right half of the chain
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color(red: 0.0, green: 0.9, blue: 1.0))
                         .frame(width: 60, height: 24)
@@ -67,7 +67,7 @@ struct FallbackLaunchView: View {
                 }
                 .frame(height: 100)
 
-                // 文本
+                // Text
                 VStack(spacing: 12) {
                     Text(String(localized: "launch.subtitle.opensource"))
                         .font(.system(size: 18, weight: .medium))

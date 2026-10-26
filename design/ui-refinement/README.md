@@ -2,7 +2,7 @@
 
 [Start here: Figma screen index](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=40-2436)
 
-The complete design covers **70 screen states in light and dark appearance** (140 editable screen frames), with 732 prototype links. The five existing tabs remain Photos, Media, Files, Notes and Settings. The index provides direct links to every state; the file also contains Light and Dark starting flows. See [the inventory](SCREEN-INVENTORY.md).
+The complete design covers **83 screen states in light and dark appearance** (166 editable screen frames), with 732 prototype links. The five existing tabs remain Photos, Media, Files, Notes and Settings. The index provides direct links to every state; the file also contains Light and Dark starting flows. See [the inventory](SCREEN-INVENTORY.md).
 
 ## Coverage
 
@@ -40,3 +40,13 @@ The six sample photos are AI-generated design content, not private user media. T
 Build 35 begins applying this design to the SwiftUI app. See [implementation coverage, adaptations and remaining work](../../docs/portable-vault/figma-ui-implementation.md). The design inventory remains broader than the first implementation pass.
 
 Build 37 completes the remaining current-feature layouts. See the [70-state runtime mapping and native adaptations](IMPLEMENTATION-COVERAGE.md); security/storage roadmap features remain separate.
+
+## Fullscreen media revision — October 23
+
+Photo and video viewers now use the entire viewport, with a black background in both appearances. Media uses aspect fit with no forced crop or stretching. Wide content is letterboxed in portrait and gets a dedicated landscape layout.
+
+Tap the media to hide/reveal chrome. A minimal close control and more menu overlay the media; video playback controls also overlay it and hide during viewing. Export, file information and delete live in the more menu. Metadata and destructive actions no longer compete with the media. Menu cancellation and hidden-control states preserve orientation. Single-item deletion is separate from batch selection deletion; video file information has its own view.
+
+The Figma prototype illustrates these interactions; it does not play an actual movie, simulate device rotation or implement pinch zoom. The application should retain native video playback, safe-area behavior, photo pinch zoom and swiping, and support double-tap zoom without changing original aspect ratio. No app source was changed by this revision.
+
+Viewer layouts were visually checked and the full revised registry audited: 166 frames, 1,802 editable text nodes, no broken navigation destinations or zero-width text.

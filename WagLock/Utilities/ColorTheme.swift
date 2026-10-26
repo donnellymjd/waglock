@@ -3,12 +3,12 @@
 //  WagLock
 //
 //  Created by Claude on 2025/11/15.
-//  深色模式颜色主题系统
+//  Color theme system with dark mode support
 //
 
 import SwiftUI
 
-/// 应用颜色主题
+/// App color theme
 struct ColorTheme {
 
     // Shared Figma tokens. Native SF Pro, SF Symbols and system presentations are retained.
@@ -25,60 +25,60 @@ struct ColorTheme {
     static let brandBackgroundStart = primaryBackground
     static let brandBackgroundEnd = primaryBackground
 
-    /// 危险操作色
+    /// Destructive action color
     static let destructive = Color.red
 
-    /// 成功色
+    /// Success color
     static let success = Color.green
 
-    /// 警告色
+    /// Warning color
     static let warning = Color.orange
 
     // MARK: - Border & Separator
 
-    /// 边框色
+    /// Border color
     static let border = Color("WagLockBorder")
 
-    /// 分隔线色
+    /// Separator color
     static let separator = Color(light: Color(white: 0.9), dark: Color(white: 0.15))
 
     // MARK: - Special Components
 
-    /// 计算器按钮背景色
+    /// Calculator button background
     static let calculatorButtonBackground = secondaryBackground
 
-    /// 计算器运算符按钮背景色
+    /// Calculator operator button background
     static let calculatorOperatorBackground = accent
 
-    /// 卡片阴影色
+    /// Card shadow color
     static let cardShadow = Color(light: Color.black.opacity(0.1), dark: Color.white.opacity(0.05))
 
-    /// 网格项背景色
+    /// Grid item background
     static let gridItemBackground = Color(light: Color(white: 0.95), dark: Color(white: 0.15))
 
-    /// 加密指示器背景色
+    /// Encryption indicator background
     static let encryptionIndicator = Color.green.opacity(0.2)
 
     // MARK: - Status Colors
 
-    /// 已选中背景色
+    /// Selected background
     static let selectedBackground = Color.blue.opacity(0.15)
 
-    /// 悬停背景色
+    /// Hover background
     static let hoverBackground = Color(
         light: Color.black.opacity(0.05), dark: Color.white.opacity(0.1))
 
-    /// 禁用背景色
+    /// Disabled background
     static let disabledBackground = Color(light: Color(white: 0.95), dark: Color(white: 0.1))
 
-    /// 禁用文本色
+    /// Disabled text color
     static let disabledText = Color(light: Color(white: 0.7), dark: Color(white: 0.3))
 }
 
 // MARK: - Color Extension
 
 extension Color {
-    /// 根据亮暗模式返回不同颜色
+    /// Returns a different color for light and dark mode
     init(light: Color, dark: Color) {
         self.init(
             UIColor { traitCollection in

@@ -2,8 +2,8 @@
 //  SettingsView.swift
 //  WagLock
 //
-//  设置视图
-//  应用配置、存储管理、安全设置
+//  Settings view
+//  App configuration, storage management and security settings
 //
 
 import SwiftData
@@ -117,7 +117,7 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showGuestModeSetup) {
             GuestModeSetupView {
-                // 设置完成后启用访客模式
+                // Enable guest mode once setup is complete
                 settings.guestModeEnabled = true
             }
         }
@@ -312,7 +312,7 @@ struct SettingsView: View {
                 vaultServices.mediaLoader.clearCache()
                 vaultServices.thumbnails.clearAll()
 
-                // 重新加载存储信息
+                // Reload storage info
                 await loadStorageInfo()
             } catch {
             }
@@ -329,7 +329,7 @@ struct SettingsView: View {
                 Spacer()
 
                 if KeychainService.shared.isGuestPasswordSet() {
-                    // 已设置访客密码 - 显示开关
+                    // Guest password set - show the toggle
                     Toggle(
                         "",
                         isOn: Binding(
@@ -343,7 +343,7 @@ struct SettingsView: View {
                             }
                         ))
                 } else {
-                    // 未设置访客密码 - 显示设置按钮
+                    // No guest password - show the setup button
                     Button {
                         showGuestModeSetup = true
                     } label: {
@@ -353,7 +353,7 @@ struct SettingsView: View {
                 }
             }
 
-            // 如果已设置访客密码，显示修改按钮
+            // If a guest password is set, show the change button
             if KeychainService.shared.isGuestPasswordSet() {
                 HStack {
                     Spacer()

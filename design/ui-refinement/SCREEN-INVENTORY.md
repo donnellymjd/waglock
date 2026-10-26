@@ -1,6 +1,6 @@
 # Complete WagLock screen inventory
 
-Each state has an editable light and dark frame. The prototype illustrates navigation; it does not perform authentication, imports, file sharing or storage operations.
+Each state has an editable light and dark frame. The prototype illustrates navigation; native operations remain in the app.
 
 | Screen state | Light | Dark |
 | --- | --- | --- |
@@ -74,3 +74,16 @@ Each state has an editable light and dark frame. The prototype illustrates navig
 | guestSettings — Settings | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=36-2516) | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=36-2591) |
 | layout — Library layout | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=39-2422) | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=39-2484) |
 | unlock — Unlock | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=3-10) | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=9-23) |
+| photoHidden — Photo · Hidden | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=73-2436) | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=73-2503) |
+| photoMenu — Photo · Menu | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=73-2437) | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=73-2504) |
+| photoLandscape — Photo · Landscape | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=73-2438) | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=73-2505) |
+| photoLandscapeHidden — Photo · LandscapeHidden | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=75-2610) | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=75-2645) |
+| photoLandscapeMenu — Photo · LandscapeMenu | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=75-2613) | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=75-2648) |
+| videoHidden — Video · Hidden | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=73-2570) | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=73-2659) |
+| videoMenu — Video · Menu | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=73-2571) | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=73-2660) |
+| videoLandscape — Video · Landscape | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=73-2572) | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=73-2661) |
+| videoLandscapeHidden — Video · LandscapeHidden | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=75-2680) | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=75-2727) |
+| videoLandscapeMenu — Video · LandscapeMenu | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=75-2683) | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=75-2730) |
+| videoInfo — Video information | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=75-2490) | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=75-2550) |
+| photoDelete — Delete current photo | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=78-2546) | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=78-2591) |
+| videoDelete — Delete current video | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=78-2636) | [Open](https://www.figma.com/design/sOaFXyvdlCstDTQ4Zfn7xz?node-id=78-2681) |

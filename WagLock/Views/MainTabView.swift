@@ -2,8 +2,8 @@
 //  MainTabView.swift
 //  WagLock
 //
-//  主标签栏视图
-//  包含：相片、影音、文件、记事本、设置五个标签
+//  Main tab bar view
+//  Tabs: Photos, Media, Files, Notes and Settings
 //
 
 import SwiftUI
@@ -23,7 +23,7 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            // 相片标签
+            // Photos tab
             PhotosView()
                 .environmentObject(authViewModel)
                 .tabItem {
@@ -33,7 +33,7 @@ struct MainTabView: View {
                 }
                 .tag(0)
 
-            // 影音标签（合并视频与音频）
+            // Media tab (videos and audio combined)
             MediaView()
                 .environmentObject(authViewModel)
                 .tabItem {
@@ -43,7 +43,7 @@ struct MainTabView: View {
                 }
                 .tag(1)
 
-            // 文件标签
+            // Files tab
             FilesView()
                 .environmentObject(authViewModel)
                 .tabItem {
@@ -53,7 +53,7 @@ struct MainTabView: View {
                 }
                 .tag(2)
 
-            // 隐藏空间标签（现在作为普通记事本）
+            // Secret space tab (now a regular notes tab)
             SecretSpaceView()
                 .tabItem {
                     Label(
@@ -62,7 +62,7 @@ struct MainTabView: View {
                 }
                 .tag(3)
 
-            // 设置标签
+            // Settings tab
             SettingsView()
                 .environmentObject(authViewModel)
                 .tabItem {
@@ -72,7 +72,7 @@ struct MainTabView: View {
                 }
                 .tag(4)
         }
-        .tint(ColorTheme.accent)  // TabBar 选中颜色
+        .tint(ColorTheme.accent)  // Tab bar selection color
         .task {
             await Task.yield()
             guard services.isActive, authViewModel.isAuthenticated, GuestModeManager.shared.isOwnerMode,

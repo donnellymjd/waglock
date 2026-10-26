@@ -2,8 +2,8 @@
 //  MediaImportService.swift
 //  WagLock
 //
-//  媒体导入服务
-//  处理照片、视频、文件的导入、加密和保存
+//  Media import service
+//  Imports, encrypts and saves photos, videos and files
 //
 
 import AVFoundation
@@ -13,14 +13,14 @@ import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// 导入错误
+/// Import errors
 enum ImportError: Error {
-    case loadFailed  // 加载失败
-    case unsupportedType  // 不支持的类型
-    case encryptionFailed  // 加密失败
-    case saveFailed  // 保存失败
-    case cancelled  // 用户取消
-    case permissionDenied  // 权限被拒绝
+    case loadFailed  // Load failed
+    case unsupportedType  // Unsupported type
+    case encryptionFailed  // Encryption failed
+    case saveFailed  // Save failed
+    case cancelled  // Cancelled by the user
+    case permissionDenied  // Permission denied
 
     var localizedDescription: String {
         switch self {
@@ -40,7 +40,7 @@ enum ImportError: Error {
     }
 }
 
-/// 导入进度
+/// Import progress
 struct ImportProgress {
     let current: Int
     let total: Int
@@ -52,7 +52,7 @@ struct ImportProgress {
     }
 }
 
-/// 媒体导入服务
+/// Media import service
 class MediaImportService {
     nonisolated deinit { }
 
@@ -74,12 +74,12 @@ class MediaImportService {
 
     // MARK: - Public Methods
 
-    /// 导入照片/视频（从PHPicker）
+    /// Import photos/videos (from PHPicker)
     /// - Parameters:
-    ///   - results: PHPicker结果数组
-    ///   - password: 加密密码
-    ///   - progress: 进度回调
-    /// - Returns: 导入成功的MediaItem数组
+    ///   - results: PHPicker results
+    ///   - password: Encryption password
+    ///   - progress: Progress callback
+    /// - Returns: Successfully imported MediaItems
     func importMedia(
         from results: [PHPickerResult],
         password: String,
@@ -93,12 +93,12 @@ class MediaImportService {
         }
     }
 
-    /// 导入文件（从文档选择器）
+    /// Import files (from the document picker)
     /// - Parameters:
-    ///   - urls: 文件URL数组
-    ///   - password: 加密密码
-    ///   - progress: 进度回调
-    /// - Returns: 导入成功的MediaItem数组
+    ///   - urls: File URLs
+    ///   - password: Encryption password
+    ///   - progress: Progress callback
+    /// - Returns: Successfully imported MediaItems
     func importFiles(
         from urls: [URL],
         password: String,
@@ -142,18 +142,18 @@ class MediaImportService {
 
     // MARK: - Private Methods - Media Import
 
-    /// 导入单个媒体（照片/视频）
+    /// Import a single media item (photo/video)
     private func importSingleMedia(result: PHPickerResult, password: String) async throws
         -> MediaItem?
     {
         let itemProvider = result.itemProvider
 
-        // 检查是否为图片
+        // Is it an image?
         if itemProvider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
             return try await importImage(from: itemProvider, password: password)
         }
 
-        // 检查是否为视频
+        // Is it a video?
         if itemProvider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
             return try await importVideo(from: itemProvider, password: password)
         }
@@ -231,7 +231,7 @@ class MediaImportService {
 
         let mediaType = MediaType.from(fileExtension: url.pathExtension)
 
-        // 针对视频文件走专用处理流程，保证缩略图与元数据一致
+        // Videos take a dedicated path so the thumbnail and metadata stay consistent
         if mediaType == .video {
             return try await processVideo(url, password: password)
         }
@@ -288,34 +288,34 @@ class MediaImportService {
 
     // MARK: - Video Processing
 
-    /// 处理视频
+    /// Process a video
     private func processVideo(_ url: URL, password: String) async throws -> MediaItem {
         try Task.checkCancellation()
-        // ⚠️ 重要: 必须先提取元数据和缩略图，再读取数据
-        // 因为临时 URL 可能在读取数据后就失效
+        // ⚠️ Important: extract metadata and the thumbnail before reading the data,
+        // because the temporary URL may become invalid once the data is read
 
 
-        // 1️⃣ 先获取视频元数据（此时临时文件还存在）
+        // 1️⃣ Get video metadata first (the temporary file still exists)
         let (width, height, duration) = await getVideoMetadata(url: url)
 
-        // 2️⃣ 生成缩略图（此时临时文件还存在）
+        // 2️⃣ Generate the thumbnail (the temporary file still exists)
         let thumbnailData = try? await generateVideoThumbnail(url: url)
 
 
-        // 3️⃣ 获取文件大小
+        // 3️⃣ Get the file size
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
         let fileSize = attributes[.size] as? Int64 ?? 0
         let fileName = url.deletingPathExtension().lastPathComponent
         let fileExtension = "." + url.pathExtension
 
-        // 4️⃣ 流式加密并保存
+        // 4️⃣ Encrypt (streaming) and save
         let encryptedPath = try storageService.saveEncryptedFile(
             from: url,
             password: password,
             originalFileName: url.lastPathComponent
         )
 
-        // 6️⃣ 创建MediaItem（确保所有参数都正确传递）
+        // 6️⃣ Create the MediaItem (make sure every parameter is passed through)
         let mediaItem = MediaItem(
             fileName: fileName,
             fileExtension: fileExtension,
@@ -328,14 +328,14 @@ class MediaImportService {
             duration: duration
         )
 
-        // 7️⃣ 验证MediaItem数据
+        // 7️⃣ Validate the MediaItem data
 
         return mediaItem
     }
 
     // MARK: - Thumbnail Generation
 
-    /// 生成缩略图
+    /// Generate a thumbnail
     private func generateThumbnail(for data: Data, type: MediaType, fileExtension: String) -> Data?
     {
         switch type {
@@ -348,16 +348,16 @@ class MediaImportService {
             return thumbnail.compressedJPEGData(quality: AppConstants.thumbnailCompressionQuality)
 
         case .video:
-            // 视频缩略图需要URL，这里返回nil，在processVideo中单独处理
+            // Video thumbnails need a URL; return nil here and handle them in processVideo
             return nil
 
         case .audio, .document:
-            // 文档使用默认图标，不需要缩略图
+            // Documents use the default icon and need no thumbnail
             return nil
         }
     }
 
-    /// 生成视频缩略图
+    /// Generate a video thumbnail
     private func generateVideoThumbnail(url: URL) async throws -> Data? {
         let asset = AVAsset(url: url)
         let imageGenerator = AVAssetImageGenerator(asset: asset)
@@ -390,16 +390,16 @@ class MediaImportService {
         }
     }
 
-    /// 获取视频元数据
+    /// Get video metadata
     private func getVideoMetadata(url: URL) async -> (width: Int?, height: Int?, duration: Double?)
     {
         let asset = AVAsset(url: url)
 
-        // 获取时长
+        // Get the duration
         let duration = try? await asset.load(.duration)
         let durationSeconds = duration.map { CMTimeGetSeconds($0) }
 
-        // 获取视频尺寸
+        // Get the video dimensions
         guard let track = try? await asset.loadTracks(withMediaType: .video).first else {
             return (nil, nil, durationSeconds)
         }
@@ -413,12 +413,12 @@ class MediaImportService {
 
     // MARK: - Encrypted File Re-encryption
 
-    /// 导入已加密文件并使用新密码重新加密
+    /// Import an already-encrypted file and re-encrypt it with a new password
     /// - Parameters:
-    ///   - url: 加密文件URL
-    ///   - originalPassword: 原始加密密码
-    ///   - newPassword: 新的加密密码
-    /// - Returns: 导入的MediaItem数组
+    ///   - url: Encrypted file URL
+    ///   - originalPassword: Original encryption password
+    ///   - newPassword: New encryption password
+    /// - Returns: Imported MediaItems
     func importEncryptedFileWithReencryption(
         url: URL,
         originalPassword: String,
@@ -426,23 +426,23 @@ class MediaImportService {
     ) async throws -> [MediaItem] {
         guard allowNativeEncryptedImport else { throw ImportError.unsupportedType }
 
-        // 1. 读取加密文件数据
+        // 1. Read the encrypted file data
         let encryptedData = try Data(contentsOf: url)
 
-        // 2. 使用原始密码解密
+        // 2. Decrypt with the original password
         let decryptedData = try encryptionService.decrypt(
             encryptedData: encryptedData,
             password: originalPassword
         )
 
-        // 3. 使用新密码重新加密
+        // 3. Re-encrypt with the new password
         let reencryptedData = try encryptionService.encrypt(
             data: decryptedData,
             password: newPassword
         )
 
-        // 4. 保存重新加密的数据
-        // 获取原始文件名（去掉.encrypted后缀）
+        // 4. Save the re-encrypted data
+        // Get the original file name (without the .encrypted suffix)
         let originalURL = url.deletingPathExtension()
         let fileName = originalURL.deletingPathExtension().lastPathComponent
         let fileExtension = "." + originalURL.pathExtension
@@ -452,7 +452,7 @@ class MediaImportService {
             originalFileName: url.lastPathComponent
         )
 
-        // 5. 尝试从解密数据中提取元数据
+        // 5. Try to extract metadata from the decrypted data
         let fileSize = Int64(decryptedData.count)
         let mediaType = MediaType.from(fileExtension: originalURL.pathExtension)
 
@@ -461,7 +461,7 @@ class MediaImportService {
         var height: Int?
         var duration: Double?
 
-        // 尝试生成缩略图（如果是图片或视频）
+        // Try to generate a thumbnail (for images or videos)
         if mediaType == .photo {
             if let image = UIImage(data: decryptedData) {
                 width = Int(image.size.width)
@@ -474,7 +474,7 @@ class MediaImportService {
             }
         }
 
-        // 创建MediaItem
+        // Create the MediaItem
         let mediaItem = MediaItem(
             fileName: fileName,
             fileExtension: fileExtension,

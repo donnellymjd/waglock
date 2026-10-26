@@ -2,8 +2,8 @@
 //  GalleryViewModel.swift
 //  WagLock
 //
-//  图库视图模型
-//  管理媒体列表、排序、删除等操作
+//  Gallery view model
+//  Manages the media list, sorting, deletion and related actions
 //
 
 internal import Combine
@@ -11,42 +11,42 @@ import Foundation
 import SwiftData
 import SwiftUI
 
-/// 图库视图模型
+/// Gallery view model
 @MainActor
 class GalleryViewModel: ObservableObject {
 
     // MARK: - Published Properties
 
-    /// 是否正在加载
+    /// Whether loading is in progress
     @Published var isLoading: Bool = false
 
-    /// 错误消息
+    /// Error message
     @Published var errorMessage: String?
 
-    /// 是否显示导入视图
+    /// Whether to show the import view
     @Published var showImportView: Bool = false
 
 
-    /// 待删除的媒体项
+    /// Media item pending deletion
     @Published var mediaItemToDelete: MediaItem?
 
-    /// 是否显示删除确认
+    /// Whether to show the delete confirmation
     @Published var showDeleteConfirmation: Bool = false
 
-    /// 排序方式
+    /// Sort order
     @Published var sortOrder: MediaItem.SortOrder {
         didSet {
             AppSettings.shared.sortOrder = sortOrder
         }
     }
 
-    /// 是否显示排序选项
+    /// Whether to show sort options
     @Published var showSortOptions: Bool = false
 
-    /// 是否处于批量选择模式
+    /// Whether batch selection mode is active
     @Published var isSelectionMode: Bool = false
 
-    /// 已选择的媒体项ID集合
+    /// IDs of selected media items
     @Published var selectedItemIDs: Set<UUID> = []
 
     // MARK: - Properties
@@ -66,13 +66,13 @@ class GalleryViewModel: ObservableObject {
 
     // MARK: - Public Methods
 
-    /// 删除媒体项
+    /// Delete a media item
     func deleteMediaItem(_ item: MediaItem) {
         mediaItemToDelete = item
         showDeleteConfirmation = true
     }
 
-    /// 确认删除
+    /// Confirm deletion
     func confirmDelete() {
         guard let item = mediaItemToDelete, let context = modelContext else { return }
 
@@ -81,15 +81,15 @@ class GalleryViewModel: ObservableObject {
             let fileName = item.fileName
 
             do {
-                // 先提交数据库删除，成功后再删文件，
-                // 避免 save 失败时留下指向已删除文件的记录
+                // Commit the database deletion first and delete files only after it succeeds,
+                // so a failed save never leaves records pointing at deleted files
                 context.delete(item)
                 try LibraryWriteCoordinator.save(context)
 
                 do {
                     try storageService.deleteFile(path: encryptedPath)
                 } catch {
-                    // 记录已删除，文件删除失败只会残留无引用的加密文件
+                    // The record is gone; a failed file delete only leaves an unreferenced encrypted file
                 }
 
 
@@ -105,34 +105,34 @@ class GalleryViewModel: ObservableObject {
         }
     }
 
-    /// 取消删除
+    /// Cancel deletion
     func cancelDelete() {
         mediaItemToDelete = nil
         showDeleteConfirmation = false
     }
 
-    /// 显示导入视图
+    /// Show the import view
     func showImport() {
         showImportView = true
     }
 
-    /// 切换排序方式
+    /// Toggle sort order
     func toggleSortOptions() {
         showSortOptions.toggle()
     }
 
-    /// 更改排序方式
+    /// Change sort order
     func changeSortOrder(to newOrder: MediaItem.SortOrder) {
         sortOrder = newOrder
         showSortOptions = false
     }
 
-    /// 批量删除
+    /// Batch delete
     func deleteMultipleItems(_ items: [MediaItem]) {
         guard let context = modelContext else { return }
         Task {
-            // 先提交数据库删除，成功后再删文件，
-            // 避免 save 失败时留下指向已删除文件的记录
+            // Commit the database deletion first and delete files only after it succeeds,
+            // so a failed save never leaves records pointing at deleted files
             let encryptedPaths = items.map { $0.encryptedPath }
             for item in items {
                 context.delete(item)
@@ -160,14 +160,14 @@ class GalleryViewModel: ObservableObject {
         }
     }
 
-    /// 获取存储统计
+    /// Get storage statistics
     func getStorageStatistics() -> FileStorageService.StorageStatistics {
         return storageService.getStorageStatistics()
     }
 
     // MARK: - Batch Selection Methods
 
-    /// 切换批量选择模式
+    /// Toggle batch selection mode
     func toggleSelectionMode() {
         isSelectionMode.toggle()
         if !isSelectionMode {
@@ -175,7 +175,7 @@ class GalleryViewModel: ObservableObject {
         }
     }
 
-    /// 切换单个媒体项的选择状态
+    /// Toggle selection of one media item
     func toggleSelection(for item: MediaItem) {
         if selectedItemIDs.contains(item.id) {
             selectedItemIDs.remove(item.id)
@@ -184,17 +184,17 @@ class GalleryViewModel: ObservableObject {
         }
     }
 
-    /// 全选
+    /// Select all
     func selectAll(_ items: [MediaItem]) {
         selectedItemIDs = Set(items.map { $0.id })
     }
 
-    /// 取消全选
+    /// Deselect all
     func deselectAll() {
         selectedItemIDs.removeAll()
     }
 
-    /// 删除已选择的媒体项
+    /// Delete the selected media items
     func deleteSelectedItems(_ allItems: [MediaItem]) {
         let itemsToDelete = allItems.filter { selectedItemIDs.contains($0.id) }
         deleteMultipleItems(itemsToDelete)
@@ -208,7 +208,7 @@ class GalleryViewModel: ObservableObject {
 
 extension GalleryViewModel {
 
-    /// 按类型过滤媒体
+    /// Filter media by type
     func filterByType(_ items: [MediaItem], type: MediaType?) -> [MediaItem] {
         guard let type = type else {
             return items
@@ -216,7 +216,7 @@ extension GalleryViewModel {
         return items.filter { $0.type == type }
     }
 
-    /// 搜索媒体
+    /// Search media
     func search(_ items: [MediaItem], query: String) -> [MediaItem] {
         guard !query.isEmpty else {
             return items

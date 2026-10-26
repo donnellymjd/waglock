@@ -2,8 +2,8 @@
 //  ImportViewModel.swift
 //  WagLock
 //
-//  导入视图模型
-//  管理媒体导入流程
+//  Import view model
+//  Manages the media import flow
 //
 
 internal import Combine
@@ -12,36 +12,36 @@ import PhotosUI
 import SwiftData
 import SwiftUI
 
-/// 导入视图模型
+/// Import view model
 @MainActor
 class ImportViewModel: ObservableObject {
     // MARK: - Published Properties
 
-    /// 是否正在导入
+    /// Whether an import is in progress
     @Published var isImporting: Bool = false
 
-    /// 导入进度
+    /// Import progress
     @Published var importProgress: ImportProgress?
 
-    /// 错误消息
+    /// Error message
     @Published var errorMessage: String?
 
-    /// 是否显示照片选择器
+    /// Whether to show the photo picker
     @Published var showPhotoPicker: Bool = false
 
-    /// 是否显示文件选择器
+    /// Whether to show the file picker
     @Published var showFilePicker: Bool = false
 
-    /// 是否显示音频选择器
+    /// Whether to show the audio picker
     @Published var showAudioPicker: Bool = false
 
-    /// 导入成功的数量
+    /// Number of items imported successfully
     @Published var importedCount: Int = 0
 
-    /// 是否显示加密文件密码输入对话框
+    /// Whether to show the encrypted-file password prompt
     @Published var showEncryptedPasswordInput: Bool = false
 
-    /// 当前待处理的加密文件信息
+    /// Encrypted file currently awaiting a password
     @Published var pendingEncryptedFile: (fileName: String, url: URL)?
 
     // MARK: - Services
@@ -53,7 +53,7 @@ class ImportViewModel: ObservableObject {
     var modelContext: ModelContext?
     var onImportComplete: (([MediaItem]) -> Void)?
 
-    /// 认证视图模型（用于获取会话密码）
+    /// Authentication view model (used to get the session password)
     var authViewModel: AuthenticationViewModel?
 
     private var currentImportTask: Task<Void, Never>?
@@ -70,7 +70,7 @@ class ImportViewModel: ObservableObject {
 
     // MARK: - Public Methods
 
-    /// 从照片库导入
+    /// Import from the photo library
     func importFromPhotoLibrary(results: [PHPickerResult]) {
         guard !isImporting else { return }
         guard !results.isEmpty else { return }
@@ -84,12 +84,12 @@ class ImportViewModel: ObservableObject {
         }
     }
 
-    /// 从文件导入
+    /// Import from Files
     func importFromFiles(urls: [URL]) {
         guard !isImporting else { return }
         guard !urls.isEmpty else { return }
 
-        // 检测是否有加密文件
+        // Check for encrypted files
         let encryptedFiles = urls.filter { $0.pathExtension.lowercased() == "encrypted" }
 
         if !encryptedFiles.isEmpty {
@@ -97,7 +97,7 @@ class ImportViewModel: ObservableObject {
                 errorMessage = "Native encrypted-file import is unavailable in this release. Recover originals with the documented recovery tools, then import them through Photos or Files. Your source files are unchanged."
                 return
             }
-            // 如果有加密文件，优先处理第一个加密文件
+            // If there are encrypted files, handle the first one first
             let firstEncryptedFile = encryptedFiles[0]
             pendingEncryptedFile = (
                 fileName: firstEncryptedFile.lastPathComponent,
@@ -106,12 +106,12 @@ class ImportViewModel: ObservableObject {
             isImporting = true
             showEncryptedPasswordInput = true
 
-            // 如果有多个文件，暂时只处理加密文件
-            // TODO: 可以支持批量处理混合文件类型
+            // With multiple files, only the encrypted file is handled for now
+            // TODO: support batches of mixed file types
             return
         }
 
-        // 正常导入非加密文件
+        // Import non-encrypted files normally
         errorMessage = nil
         isImporting = true
         importedCount = 0
@@ -121,22 +121,22 @@ class ImportViewModel: ObservableObject {
         }
     }
 
-    /// 显示照片选择器
+    /// Show the photo picker
     func selectPhotos() {
         showPhotoPicker = true
     }
 
-    /// 显示文件选择器
+    /// Show the file picker
     func selectFiles() {
         showFilePicker = true
     }
 
-    /// 显示音频选择器
+    /// Show the audio picker
     func selectAudio() {
         showAudioPicker = true
     }
 
-    /// 取消导入
+    /// Cancel the import
     func cancelImport() {
         importGeneration = UUID()
         currentImportTask?.cancel()
@@ -252,7 +252,7 @@ class ImportViewModel: ObservableObject {
 // MARK: - Import Progress Extension
 
 extension ImportViewModel {
-    /// 格式化的进度文本
+    /// Formatted progress text
     var progressText: String {
         guard let progress = importProgress else {
             return isImporting ? String(localized: "import.status.preparing") : ""
@@ -264,7 +264,7 @@ extension ImportViewModel {
             progress.currentFileName)
     }
 
-    /// 进度百分比
+    /// Progress percentage
     var progressPercentage: Double {
         importProgress?.percentage ?? 0
     }
@@ -273,18 +273,18 @@ extension ImportViewModel {
 // MARK: - Encrypted File Password Handling
 
 extension ImportViewModel {
-    /// 处理加密文件密码输入确认
+    /// Confirm the password entered for an encrypted file
     func handleEncryptedFilePassword(_ password: String) {
         guard let pendingFile = pendingEncryptedFile else { return }
 
-        // 清空待处理文件
+        // Clear the pending file
         pendingEncryptedFile = nil
 
-        // 使用输入的密码重新导入文件
+        // Re-import the file with the entered password
         importEncryptedFileWithPassword(url: pendingFile.url, originalPassword: password)
     }
 
-    /// 取消加密文件密码输入
+    /// Cancel the encrypted-file password prompt
     func cancelEncryptedFilePasswordInput() {
         cancelImport()
         errorMessage = String(localized: "import.encryptedFile.cancelled")

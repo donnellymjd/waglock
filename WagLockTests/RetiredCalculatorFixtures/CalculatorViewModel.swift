@@ -3,8 +3,8 @@
 //  CalculatorViewModel.swift
 //  WagLock
 //
-//  计算器逻辑视图模型
-//  支持基础四则运算 + 密码序列检测
+//  Calculator logic view model
+//  Basic arithmetic plus password sequence detection
 //
 
 import Foundation
@@ -19,9 +19,9 @@ class CalculatorViewModel: ObservableObject {
     // older iOS runtimes (swiftlang/swift#88036). No actor-bound cleanup is needed.
     nonisolated deinit { }
 
-    // MARK: - 计算器逻辑
+    // MARK: - Calculator logic
 
-    /// 数字按钮按下
+    /// Digit button pressed
     func numberPressed(_ number: Int) {
         let numString = String(number)
 
@@ -29,30 +29,30 @@ class CalculatorViewModel: ObservableObject {
             state.displayValue = numString
             state.shouldResetDisplay = false
         } else {
-            // 限制显示长度
+            // Limit the display length
             if state.displayValue.count < 12 {
                 state.displayValue =
                     state.displayValue == "0" ? numString : state.displayValue + numString
             }
         }
 
-        // 添加到密码历史（仅数字）
+        // Add to the password history (digits only)
         addToPasswordHistory(numString)
     }
 
-    /// 小数点按下
+    /// Decimal point pressed
     func decimalPressed() {
         if !state.displayValue.contains(".") {
             state.displayValue += "."
 
-            // 添加到密码历史（小数点也计入）
+            // Add to the password history (the decimal point counts too)
             addToPasswordHistory(".")
         }
     }
 
-    /// 运算符按下
+    /// Operator pressed
     func operationPressed(_ operation: CalculatorState.Operation) {
-        // 如果已有运算符，先计算结果
+        // If an operator is already pending, compute the result first
         if let currentOp = state.currentOperation {
             calculateResult()
         } else {
@@ -62,38 +62,38 @@ class CalculatorViewModel: ObservableObject {
         state.currentOperation = operation
         state.shouldResetDisplay = true
 
-        // ❌ 运算符不计入密码历史
+        // ❌ Operators are not added to the password history
     }
 
-    /// 等号按下
+    /// Equals pressed
     func equalsPressed() {
-        // 再执行计算
+        // Then perform the calculation
         calculateResult()
 
         state.currentOperation = nil
         state.shouldResetDisplay = true
     }
 
-    /// 清除按钮
+    /// Clear button
     func clearPressed() {
         state = CalculatorState()
     }
 
-    /// 百分号按钮
+    /// Percent button
     func percentPressed() {
         if let value = Double(state.displayValue) {
             state.displayValue = formatNumber(value / 100)
         }
     }
 
-    /// 正负号按钮
+    /// Sign toggle button
     func negatePressed() {
         if let value = Double(state.displayValue) {
             state.displayValue = formatNumber(-value)
         }
     }
 
-    // MARK: - 计算逻辑
+    // MARK: - Calculation logic
 
     private func calculateResult() {
         guard let operation = state.currentOperation,
@@ -108,25 +108,25 @@ class CalculatorViewModel: ObservableObject {
     }
 
     private func formatNumber(_ number: Double) -> String {
-        // 如果是整数，显示整数格式
+        // If it's an integer, show integer formatting
         if number.truncatingRemainder(dividingBy: 1) == 0 {
             return String(format: "%.0f", number)
         }
 
-        // 否则最多显示8位小数
+        // Otherwise show at most 8 decimal places
         let formatted = String(format: "%.8f", number)
-        // 去除尾部的0
+        // Strip trailing zeros
         return formatted.trimmingCharacters(in: CharacterSet(charactersIn: "0"))
             .trimmingCharacters(in: CharacterSet(charactersIn: "."))
     }
 
-    // MARK: - 密码检测
+    // MARK: - Password detection
 
-    /// 添加到密码历史（仅数字和小数点）
+    /// Add to the password history (digits and decimal point only)
     private func addToPasswordHistory(_ input: String) {
         state.inputHistory.append(input)
 
-        // 限制历史长度
+        // Limit the history length
         if state.inputHistory.count > maxHistoryLength {
             state.inputHistory.removeFirst()
         }

@@ -2,8 +2,8 @@
 //  MediaLoaderService.swift
 //  WagLock
 //
-//  媒体加载服务
-//  负责解密和加载图片、视频等媒体文件
+//  Media loading service
+//  Decrypts and loads images, videos and other media
 //
 
 import Foundation
@@ -11,7 +11,7 @@ import CryptoKit
 import SwiftUI
 import UIKit
 
-/// 媒体加载服务
+/// Media loading service
 ///
 /// Cache publication is generation-checked; workers only decrypt/decode.
 nonisolated final class MediaLoaderService: @unchecked Sendable {
@@ -53,7 +53,7 @@ nonisolated final class MediaLoaderService: @unchecked Sendable {
 
     // MARK: - Public Methods
 
-    /// 加载图片（带缓存）
+    /// Load an image (cached)
     @MainActor
     func loadImage(from mediaItem: MediaItem, password: String) async throws -> UIImage {
         try await loadImage(from: MediaPreviewSnapshot(mediaItem), password: password)
@@ -68,12 +68,12 @@ nonisolated final class MediaLoaderService: @unchecked Sendable {
         try Task.checkCancellation()
         let snapshot = imageCache.lookup(cacheKey)
 
-        // 检查缓存
+        // Check the cache
         if let cachedImage = snapshot.image {
             return cachedImage
         }
 
-        // 统一走 ZNSC 感知的解密管线，加密格式检测只存在 FileStorageService 一处
+        // Use the single ZNSC-aware decryption pipeline; format detection lives only in FileStorageService
         try Task.checkCancellation()
         let decryptedData = try await storage.loadDecryptedDataAsync(
             path: encryptedPath,
@@ -82,7 +82,7 @@ nonisolated final class MediaLoaderService: @unchecked Sendable {
         )
         try Task.checkCancellation()
 
-        // 后台解码，避免阻塞主线程
+        // Decode in the background to avoid blocking the main thread
         let image: UIImage? = await withCheckedContinuation { continuation in
             loadQueue.addOperation {
                 continuation.resume(returning: self.decoder(decryptedData, AppConstants.previewImageMaxPixelSize))
@@ -99,12 +99,12 @@ nonisolated final class MediaLoaderService: @unchecked Sendable {
         return image
     }
 
-    /// 清除缓存（NSCache 线程安全，可在任意线程调用）
+    /// Clear the cache (NSCache is thread-safe; callable from any thread)
     func clearCache() {
         imageCache.clear()
     }
 
-    /// 清除指定图片的缓存（NSCache 线程安全，可在任意线程调用）
+    /// Clear the cache for one image (NSCache is thread-safe; callable from any thread)
     func clearCache(forPath encryptedPath: String) {
         // Invalidate pending loads in every password context for this asset.
         // NSCache cannot enumerate context keys; conservative eviction is intentional.

@@ -2,8 +2,8 @@
 //  PhotosView.swift
 //  WagLock
 //
-//  相片视图
-//  网格展示所有图片，支持预览、缩放、搜索和批量选择
+//  Photos view
+//  Grid of all images with preview, zoom, search and batch selection
 //
 
 import SwiftData
@@ -17,7 +17,7 @@ struct PhotosView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var authViewModel: AuthenticationViewModel
 
-    // 只查询图片类型的媒体
+    // Query only image media
     @Query(
         filter: #Predicate<MediaItem> { item in
             item.typeRawValue == "photo"
@@ -73,7 +73,7 @@ struct PhotosView: View {
                     }
                 }.padding(.horizontal, 24)
                 ZStack {
-                // 访客模式下始终显示空状态
+                // Always show the empty state in guest mode
                 if guestModeManager.isGuestMode || photos.isEmpty {
                     emptyStateView
                 } else if filteredPhotos.isEmpty {
@@ -184,7 +184,7 @@ struct PhotosView: View {
                 Text(deleteErrorMessage ?? "")
             }
             .onChange(of: searchText) { _, _ in
-                // 搜索条件变化后清除选择，避免"已选择 N 项"与实际可见结果不一致
+                // Clear the selection when the search changes so "N selected" always matches the visible results
                 selectedPhotoIDs.removeAll()
             }
 
@@ -263,7 +263,7 @@ struct PhotosView: View {
     @ViewBuilder
     private func photoTile(_ photo: MediaItem) -> some View {
                     if isSelectionMode {
-                        // 选择模式：点击切换选择状态
+                        // Selection mode: tap toggles selection
                         Button {
                             toggleSelection(for: photo)
                         } label: {
@@ -277,7 +277,7 @@ struct PhotosView: View {
                         }
                         .buttonStyle(.plain)
                     } else {
-                        // 正常模式：点击预览
+                        // Normal mode: tap to preview
                         GridItemView(mediaItem: photo, showsMetadata: false)
                             .aspectRatio(1, contentMode: .fill)
                             .onTapGesture {
@@ -371,7 +371,7 @@ struct PhotosView: View {
 
     // MARK: - Computed Properties
 
-    /// 按搜索关键词过滤后的相片列表
+    /// Photos filtered by the search text
     private var filteredPhotos: [MediaItem] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let sorted = photos.sorted(using: settings.sortOrder.sortDescriptor)
@@ -396,8 +396,8 @@ struct PhotosView: View {
     private func deletePhoto(_ photo: MediaItem) {
         let encryptedPath = photo.encryptedPath
 
-        // 先提交数据库删除，成功后再删文件，
-        // 避免 save 失败时留下指向已删除文件的记录
+        // Commit the database deletion first and delete files only after it succeeds,
+        // so a failed save never leaves records pointing at deleted files
         modelContext.delete(photo)
         do {
             try LibraryWriteCoordinator.save(modelContext)
@@ -412,18 +412,18 @@ struct PhotosView: View {
         do {
             try vaultServices.storage.deleteFile(path: encryptedPath)
         } catch {
-            // 记录已删除，文件删除失败只会残留无引用的加密文件
+            // The record is gone; a failed file delete only leaves an unreferenced encrypted file
         }
     }
 
-    /// 批量删除选中的相片
+    /// Batch delete the selected photos
     private func deletePhotos(_ items: [MediaItem]) {
         guard !items.isEmpty else { return }
 
         let encryptedPaths = items.map { $0.encryptedPath }
 
-        // 先提交数据库删除，成功后再删文件，
-        // 避免 save 失败时留下指向已删除文件的记录
+        // Commit the database deletion first and delete files only after it succeeds,
+        // so a failed save never leaves records pointing at deleted files
         for item in items {
             modelContext.delete(item)
         }
@@ -441,11 +441,11 @@ struct PhotosView: View {
             do {
                 try vaultServices.storage.deleteFile(path: path)
             } catch {
-                // 记录已删除，文件删除失败只会残留无引用的加密文件
+                // The record is gone; a failed file delete only leaves an unreferenced encrypted file
             }
         }
 
-        // 退出选择模式并清空选择
+        // Leave selection mode and clear the selection
         isSelectionMode = false
         selectedPhotoIDs.removeAll()
         batchPhotosToDelete = []
@@ -462,7 +462,7 @@ struct PhotoThumbnailView: View {
         Rectangle()
             .fill(Color.gray.opacity(0.2))
             .overlay {
-                // TODO: 加载真实的缩略图
+                // TODO: load the real thumbnail
                 Image(systemName: "photo")
                     .foregroundColor(.gray)
             }

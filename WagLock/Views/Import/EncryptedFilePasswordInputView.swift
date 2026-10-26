@@ -2,8 +2,8 @@
 //  EncryptedFilePasswordInputView.swift
 //  WagLock
 //
-//  加密文件密码输入视图
-//  用于导入旧加密文件时输入原始密码
+//  Encrypted file password entry view
+//  Used to enter the original password when importing old encrypted files
 //
 
 import SwiftUI

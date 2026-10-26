@@ -2,8 +2,8 @@
 //  SetupPasswordView.swift
 //  WagLock
 //
-//  首次设置密码界面
-//  引导用户创建应用密码
+//  First-time password setup screen
+//  Guides the user through creating an app password
 //
 
 import SwiftUI
@@ -46,10 +46,10 @@ struct SetupPasswordView: View {
 
     // MARK: - View Components
 
-    /// 头部区域
+    /// Header
     private var headerSection: some View {
         VStack(spacing: 20) {
-            // 锁图标
+            // Lock icon
             Image("AppIconDisplay")
                 .resizable()
                 .scaledToFit()
@@ -70,7 +70,7 @@ struct SetupPasswordView: View {
         }
     }
 
-    /// 零网络隐私提醒
+    /// Offline privacy notice
     private var privacyNotice: some View {
         HStack(spacing: 12) {
             Image(systemName: "network.slash")
@@ -101,12 +101,12 @@ struct SetupPasswordView: View {
         .cornerRadius(12)
     }
 
-    /// 密码输入表单
+    /// Password entry form
     private var passwordForm: some View {
         VStack(spacing: 20) {
             PasswordKeyboardPicker(selection: $keyboard)
                 .onChange(of: keyboard) { _, _ in focusedField = nil }
-            // 密码输入
+            // Password field
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Image(systemName: "lock.fill")
@@ -152,7 +152,7 @@ struct SetupPasswordView: View {
                 PasswordStrengthView(password: viewModel.password)
             }
 
-            // 确认密码输入
+            // Confirm password field
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Image(systemName: "lock.fill")
@@ -243,7 +243,7 @@ struct SetupPasswordView: View {
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
 
-            // 错误消息
+            // Error message
             if let errorMessage = viewModel.errorMessage {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -263,7 +263,7 @@ struct SetupPasswordView: View {
         .shadow(radius: 5)
     }
 
-    /// 设置按钮
+    /// Set password button
     private var setupButton: some View {
         Button(action: {
             viewModel.setupPassword()

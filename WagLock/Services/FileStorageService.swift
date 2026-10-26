@@ -2,22 +2,22 @@
 //  FileStorageService.swift
 //  WagLock
 //
-//  文件存储管理服务
-//  管理加密文件的保存、读取、删除
+//  File storage service
+//  Saves, reads and deletes encrypted files
 //
 
 import Foundation
 import CryptoKit
 
-/// 文件存储错误类型
+/// File storage error types
 enum FileStorageError: Error {
-    case directoryCreationFailed  // 目录创建失败
-    case fileNotFound  // 文件不存在
-    case fileSaveFailed  // 文件保存失败
-    case fileDeleteFailed  // 文件删除失败
-    case insufficientStorage  // 存储空间不足
-    case fileTooLarge  // 文件过大
-    case invalidPath  // 无效路径
+    case directoryCreationFailed  // Directory creation failed
+    case fileNotFound  // File not found
+    case fileSaveFailed  // File save failed
+    case fileDeleteFailed  // File delete failed
+    case insufficientStorage  // Insufficient storage
+    case fileTooLarge  // File too large
+    case invalidPath  // Invalid path
 
     var localizedDescription: String {
         switch self {
@@ -39,7 +39,7 @@ enum FileStorageError: Error {
     }
 }
 
-/// 文件存储服务
+/// File storage service
 nonisolated class FileStorageService: @unchecked Sendable {
 
     // MARK: - Singleton
@@ -60,7 +60,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
         return queue
     }()
 
-    // 存储目录URL
+    // Storage directory URL
     private let storageDirectory: URL
     private let bindingLock = NSLock()
     private var bindings: CiphertextBindings?
@@ -72,7 +72,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
         let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
         storageDirectory = documentsURL.appendingPathComponent(storageDirectoryName)
         availableCapacity = Self.readAvailableCapacity
-        // 确保存储目录存在
+        // Make sure the storage directory exists
         createStorageDirectoryIfNeeded()
     }
 
@@ -112,38 +112,38 @@ nonisolated class FileStorageService: @unchecked Sendable {
 
     // MARK: - Public Methods
 
-    /// 保存加密数据
+    /// Save encrypted data
     /// - Parameters:
-    ///   - data: 加密后的数据
-    ///   - fileName: 原始文件名（可选，用于生成唯一文件名）
-    /// - Returns: 保存后的相对文件路径（仅文件名）
+    ///   - data: Encrypted data
+    ///   - fileName: Original file name (optional; used to generate a unique name)
+    /// - Returns: Relative path of the saved file (file name only)
     /// - Throws: FileStorageError
     func saveEncrypted(data: Data, originalFileName: String? = nil) throws -> String {
         let registry = currentBindings()
-        // 检查文件大小
+        // Check file size
         guard data.count <= AppConstants.maxFileSize else {
             throw FileStorageError.fileTooLarge
         }
 
-        // 检查存储空间
+        // Check storage space
         try checkStorageSpace(requiredBytes: Int64(data.count))
 
-        // 生成唯一文件名
+        // Generate a unique file name
         let fileName = generateUniqueFileName(originalName: originalFileName)
         let fileURL = try getFileURL(for: fileName)
 
-        // 保存文件
+        // Save the file
         do {
             try data.write(to: fileURL, options: [.atomic, .completeFileProtection])
             try registry?.register(fileName, digest: Data(SHA256.hash(data: data)))
-            // 返回相对路径（仅文件名），而不是绝对路径
+            // Return a relative path (file name only), not an absolute path
             return fileName
         } catch {
             throw FileStorageError.fileSaveFailed
         }
     }
 
-    /// 保存大文件（流式加密）
+    /// Save a large file (streaming encryption)
     func saveEncryptedFile(
         from sourceURL: URL,
         password: String,
@@ -177,19 +177,19 @@ nonisolated class FileStorageService: @unchecked Sendable {
         return fileName
     }
 
-    /// 读取加密数据
-    /// - Parameter path: 文件相对路径（文件名）
-    /// - Returns: 加密的数据
+    /// Read encrypted data
+    /// - Parameter path: Relative file path (file name)
+    /// - Returns: Encrypted data
     /// - Throws: FileStorageError
     func loadEncrypted(path: String) throws -> Data {
         let fileURL = try getFileURL(for: path)
 
-        // 检查文件是否存在
+        // Check that the file exists
         guard fileManager.fileExists(atPath: fileURL.path) else {
             throw FileStorageError.fileNotFound
         }
 
-        // 读取文件
+        // Read the file
         do {
             let expected = try expectedCiphertextDigest(path: path)
             let data = try Data(contentsOf: fileURL)
@@ -200,18 +200,18 @@ nonisolated class FileStorageService: @unchecked Sendable {
         }
     }
 
-    /// 删除文件
-    /// - Parameter path: 文件相对路径（文件名）
+    /// Delete a file
+    /// - Parameter path: Relative file path (file name)
     /// - Throws: FileStorageError
     func deleteFile(path: String) throws {
         let fileURL = try getFileURL(for: path)
 
-        // 检查文件是否存在
+        // Check that the file exists
         guard fileManager.fileExists(atPath: fileURL.path) else {
             return
         }
 
-        // 删除文件
+        // Delete the file
         do {
             try fileManager.removeItem(at: fileURL)
         } catch {
@@ -219,9 +219,9 @@ nonisolated class FileStorageService: @unchecked Sendable {
         }
     }
 
-    /// 获取文件大小
-    /// - Parameter path: 文件相对路径（文件名）
-    /// - Returns: 文件大小（字节）
+    /// Get file size
+    /// - Parameter path: Relative file path (file name)
+    /// - Returns: File size (bytes)
     func getFileSize(path: String) -> Int64? {
         guard let fileURL = try? getFileURL(for: path) else { return nil }
 
@@ -233,22 +233,22 @@ nonisolated class FileStorageService: @unchecked Sendable {
         }
     }
 
-    /// 检查文件是否存在
-    /// - Parameter path: 文件相对路径（文件名）
-    /// - Returns: 是否存在
+    /// Check whether a file exists
+    /// - Parameter path: Relative file path (file name)
+    /// - Returns: Whether it exists
     func fileExists(path: String) -> Bool {
         guard let fileURL = try? getFileURL(for: path) else { return false }
         return fileManager.fileExists(atPath: fileURL.path)
     }
 
-    /// 获取存储目录路径
-    /// - Returns: 存储目录URL
+    /// Get the storage directory path
+    /// - Returns: Storage directory URL
     func getStorageDirectory() -> URL {
         return storageDirectory
     }
 
-    /// 计算总存储大小
-    /// - Returns: 总大小（字节）
+    /// Calculate total storage size
+    /// - Returns: Total size (bytes)
     func getTotalStorageSize() -> Int64 {
         var totalSize: Int64 = 0
 
@@ -271,8 +271,8 @@ nonisolated class FileStorageService: @unchecked Sendable {
         return totalSize
     }
 
-    /// 获取所有加密文件列表
-    /// - Returns: 文件路径数组
+    /// Get the list of all encrypted files
+    /// - Returns: Array of file paths
     func getAllEncryptedFiles() -> [String] {
         do {
             let fileURLs = try fileManager.contentsOfDirectory(
@@ -293,7 +293,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
         }
     }
 
-    /// 清空所有加密文件
+    /// Delete all encrypted files
     /// - Throws: FileStorageError
     func clearAllFiles() throws {
         let files = getAllEncryptedFiles()
@@ -306,7 +306,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
 
     // MARK: - Private Methods
 
-    /// 创建存储目录（如果不存在）
+    /// Create the storage directory (if it doesn't exist)
     private func createStorageDirectoryIfNeeded() {
         if !fileManager.fileExists(atPath: storageDirectory.path) {
             do {
@@ -320,16 +320,16 @@ nonisolated class FileStorageService: @unchecked Sendable {
         }
     }
 
-    /// 生成唯一文件名
-    /// - Parameter originalName: 原始文件名（可选）
-    /// - Returns: 唯一文件名
+    /// Generate a unique file name
+    /// - Parameter originalName: Original file name (optional)
+    /// - Returns: Unique file name
     private func generateUniqueFileName(originalName: String?) -> String {
         // Names/extensions remain in the catalog; ciphertext paths reveal neither.
         UUID().uuidString + fileExtension
     }
 
-    /// 检查存储空间
-    /// - Parameter requiredBytes: 需要的字节数
+    /// Check storage space
+    /// - Parameter requiredBytes: Number of bytes required
     /// - Throws: FileStorageError
     private func checkStorageSpace(requiredBytes: Int64) throws {
         let freeSpace = try availableCapacity(storageDirectory)
@@ -353,7 +353,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
 
 nonisolated extension FileStorageService {
 
-    /// 存储统计信息
+    /// Storage statistics
     struct StorageStatistics {
         let totalFiles: Int
         let totalSize: Int64
@@ -372,8 +372,8 @@ nonisolated extension FileStorageService {
         }
     }
 
-    /// 获取存储统计信息
-    /// - Returns: 存储统计
+    /// Get storage statistics
+    /// - Returns: Storage statistics
     func getStorageStatistics() -> StorageStatistics {
         let files = getAllEncryptedFiles()
         let totalSize = getTotalStorageSize()
@@ -393,7 +393,7 @@ nonisolated extension FileStorageService {
         )
     }
 
-    /// 获取存储文件的完整 URL
+    /// Get the full URL of a stored file
     func getFileURL(for path: String) throws -> URL {
         guard !path.isEmpty, !path.utf8.contains(0),
               !path.split(separator: "/", omittingEmptySubsequences: false).contains(".."),
@@ -416,7 +416,7 @@ nonisolated extension FileStorageService {
         return candidate
     }
 
-    /// 将加密文件解密到临时文件
+    /// Decrypt an encrypted file to a temporary file
     func createDecryptedTempFile(
         path: String,
         password: String,
@@ -432,7 +432,7 @@ nonisolated extension FileStorageService {
                 expectedCiphertextDigest: try expectedCiphertextDigest(path: path)
             )
 
-            // 明文临时文件必须使用最高文件保护级别，防止锁屏后被读取
+            // Plaintext temporary files must use the strongest file protection so they can't be read while the device is locked
             try FileManager.default.setAttributes(
                 [.protectionKey: FileProtectionType.complete],
                 ofItemAtPath: tempURL.path
@@ -440,13 +440,13 @@ nonisolated extension FileStorageService {
 
             return tempURL
         } catch {
-            // 解密失败时清理可能残留的半成品文件
+            // On decryption failure, clean up any partial output
             try? FileManager.default.removeItem(at: tempURL)
             throw error
         }
     }
 
-    /// 在受控后台队列中解密媒体，避免翻页或打开播放器时阻塞主线程。
+    /// Decrypt media on a controlled background queue so paging or opening the player doesn't block the main thread.
     func createDecryptedTempFileAsync(
         path: String,
         password: String,
@@ -477,7 +477,7 @@ nonisolated extension FileStorageService {
         }
     }
 
-    /// 在受控后台队列中读取并解密文件数据，兼容标准和流式加密格式。
+    /// Read and decrypt file data on a controlled background queue; supports both buffered and streaming formats.
     func loadDecryptedDataAsync(
         path: String,
         password: String,
@@ -489,14 +489,14 @@ nonisolated extension FileStorageService {
                 do {
                     let sourceURL = try self.getFileURL(for: path)
 
-                    // 只读取 4 字节魔数判断加密格式，避免把整个加密文件读入内存
+                    // Read only the 4-byte magic to detect the format, without loading the whole encrypted file into memory
                     let handle = try FileHandle(forReadingFrom: sourceURL)
                     let magic = try handle.read(upToCount: 4) ?? Data()
                     try handle.close()
                     let chunkMagic = Data("ZNSC".utf8)
 
                     if magic == chunkMagic {
-                        // 流式加密：解密到临时文件后读取（临时文件用完即删）
+                        // Streaming format: decrypt to a temporary file, then read it (the temporary file is deleted right after)
                         let tempURL = try self.createDecryptedTempFile(
                             path: path,
                             password: password,
@@ -520,7 +520,7 @@ nonisolated extension FileStorageService {
         }
     }
 
-    /// 清洗文件扩展名，防止非法字符混入临时文件名（未来调用方的路径穿越风险）
+    /// Sanitize the file extension so illegal characters can't reach temporary file names (path traversal risk for future callers)
     private func sanitizedExtension(_ fileExtension: String) -> String {
         let cleaned = fileExtension
             .trimmingCharacters(in: CharacterSet(charactersIn: "."))

@@ -2,8 +2,8 @@
 //  ImportButtonsView.swift
 //  WagLock
 //
-//  导入按钮视图
-//  提供照片和文件导入选项
+//  Import buttons view
+//  Offers photo and file import options
 //
 
 import PhotosUI
@@ -43,7 +43,7 @@ private struct ScopedImportButtonsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // 背景
+                // Background
                 ColorTheme.primaryBackground
                     .ignoresSafeArea()
 
@@ -139,7 +139,7 @@ private struct ScopedImportButtonsView: View {
                     if items.isEmpty {
                         dismiss()
                     } else {
-                        // 显示成功提示，用户确认后关闭
+                        // Show a success message; close after the user confirms
                         importSuccessCount = items.count
                         showImportSuccess = true
                     }
@@ -194,7 +194,7 @@ private struct ScopedImportButtonsView: View {
         VStack(spacing: 30) {
             Spacer()
 
-            // 动画图标
+            // Animated icon
             ZStack {
                 Circle()
                     .stroke(Color.blue.opacity(0.2), lineWidth: 4)
@@ -212,7 +212,7 @@ private struct ScopedImportButtonsView: View {
                     .foregroundColor(.blue)
             }
 
-            // 进度信息
+            // Progress info
             VStack(spacing: 12) {
                 Text(viewModel.progressText)
                     .font(.headline)
@@ -228,7 +228,7 @@ private struct ScopedImportButtonsView: View {
 
             Spacer()
 
-            // 成功消息
+            // Success message
             if viewModel.importedCount > 0 && !viewModel.isImporting {
                 VStack(spacing: 12) {
                     Image(systemName: "checkmark.circle.fill")

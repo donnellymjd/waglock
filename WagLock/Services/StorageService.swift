@@ -2,14 +2,14 @@
 //  StorageService.swift
 //  WagLock
 //
-//  存储空间管理服务
-//  计算文件大小、清理缓存等
+//  Storage management service
+//  Calculates file sizes, clears caches, etc.
 //
 
 import Foundation
 import SwiftData
 
-/// 存储管理服务
+/// Storage management service
 class StorageService {
 
     // MARK: - Singleton
@@ -19,7 +19,7 @@ class StorageService {
 
     // MARK: - Storage Calculation
 
-    /// 计算所有加密文件的总大小
+    /// Calculate the total size of all encrypted files
     func calculateTotalStorageUsed(modelContext: ModelContext) async -> Int64 {
         let descriptor = FetchDescriptor<MediaItem>()
 
@@ -32,12 +32,12 @@ class StorageService {
         }
     }
 
-    /// 格式化文件大小
+    /// Format a file size
     func formatBytes(_ bytes: Int64) -> String {
         ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
 
-    /// 获取应用文档目录大小
+    /// Get the size of the app's Documents directory
     func calculateDocumentsDirectorySize() -> Int64 {
         guard
             let documentsURL = FileManager.default.urls(
@@ -50,7 +50,7 @@ class StorageService {
         return calculateDirectorySize(url: documentsURL)
     }
 
-    /// 计算指定目录的大小
+    /// Calculate the size of a directory
     private func calculateDirectorySize(url: URL) -> Int64 {
         var totalSize: Int64 = 0
 
@@ -83,7 +83,7 @@ class StorageService {
 
     // MARK: - Cache Management
 
-    /// 计算临时缓存大小
+    /// Calculate the temporary cache size
     func calculateCacheSize() -> Int64 {
         guard
             let cacheURL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
@@ -95,7 +95,7 @@ class StorageService {
         return calculateDirectorySize(url: cacheURL)
     }
 
-    /// 清理临时缓存
+    /// Clear the temporary cache
     func clearCache() throws -> Int64 {
         guard
             let cacheURL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
@@ -107,7 +107,7 @@ class StorageService {
         let fileManager = FileManager.default
         let cacheSize = calculateDirectorySize(url: cacheURL)
 
-        // 获取缓存目录中的所有文件
+        // Get all files in the cache directory
         guard
             let contents = try? fileManager.contentsOfDirectory(
                 at: cacheURL,
@@ -118,7 +118,7 @@ class StorageService {
             throw StorageError.clearCacheFailed
         }
 
-        // 删除每个文件和子目录
+        // Delete each file and subdirectory
         for fileURL in contents {
             try? fileManager.removeItem(at: fileURL)
         }
@@ -126,7 +126,7 @@ class StorageService {
         return cacheSize
     }
 
-    /// 清理临时文件目录
+    /// Clear the temporary files directory
     func clearTemporaryFiles() throws -> Int64 {
         let tempURL = FileManager.default.temporaryDirectory
         let fileManager = FileManager.default
@@ -151,13 +151,13 @@ class StorageService {
 
     // MARK: - Storage Info
 
-    /// 获取存储统计信息
+    /// Get storage statistics
     func getStorageInfo(modelContext: ModelContext, storage: FileStorageService? = nil) async -> StorageInfo {
         let totalUsed = await calculateTotalStorageUsed(modelContext: modelContext)
         let cacheSize = storage == nil ? calculateCacheSize() : 0
         let documentsSize = storage.map { calculateDirectorySize(url: $0.getStorageDirectory()) } ?? calculateDocumentsDirectorySize()
 
-        // 获取设备可用空间
+        // Get the device's available space
         let availableSpace = getAvailableSpace()
 
         return StorageInfo(
@@ -168,7 +168,7 @@ class StorageService {
         )
     }
 
-    /// 获取设备可用空间
+    /// Get the device's available space
     private func getAvailableSpace() -> Int64 {
         guard
             let documentsURL = FileManager.default.urls(
@@ -192,34 +192,34 @@ class StorageService {
 // MARK: - Storage Info Model
 
 struct StorageInfo {
-    /// 所有媒体文件占用的总空间
+    /// Total space used by all media files
     let totalUsed: Int64
 
-    /// 缓存占用空间
+    /// Space used by caches
     let cacheSize: Int64
 
-    /// 文档目录总大小
+    /// Total size of the Documents directory
     let documentsSize: Int64
 
-    /// 设备可用空间
+    /// Device available space
     let availableSpace: Int64
 
-    /// 格式化的总使用空间
+    /// Formatted total used space
     var formattedTotalUsed: String {
         ByteCountFormatter.string(fromByteCount: totalUsed, countStyle: .file)
     }
 
-    /// 格式化的缓存大小
+    /// Formatted cache size
     var formattedCacheSize: String {
         ByteCountFormatter.string(fromByteCount: cacheSize, countStyle: .file)
     }
 
-    /// 格式化的文档大小
+    /// Formatted Documents size
     var formattedDocumentsSize: String {
         ByteCountFormatter.string(fromByteCount: documentsSize, countStyle: .file)
     }
 
-    /// 格式化的可用空间
+    /// Formatted available space
     var formattedAvailableSpace: String {
         ByteCountFormatter.string(fromByteCount: availableSpace, countStyle: .file)
     }

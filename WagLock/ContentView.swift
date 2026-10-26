@@ -2,8 +2,8 @@
 //  ContentView.swift
 //  WagLock
 //
-//  主内容视图（已认证后显示）
-//  使用 MainTabView 展示标签栏界面
+//  Main content view (shown after authentication)
+//  Uses MainTabView to present the tab bar interface
 //
 
 import SwiftData

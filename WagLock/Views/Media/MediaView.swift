@@ -2,7 +2,7 @@
 //  MediaView.swift
 //  WagLock
 //
-//  影音视图（合并视频与音频两个子标签）
+//  Media view (videos and audio as two sub-tabs)
 //
 
 import SwiftUI
