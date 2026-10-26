@@ -49,7 +49,7 @@ if [ "$archived_build_number" != "$current_build_number" ]; then
     exit 1
 fi
 
-xcrun agvtool next-version -all
+xcrun agvtool next-version
 
 next_build_number="$(xcrun agvtool what-version -terse | tail -n 1)"
 expected_build_number="$((current_build_number + 1))"
