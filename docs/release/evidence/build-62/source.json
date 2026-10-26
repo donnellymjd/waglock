@@ -1,0 +1,8 @@
+{
+  "tag": "candidate-1.0-build62",
+  "commit": "7b682476b433be5e9802cf29ca241029a12fe8ec",
+  "archive": "WagLock-1.0-build62-source.tar.gz",
+  "archiveSHA256": "dd26bab31b1a0c25d97517f634ddf4c46defb00bce993fee43b8d13c763d4f09",
+  "binaryPackageReceipt": "package.json",
+  "byteIdenticalBuildClaim": false
+}
