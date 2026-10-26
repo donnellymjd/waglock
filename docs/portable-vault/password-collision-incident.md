@@ -1,6 +1,6 @@
 # Password collision access incident — D2S-178
 
-Reported October26 against installed build62. [Urgent tracking issue](https://linear.app/d2sci/issue/D2S-178/prevent-main-vault-access-loss-after-secondary-password-collision). Submission is on hold for this incident. Actual phone recovery has not yet been confirmed.
+Reported October26 against installed build62. [Urgent tracking issue](https://linear.app/d2sci/issue/D2S-178/prevent-main-vault-access-loss-after-secondary-password-collision). Submission is on hold for this incident. The owner confirmed on October26 that the main library opens again after the guided secondary-password change to a distinct value. No reset or reinstall was required. Secondary-content verification and preventing recurrence remain open.
 
 ## Cause and security constraints
 
@@ -25,4 +25,4 @@ This changes only the selected secondary wrapper and preserves both data keys. F
 
 The existing collision regression already checked moving the secondary password away restores primary routing. The expanded case covers the reported Face ID sequence and encrypted content preservation. All5 `SecondaryVaultAuthenticationTests` pass with0 failures in `/private/tmp/waglock-collision-recovery-final.xcresult`, including the expanded recovery regression. `git diff --check` passes. No production authentication behavior is changed by these regression tests.
 
-D2S-178 remains open until the owner confirms phone recovery and a reviewed collision/recoverability UX is chosen. A generic instruction to use a unique password is insufficient evidence that recurrence has been prevented. Any proposed behavior must address accidental owner lockout, the secondary-password oracle and ordinary decoy-login confidentiality together.
+Main-vault phone access recovery is owner-confirmed. D2S-178 remains open until a reviewed collision/recoverability UX is chosen and validated. A generic instruction to use a unique password is insufficient evidence that recurrence has been prevented. Any proposed behavior must address accidental owner lockout, the secondary-password oracle and ordinary decoy-login confidentiality together.
