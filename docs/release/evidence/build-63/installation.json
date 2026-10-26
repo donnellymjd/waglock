@@ -1,0 +1,9 @@
+{
+  "installed": true,
+  "bundleIdentifier": "com.d2sci.waglock",
+  "build": "63",
+  "preservedDev": true,
+  "resetOrUninstall": false,
+  "privateContentRead": false,
+  "ownerUAT": "pending"
+}
