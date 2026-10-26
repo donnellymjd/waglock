@@ -1,0 +1,21 @@
+{
+  "acceptedBy": "Michael Donnelly",
+  "date": "2026-10-26",
+  "issue": "D2S-151",
+  "candidate": "1.0(65)",
+  "ownerReply": "Accept these disclosed limits for 1.0",
+  "acceptedScope": [
+    "AI-assisted review without independent human cryptographic audit",
+    "Broader fuzzing deferred under D2S-183",
+    "Direct AirPlay and accessibility coverage deferred under D2S-184",
+    "Documented short-PIN offline-guessing limitation",
+    "Device-bound biometric recovery and explicit-backup dependency",
+    "Secondary-vault discoverability and lack of forensic deniability"
+  ],
+  "doesNotAuthorize": [
+    "upload",
+    "submission",
+    "public release"
+  ],
+  "focusedCandidatePhoneUAT": "pending"
+}

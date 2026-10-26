@@ -1,8 +1,8 @@
 {
-  "status": "engineering-and-local-distribution-signing-verified-awaiting-phone-name-check-and-external-gates",
+  "status": "adversarial-review-fixes-verified-awaiting-focused-phone-UAT-and-external-gates",
   "bundleId": "com.d2sci.waglock",
   "version": "1.0",
-  "build": "64",
+  "build": "65",
   "primaryLocale": "en-US",
   "name": "WagLock",
   "subtitle": "Private photos. Your control.",
@@ -22,9 +22,9 @@
   "privacyRecommendation": "Data Not Collected, pending account-holder confirmation of actual support/diagnostic arrangements",
   "encryptionDeclaration": "pending account-holder determination; do not claim exemption or invent a compliance code",
   "ageRating": "complete Apple questionnaire; no rating asserted before filing",
-  "sourceTag": "candidate-1.0-build64",
+  "sourceTag": "candidate-1.0-build65",
   "appStoreConnectAppId": "6826717664",
   "appStoreConnectStateVerified": false,
-  "screenshotDirectory": "../screenshots/build64",
+  "screenshotDirectory": "../screenshots/build65",
   "readyForSubmission": false
 }

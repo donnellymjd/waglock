@@ -125,3 +125,8 @@ Owner explicitly approved refreshing/creating distribution signing resources for
 ## D2S-151 adversarial review — build65
 
 Build64 is held after four reproduced integration defects. Preserve ADR-028: album previews require selected-storage ciphertext binding; all audio import callers supply storage explicitly; confirmation/indicators compare exact credential UTF-8; album biometric enrollment rechecks captured generation before Keychain mutation. No normalization, key rotation, format migration, singleton fallback, orphan cross-vault migration or deletion is authorized by these fixes. Keep candidate-1.0-build64 immutable and retain independent Dev/owner libraries. See docs/portable-vault/audits/D2S-151.md and build65 evidence. This developer-AI review is not independent certification; material residual-risk acceptance, focused phone UAT and external submission gates remain explicit.
+
+
+## Build65 verification and owner risk acceptance — October26
+
+D2S-179–182 fixes are frozen at candidate-1.0-build65/1996670.363 Debug-host unit/security tests and three workflows against actual Release65 pass; eight native public screenshots and local Apple Distribution export/association/profile checks pass.65 is installed/launched preserving owner libraries and Dev44. Owner explicitly accepted AI-only assurance and the documented183/184, PIN/recovery/decoy limits for1.0. Focused65 phone UAT remains pending; no upload/submission/release is authorized by risk acceptance. See build65 receipts and current release ledger. The archive post-action advances working counters/Info.plist to66; keep65 immutable and do not accidentally substitute the generated working counter into65 source receipts.

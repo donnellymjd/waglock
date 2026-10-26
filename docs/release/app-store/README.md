@@ -1,24 +1,25 @@
-> **D2S-151 hold:** do not upload or submit64. The final review reproduced four issues; corrected65 is being verified. The64 inventory below is historical. See [the review](../../portable-vault/audits/D2S-151.md).
+# WagLock1.0 submission package — corrected build65
 
-# WagLock1.0 submission package — build64 verified local candidate
+Build64 is held after D2S-151 reproduced four integration defects. Corrected65 fixes album-preview binding, Unicode confirmation, generic Files audio routing and late album biometric enrollment.363 tests, three actual-release confirmation/management/backup UI checks, eight native screenshots, signed archive and local App Store distribution export pass.65 is installed preserving both phone libraries and Dev44. Focused phone UAT remains pending. The owner explicitly accepted the documented material review limits; no upload/submission/release follows from that acceptance.
 
-Build63 is the owner-accepted security/provider baseline. Build64 adds an editable date/time-stamped backup default and uses the accepted dedicated password-manager association in the standard release configuration. Build64 local engineering checks pass; a short phone filename check and the external gates below remain. [Current pre-launch ledger](../prelaunch-status.md) is authoritative; old build50/53 handoffs and screenshots are historical.
+[Current pre-launch ledger](../prelaunch-status.md) and [adversarial review](../../portable-vault/audits/D2S-151.md) are authoritative. This is AI-assisted development review, not independent human security certification.
 
-## Exact package
+## Exact candidate
 
-- App/bundle: WagLock1.0, `com.d2sci.waglock`, build64. Keep WagLock Dev separate.
-- Verified signed development archive: `/private/tmp/WagLock-1.0-build64-prelaunch.xcarchive`.
-- Frozen source: `candidate-1.0-build64` (`e0240c2`), with source/archive digest in build64 evidence. Never retag accepted candidates.
+- App: WagLock1.0(65), `com.d2sci.waglock`. Keep WagLock Dev separate.
+- Signed archive: `/private/tmp/WagLock-1.0-build65-adversarial-review.xcarchive`.
+- Source: immutable `candidate-1.0-build65`, commit1996670. [Source/digest](../evidence/build-65/source.json). Never retag candidates.
+- Distribution IPA: `/private/tmp/waglock-build65-store-export/WagLock.ipa`. [Actual signature/profile/digest](../evidence/build-65/distribution-signing.json).
 - Copy-ready fields: [metadata](metadata.json), [description](description.txt), [review walkthrough](review-notes.txt), [release notes](release-notes.txt), [encryption facts](encryption-brief.md).
-- Verified native screenshots: [build64](../screenshots/build64/README.md), eight visually inspected public iPhone/iPad captures. Never label older captures as64.
-- Price: Free. Release: Manual. Worldwide where permitted, subject to the encryption/territory determination.
+- Accurate native screenshots: [build65](../screenshots/build65/README.md), four public-fixture captures each for iPhone/iPad; visually checked, unedited.64 assets remain historical.
+- Price: Free. Release: Manual. Worldwide where permitted, subject to encryption/territory determination.
 
-## Remaining account/approval gates
+## Remaining gates
 
-1. **Signing repair complete:** following explicit owner approval, Xcode refreshed provisioning and exported64 successfully. The exported IPA has an Apple Distribution signature, App Store profile, no debugger entitlement and `webcredentials:waglock.d2sci.co` preserved. See [signing evidence](../evidence/build-64/distribution-signing.json). IPA: `/private/tmp/waglock-build64-store-export-refreshed/WagLock.ipa`. No upload or App Store server validation has occurred.
-2. Complete App Store Connect's encryption questionnaire using [the inventory](encryption-brief.md); obtain any documents required for selected territories. No exemption flag or compliance code has been invented. France is not silently excluded.
-3. Confirm actual privacy/age/content answers, public copyright/publisher, account agreements and availability in the existing app record6826717664. Private App Review contact details were supplied in conversation; enter them only in Apple's private fields. There is no authenticated App Store Connect API session available to this task, and Safari scripting was declined; local text is prepared, not remotely saved.
-4. Resolve the recorded source/platform/artwork distribution determination under D2S-106. Matching GPL source, attribution and original BSD notices are prepared. GPL commercial use does not itself require a lawyer letter or monetization permission; no particular platform conflict is established by this packet.
-5. Upload the validated distribution build, select exactly1.0(64), attach the matching accurate assets/instructions, and select manual release. No upload, agreement acceptance or App Review submission has been performed by this work.
+1. Finish the focused65 phone checklist, including protected-album previews/background, selected-vault Files audio and backup recovery, authentication/confirmation and album Face ID. Record acceptance under D2S-151.
+2. Complete Apple's encryption questionnaire using [the inventory](encryption-brief.md); obtain any required territory documents. No exemption flag/compliance code was invented; France is not silently excluded.
+3. Confirm live privacy/age/content answers, publisher/copyright, agreements and availability in record6826717664. Private App Review contact is in conversation for Apple's private fields only. Safari scripting was declined and no authenticated API session is available here; local prepared text has not been remotely saved.
+4. Resolve the source/platform/artwork distribution determination under D2S-106. Matching GPL source and original notices are prepared. GPL commercial use itself requires neither monetization permission nor a lawyer letter; this packet establishes no particular platform conflict or legal clearance.
+5. Once all gates are cleared and the upload is authorized, perform App Store server validation/upload, select exactly1.0(65), matching assets/walkthrough, and manual release. Local distribution export alone is not App Store validation. No upload, legal agreement acceptance, submission or release has occurred.
 
-Passing package checks alone never establishes export/legal/account completion or independent security certification. Keep the current phone vaults; no reset or development-library migration is required for this handoff.
+Preserve existing phone vaults. No reset, native-format conversion or development-library migration is required by this candidate.

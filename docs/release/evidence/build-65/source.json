@@ -1,0 +1,14 @@
+{
+  "tag": "candidate-1.0-build65",
+  "commit": "1996670df487d71539ee6cb0a7289badbba13a9f",
+  "archive": "WagLock-1.0-build65-source.tar.gz",
+  "archiveSHA256": "55721fae7c7955ee1c4b734d6050a4d4e0a5c526f8d43a57d95c221aa91b093d",
+  "binaryPackageReceipt": "package.json",
+  "byteIdenticalBuildClaim": false,
+  "buildInputs": {
+    "configuration": "Release + config/AppStore.xcconfig",
+    "CURRENT_PROJECT_VERSION": "65",
+    "InfoPlist": "committed macro template, byte-identical copy supplied through temporary INFOPLIST_FILE override",
+    "unrelatedWorkingCounterAndDesignEditsExcluded": true
+  }
+}

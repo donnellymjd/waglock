@@ -12,4 +12,10 @@ Fixes: album-preview ciphertext binding (D2S-179), exact UTF-8 password confirma
 
 ## Candidate and remaining gates
 
-Signed archive being prepared: `/private/tmp/WagLock-1.0-build65-adversarial-review.xcarchive`. Receipts for actual-release UI, package/distribution signing, source freeze and installation are added only after those steps succeed.64 remains historical and must not be submitted. Focused65 phone UAT and explicit owner acceptance of material review limits remain required. No upload, submission or public release is authorized by these receipts.
+Signed archive: `/private/tmp/WagLock-1.0-build65-adversarial-review.xcarchive`. `package.json` verifies identity, signature, original notices/provenance and privacy manifest. `source.json` binds immutable source1996670 and source archive digest without claiming byte-identical reproducibility. `association.json` and `distribution-association.json` verify the exact signed entitlement/profile and live HTTPS domain. `distribution-signing.json` verifies the locally exported Apple Distribution IPA, App Store profile and disabled debugger entitlement. No account refresh was needed for65 and no upload/server validation occurred.
+
+`confirmation-release-ui.json` records the actual separately installed65 setup/change/mismatch/fallback pass. `management-backup-release-ui.json` records two passes for primary-only management, collision rejection, both-vault isolation, clearing on background, backup filename/reuse and per-vault reminder settings. All tests use the new public Confirmation Audit65 simulator, not the owner's phone.
+
+Eight matching native public [iPhone/iPad captures](../../screenshots/build65/README.md) pass and were visually checked. Original native JPEG pixels are retained;64 is not relabeled. `installation.json` records65 installed/launched over64 with Dev44 retained, no reset/uninstall or private-content read. Owner UAT remains pending.
+
+`owner-risk-acceptance.json` records explicit October26 acceptance of the disclosed material limits for1.0, including AI-only assurance and183/184 deferrals. No upload/submission/release authorization follows.64 must not be submitted; focused65 phone UAT and the external gates in the authoritative release ledger remain.

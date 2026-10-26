@@ -6,23 +6,23 @@ WagLock is an independent fork of [SealedPocket / ZeroNet Space](https://github.
 
 - [Final adversarial review](audits/D2S-151.md): build64 findings, corrected candidate verification, blunt critique and release limits.
 - [First-release security closeout](audits/launch-closeout-2026-10-26.md): current architecture, evidence-backed finding dispositions and residual limits.
-- [Password collision incident and recovery](password-collision-incident.md): D2S-178 release hold, non-destructive recovery and unresolved collision UX.
-- [Encrypted backup and independent recovery](backup-recovery.md): build40 readable filenames/albums, editable export filename, password/recovery-key choices, separate protected child archives and native Files/cloud destinations.
+- [Password collision incident and recovery](password-collision-incident.md): D2S-178 incident, non-destructive recovery, primary-only prevention and owner63 acceptance.
+- [Encrypted backup and independent recovery](backup-recovery.md): readable filenames/albums, dated editable export filename, password/recovery-key choices, separate protected child archives and native Files/cloud destinations.
 - [Age backup architecture](age-backup-design.md): format, source/license inventory, lifecycle and remaining gates.
 - [Complete-library snapshot groundwork](portable-export-snapshot.md): read-only owner capture, complete current-model inventory and nested domains used by the backup writer.
 - [Portable export implementation experiment](portable-export-design.md): iOS-simulator/macOS writer, independent CLI recovery, nested passwords and integrity gates; not linked to the app.
 - [Prioritized backlog](backlog-priorities.md): security/recovery, alternative vault, encrypted Trash, beta preparation and later sharing work.
 - [Session-bound library writes](library-write-boundary.md): build43 centralized saves, revocation, uncertain resource retention and dormant encrypted-repository integration.
-- [Note write boundary](note-write-boundary.md): build 38 cancellation, draft clearing and owner-session checks; persisted note encryption remains open.
+- [Note write boundary](note-write-boundary.md): build 38 cancellation, draft clearing and owner-session checks; historical write-boundary work; the fresh release encrypts persisted notes/drafts.
 - [Document preview boundary](document-preview-boundary.md): build 33 revocation and rejection of late PDF/text results.
 - [Shared-album discovery](shared-albums.md): two-person E2E sharing, mutual consent, revocation limits, transport options and prototype gates (D2S-139).
 - [Session-bound exports](export-session-boundary.md): build 32 operation-owned plaintext output, revocation, safe filenames and cleanup isolation.
-- [Password-manager association preparation](../../hosting/autofill/README.md): dedicated release-only webcredentials, signed build59 preview, Google hosting reauthentication and provider/decoy UAT pending.
+- [Password-manager association preparation](../../hosting/autofill/README.md): dedicated release-only webcredentials, signed build59 preparation and historical gates; the current ledger records accepted provider UAT and verified distribution association.
 - [Password entry and strength](password-entry.md): builds 30–31 shared main/guest rules, switchable login keyboards and advisory scoring only when setting/changing passwords.
 - [Authenticated library boundary](authenticated-library-boundary.md): build 29 session-bound database mounting, stale-login rejection and disposable metadata-transition rehearsal.
 - [WagLock branding and video thumbnails](waglock-branding-and-thumbnails.md): build 28 rename, stable installed identity, persisted-model compatibility and proportional previews.
 - [English-only friend beta priorities](beta-readiness.md): language strategy, free-feature status, audit risks and distribution gates.
-- [Secondary passcode / separate alternative vault](secondary-vault-design.md): prioritized D2S-115 requirements, proposed context/key boundaries and tests; current Guest Mode is insufficient.
+- [Secondary passcode / separate alternative vault](secondary-vault-design.md): prioritized D2S-115 requirements, historical context/key proposal and tests; release52+ implements independent libraries, unlike legacy Dev Guest Mode.
 - [Two-vault isolation prototype](vault-isolation-prototype.md): test-only encrypted context/key/index/storage experiment and production boundaries.
 - [Requirements and release gates](requirements.md): product direction, exclusions, issue ownership and evidence needed.
 - [Linear requirements snapshot](linear-requirements-snapshot.md): linked source requirements and project issue inventory retrieved 2026-10-17.
@@ -36,7 +36,7 @@ WagLock is an independent fork of [SealedPocket / ZeroNet Space](https://github.
 - [Import lifecycle hardening](import-lifecycle.md): build 25 commit/session checks, cancellation cleanup and older-runtime compatibility evidence.
 - [Migration fidelity test preparation](migration-fidelity.md): disposable fixtures, read-only export comparison and the source-app validation matrix.
 
-- [Draft preservation](draft-preservation.md): conflicting-source protection and unused encrypted draft staging.
+- [Draft preservation](draft-preservation.md): conflicting-source protection and historical encrypted draft staging; fresh release notes/drafts now persist encrypted.
 - [Mutable encrypted metadata candidate](encrypted-metadata-candidate.md): unused transactional index, corruption/crash checks and live-migration gates.
 
 - [First App Store submission](../release/submission-plan.md): immediate scope, readiness gates, draft listing, privacy/compliance and licensing review packet.

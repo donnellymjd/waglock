@@ -1,11 +1,11 @@
 {
   "asOf": "2026-10-26",
-  "candidateBuild": "64",
+  "candidateBuild": "65",
   "gates": [
     {
       "id": "security-review",
       "status": "pending",
-      "evidence": "D2S-151 final adversarial review in progress. D2S-179 album-preview binding bypass reproduced in buffered/streamed tests;64 held pending corrected candidate verification."
+      "evidence": "D2S-151 report checked in;179\u2013182 fixed,363/363 tests and three actual-release UI checks pass. Owner explicitly accepted material limits on October26; focused65 phone UAT remains."
     },
     {
       "id": "provider-and-recovery",
@@ -13,14 +13,14 @@
       "evidence": "Owner63 checklist plus official age/public-fixture recovery and27 helper tests."
     },
     {
-      "id": "candidate64-final-checks",
+      "id": "candidate65-final-checks",
       "status": "pending",
-      "evidence": "355 tests and actual Release64 backup/reset/decoy UI pass; eight native reviewed screenshots, signed archive and phone install complete. Source receipt binds the candidate; short phone dated-filename check pending."
+      "evidence": "363 tests, three actual-release UI checks, eight reviewed native captures, matching source, signed archive and local distribution export pass.65 installed/launched preserving both libraries/Dev44; focused phone UAT pending."
     },
     {
       "id": "distribution-profile",
       "status": "passed",
-      "evidence": "Owner-authorized Xcode provisioning refresh and local64 export succeeded. Apple Distribution signature, App Store profile, no debugger entitlement and exact AutoFill domain verified; distribution-signing.json."
+      "evidence": "Corrected65 local export passes: actual Apple Distribution signature, App Store profile, disabled debugger entitlement and exact live AutoFill domain. No upload/submission; build65/distribution-signing.json."
     },
     {
       "id": "encryption-and-territories",

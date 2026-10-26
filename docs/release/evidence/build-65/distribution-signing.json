@@ -1,0 +1,18 @@
+{
+  "build": "65",
+  "export": "passed",
+  "distributionSigningAuthority": "Apple Distribution",
+  "signatureVerifies": true,
+  "appIdentifier": "Z3B45KM866.com.d2sci.waglock",
+  "associatedDomains": [
+    "webcredentials:waglock.d2sci.co"
+  ],
+  "debuggerEntitlement": false,
+  "profileType": "App Store distribution",
+  "profileExpires": "2027-04-28T19:23:47Z",
+  "ipa": "WagLock.ipa",
+  "ipaSHA256": "a69c776e1f6c4db462c5e59ac3c058c567c53449ead0f5781017f16f91b0293f",
+  "uploaded": false,
+  "submitted": false,
+  "appStoreServerValidation": "not performed"
+}
