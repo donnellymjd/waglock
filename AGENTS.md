@@ -100,3 +100,8 @@ Build62 owner reports main access shadowed after changing the secondary password
 ## D2S-178 approved collision prevention — build63
 
 Owner approved primary-only password management on October26. Hide Change password and all alternative-management wording in alternative sessions; enforce denial before credential/budget reads. Main settings may change the alternative wrapper only with fresh main and current alternative passwords, using independent durable settings budgets and the originating active primary session. Reject exact credential collisions in both directions only after primary authorization; preserve secondary-first ordinary login, both keys/identities/stores and biometric assignment. Remove the secondary-authenticated rewrap API. Clear/dismiss management forms on background/logout/session change; check source bytes and read back writes without rollback/deletion on uncertain outcomes. Follow [the accepted incident/prevention design](docs/portable-vault/password-collision-incident.md). Owner recovered primary access in62 before upgrade; historical62 guest-change recovery steps do not describe63. Submission stays held until63 phone UAT.
+
+
+## Build63 owner acceptance — October26
+
+Owner passed the physical checklist for primary-only alternative-password management, matching-password rejection, both retained libraries/samples, absence of guest management controls and Face ID/background locking. D2S-178 is Done and its incident hold is cleared; older pending/hold statements above are historical. Preserve ADR-027 boundaries and candidate-1.0-build63. This does not clear separate provider/backup acceptance, distribution/account/compliance or broader audit gates.

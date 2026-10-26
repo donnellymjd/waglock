@@ -5,5 +5,6 @@
   "preservedDev": true,
   "resetOrUninstall": false,
   "privateContentRead": false,
-  "ownerUAT": "pending"
+  "ownerUAT": "passed",
+  "ownerUATConfirmedDate": "2026-10-26"
 }

@@ -1,6 +1,6 @@
 # Password collision access incident — D2S-178
 
-Reported October26 against installed build62. [Urgent tracking issue](https://linear.app/d2sci/issue/D2S-178/prevent-main-vault-access-loss-after-secondary-password-collision). Submission is on hold for this incident. The owner confirmed on October26 that the main library opens again after the guided secondary-password change to a distinct value. No reset or reinstall was required. Secondary-content verification and preventing recurrence remain open.
+Reported October26 against installed build62. [Urgent tracking issue](https://linear.app/d2sci/issue/D2S-178/prevent-main-vault-access-loss-after-secondary-password-collision). The incident hold was cleared after the owner accepted build63 on October26; D2S-178 is Done. The owner confirmed on October26 that the main library opens again after the guided secondary-password change to a distinct value. No reset or reinstall was required. The owner subsequently passed the build63 checklist covering both libraries and the approved collision-prevention flow.
 
 ## Cause and security constraints
 
@@ -25,7 +25,7 @@ The pre-fix regression `SecondaryVaultAuthenticationTests.testSecondaryPasswordC
 
 The existing collision regression already checked moving the secondary password away restores primary routing. The expanded case covers the reported Face ID sequence and encrypted content preservation. All5 `SecondaryVaultAuthenticationTests` pass with0 failures in `/private/tmp/waglock-collision-recovery-final.xcresult`, including the expanded recovery regression. `git diff --check` passes. No production authentication behavior is changed by these regression tests.
 
-Main-vault phone access recovery is owner-confirmed. D2S-178 remains open until a reviewed collision/recoverability UX is chosen and validated. A generic instruction to use a unique password is insufficient evidence that recurrence has been prevented. Any proposed behavior must address accidental owner lockout, the secondary-password oracle and ordinary decoy-login confidentiality together.
+Main-vault phone access recovery is owner-confirmed. The owner-approved primary-only management design below passed automated and physical validation in63; D2S-178 is Done. A generic instruction to use a unique password is insufficient evidence that recurrence has been prevented. Any proposed behavior must address accidental owner lockout, the secondary-password oracle and ordinary decoy-login confidentiality together.
 
 ## Owner-approved prevention — build63
 
@@ -37,4 +37,4 @@ Management is synchronous on the main actor, with the originating active primary
 
 Existing collision login still selects the alternative library. There is no new login selector, primary bypass or automatic credential rewrite. The owner's build62 collision was resolved and main access confirmed before this update. Recovery instructions above describe build62; they must not be offered as a guest-session password-change feature in build63. A preexisting collision with no primary biometric access needs separate recovery planning before upgrade.
 
-Verification and phone acceptance for build63 are recorded in [the candidate evidence](../release/evidence/build-63/README.md) when complete. The submission hold remains until this new management flow passes owner UAT.
+Verification and phone acceptance for build63 are recorded in [the candidate evidence](../release/evidence/build-63/README.md) when complete. The owner replied “Passed” to the build63 phone checklist on October26, clearing this incident hold. Other submission gates remain separate.
