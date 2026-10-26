@@ -178,7 +178,7 @@ final class AuthenticationViewModel: ObservableObject {
         }
 
         // 检查密码匹配
-        guard password == confirmPassword else {
+        guard PasswordText.matches(password, confirmPassword) else {
             errorMessage = AppConstants.ErrorMessages.passwordMismatch
             return
         }

@@ -1,5 +1,7 @@
 # WagLock pre-launch status — October26,2026
 
+**Submission hold:** D2S-151 reproduced four defects in64. Corrected65 is undergoing verification; see [the review](../portable-vault/audits/D2S-151.md). The accepted63 and verified64 receipts below are historical evidence, not approval to submit64.
+
 Accepted security/provider baseline:1.0(63), `candidate-1.0-build63`. Candidate64 adds only dated editable backup names and selects the already accepted public webcredentials entitlement in the standard release config. No external users exist; older-version compatibility is not a pre-1.0 gate. Preserve the owner's installed libraries unless a separate deliberate erase is explicitly authorized.
 
 | Gate | Evidence / remaining action |

@@ -1,4 +1,4 @@
-> **Submission hold:** October 23 security fixes and independent Guest Mode are required for 1.0. Build50 is historical, not the submission candidate. See [launch triage](docs/portable-vault/security-launch-triage.md).
+> **Release candidate under review:** D2S-151 found four reproducible issues in build64. Corrected build65 is being verified before submission. See the [adversarial review and dispositions](docs/portable-vault/audits/D2S-151.md) and [release ledger](docs/release/prelaunch-status.md).
 
 <p align="center">
   <img src="WagLock/Assets.xcassets/AppIcon.appiconset/Icon.png" width="112" alt="WagLock app icon">
@@ -31,15 +31,16 @@ The app also includes notes and audio import/playback. New audio recording is de
 
 ## Current development status
 
-As of **October 23, 2026**, build 50 prepared a separate **WagLock 1.0** fresh encrypted library under `com.d2sci.waglock`. Models, thumbnails, notes and drafts persist in an authenticated encrypted index with a memory-only UI projection. New credentials use an independent random data secret retained across password changes. Existing **WagLock Dev 1.3.8 (44)** and its library are preserved. This is not a migration. See [the fresh-library contract](docs/portable-vault/fresh-encrypted-library.md) for evidence and limits. Native video viewing uses standard AVKit controls. Build47 corrects Apple-directory alias validation; the owner confirms the new library opens and survives repeated locking. Build48 corrects the localized app label: release is WagLock, development is WagLock Dev. Build49 makes unfinished notes visible with Resume draft and flushes the latest pending edit before background locking. Build50 corrects delayed encrypted autosaves cancelling themselves, stabilizes editor navigation during draft-list refreshes, and preserves current text across reappearance; the owner has now passed the complete phone and independent backup-recovery checklist. The intermittent classification report remains tracked; Apple distribution signing and submission declarations remain pending.
-Build51 hardening removes calculator authentication, persists password budgets, adds versioned stronger password wrappers, contains storage paths, owns temporary plaintext jobs and locks immediately with synchronous key revocation. Build51 verification:298 unit/security tests pass, and the owner passed the requested phone checks on October24. Build52 adds independent vaults with accepted phone and secondary-backup recovery checks. Build53 passes314 unit/security tests and the final phone credential/preview/live-recording checks. The [submission handoff](docs/release/app-store/README.md) records the remaining Apple account/distribution gates. A subsequent owner security review places build53 on hold. [Build55 follow-up](docs/portable-vault/security-review-build55.md) adds secondary credential/Face ID isolation fixes, elapsed-time attempt budgets and neutral secondary UI;317 unit/security tests pass, with fresh physical acceptance pending.
+As of **October 26, 2026**, the separate WagLock1.0 release app encrypts library metadata, thumbnails, notes and drafts, uses independent primary/alternative libraries, and preserves data keys across password changes. Main-vault settings exclusively manage alternative credentials, with both current passwords required and matching passwords rejected. The owner passed build63 security, real1Password, cloud-backup recovery and reminder checks. WagLock Dev remains a separate legacy app; no migration or deletion is implied.
 
-The immediate target is a first App Store submission with manual release, including the now-required independent Guest Mode. [Submission preparation and readiness gates](docs/release/submission-plan.md) track the licensing route, security/recovery work, final identity, privacy/support, listing and exact-archive validation. The proposed store identity is separate from the existing development app. **No App Store submission or public-release approval is announced.**
+Build64 added dated editable backup names and passed355 tests plus actual-release backup, decoy and erase UI checks. Its local Apple Distribution export and AutoFill entitlement checks pass. The final adversarial review then reproduced four missed paths: album-preview ciphertext substitution, Unicode confirmation mismatch, generic Files audio choosing primary storage, and album biometric enrollment continuing after lock. Those are being corrected in build65. **Build64 must not be submitted.** See [D2S-151](docs/portable-vault/audits/D2S-151.md) for impact, evidence and limits.
+
+The immediate target is a first submission with manual release. The [submission handoff](docs/release/app-store/README.md) and [current ledger](docs/release/prelaunch-status.md) retain phone acceptance, account, encryption/territory and source/distribution decisions. This project has not received an independent human cryptographic audit. No App Store submission or public-release approval is announced.
 
 | Capability | Status |
 | --- | --- |
-| Encrypted media, nested album passwords and optional biometrics | Available in the development app; further hardening remains |
-| Encrypted export with independent desktop extraction | Build 39 development candidate; password/recovery-key choices, nested protection and Files/cloud destinations; see limits below |
+| Encrypted media, nested album passwords and optional biometrics | Implemented in the fresh encrypted release candidate; final review/UAT required |
+| Encrypted export with independent desktop extraction | Implemented with password/recovery-key choices, nested protection and Files/cloud destinations; independent recovery and owner/provider checks pass |
 | Separate populated vault selected by an alternative passcode | Implemented in build52 release candidate; automated isolation and requested phone/recovery checks pass |
 | Encrypted Trash with configurable retention | Planned; enabled with seven-day retention by default when implemented |
 | Encrypted note fields/drafts | Fresh release candidate; full Markdown editing and encrypted search remain backlog |
@@ -68,9 +69,9 @@ The export experiment creates a Cryptomator-format candidate with encrypted mani
 
 Completeness requires additional verification: the standard reader can accept a valid prefix after a complete final chunk is removed. The experimental manifest verifier detects that loss. Successful desktop opening alone is not a completeness check.
 
-Build 39 adds an additional **age-encrypted backup** under Settings → Encrypted backup. Choose a password or an existing age X25519 recovery recipient, retain separate protected album passwords, and save finished ciphertext through the native iOS Files picker to local storage, iCloud Drive or an installed provider. Optional Face ID-only album copies require explicit consent, real biometric authorization and a new separate export password. Export does not rewrite native storage or credentials.
+The release candidate provides an **age-encrypted backup** under Settings → Encrypted backup. Choose a password or an existing age X25519 recovery recipient, retain separate protected album passwords, and save finished ciphertext through the native iOS Files picker to local storage, iCloud Drive or an installed provider. Optional Face ID-only album copies require explicit consent, real biometric authorization and a new separate export password. Export does not rewrite native storage or credentials.
 
-The open-source recovery helper automatically downloads and verifies age if needed, then invokes the official tool and verifies content/hierarchy before publishing a new desktop extraction directory. Recovered photos/files use original names and extensions under **Library**, albums become nested folders, and notes/drafts are available as Markdown files. The app's ready screen lets you edit or clear the backup filename before saving. Synthetic iOS exports recover seven payloads plus notes/drafts and two nested password domains without the phone/Keychain; a 64 MiB + 3-byte stream also recovers byte-exactly. Build40 automated regression passes 207 unit/security tests plus 57 Python tool tests. **Older buffered native files above 64 MiB currently block complete export**; device settings/biometric registrations are excluded explicitly. This is not an in-app restore wizard. Fresh release metadata encryption is implemented; broad physical-device/provider validation and inherited distribution review remain open.
+The open-source recovery helper automatically downloads and verifies age if needed, then invokes the official tool and verifies content/hierarchy before publishing a new desktop extraction directory. Recovered photos/files use original names and extensions under **Library**, albums become nested folders, and notes/drafts are available as Markdown files. The app's ready screen lets you edit or clear the backup filename before saving. Synthetic iOS exports recover seven payloads plus notes/drafts and two nested password domains without the phone/Keychain; a 64 MiB + 3-byte stream also recovers byte-exactly. Build40 automated regression passes 207 unit/security tests plus 57 Python tool tests. **Older buffered native files above 64 MiB currently block complete export**; device settings/biometric registrations are excluded explicitly. This is not an in-app restore wizard. Fresh release metadata encryption and the requested owner/provider checks pass; broader hardware coverage, final candidate acceptance and distribution decisions remain open.
 
 - [Create, save and independently recover a backup](docs/portable-vault/backup-recovery.md)
 - [Age format, cryptographic options and dependency decisions](docs/portable-vault/age-backup-design.md)
@@ -152,12 +153,11 @@ The [export experiment instructions](spikes/cryptomator/RECOVERY.md) separately 
 
 The current order is:
 
-1. Fix security and reliability findings; complete recovery/key-lifecycle foundations.
-2. Deliver complete encrypted vault export with tested open-source decryption instructions, preserving nested-password boundaries.
-3. Finish independent protection and recovery for nested albums, then independent top-level alternative vaults.
+1. Verify the final adversarial-review fixes, focused phone UAT and documented residual-risk acceptance.
+2. Complete remaining App Store account, encryption/territory and distribution/source decisions for a manual first release.
+3. Expand independent security review, format/decoder fuzzing and hardware coverage.
 4. Add encrypted Trash with restore, configurable retention and a seven-day default.
-5. Prepare the internal beta, corresponding source and distribution documentation.
-6. Develop encrypted Markdown notes, encrypted local file search and optional consent-controlled shared albums.
+5. Develop full in-app restore, Markdown editing, encrypted local file search and optional consent-controlled shared albums.
 
 Unlock-camera capture and an optional repeated-wrong-password self-destruct lock are also tracked. Destructive behavior needs a concrete reviewed design and explicit opt-in; it is not enabled today. These are development priorities, not committed release dates.
 

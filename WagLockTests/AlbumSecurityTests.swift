@@ -24,6 +24,23 @@ private final class TestBiometricStore: BiometricSecretStoring {
 }
 
 @MainActor
+private final class RevokingEnrollmentStore: BiometricSecretStoring {
+    var revoke: () -> Void = {}
+    var writes = 0
+    func store(_ secret: String, account: String) async throws {
+        try await store(secret, account: account, authorizing: { true })
+    }
+    func store(_ secret: String, account: String, authorizing: @MainActor () -> Bool) async throws {
+        // Simulate successful biometric consent returning after a lock event.
+        revoke()
+        guard authorizing(), !Task.isCancelled else { throw CancellationError() }
+        writes += 1
+    }
+    func read(account: String, reason: String) async throws -> String { throw VaultAccessError.locked }
+    func remove(account: String) { }
+}
+
+@MainActor
 struct AlbumSecurityTests {
     private func container() throws -> ModelContainer {
         try ModelContainer(for: VaultAlbum.self, MediaItem.self, SecretNote.self,
@@ -33,6 +50,43 @@ struct AlbumSecurityTests {
     private func denied(_ operation: () async throws -> Void) async {
         do { try await operation(); Issue.record("Locked or invalid access unexpectedly succeeded") }
         catch { }
+    }
+
+    @Test
+    func lockingDuringAlbumCreationConsentCannotWriteABiometricFactor() async throws {
+        let db = try container()
+        let biometric = RevokingEnrollmentStore()
+        let store = AlbumStore(biometrics: biometric, attemptStorage: InMemoryAttemptStorage())
+        store.beginSession(vaultSecret: "PUBLIC enrollment vault")
+        biometric.revoke = { store.endSession() }
+        await denied {
+            _ = try await store.create(name: "Disposable", parent: nil, protection: .faceIDOnly,
+                password: "", albums: [], context: db.mainContext)
+        }
+        #expect(biometric.writes == 0)
+        #expect(try db.mainContext.fetch(FetchDescriptor<VaultAlbum>()).isEmpty)
+    }
+
+    @Test
+    func lockingParentDuringProtectionConsentCannotWriteOrChangeAlbum() async throws {
+        let db = try container()
+        let biometric = RevokingEnrollmentStore()
+        let store = AlbumStore(biometrics: biometric, attemptStorage: InMemoryAttemptStorage())
+        store.beginSession(vaultSecret: "PUBLIC enrollment vault")
+        let parent = try await store.create(name: "Parent", parent: nil, protection: .inherited,
+            password: "", albums: [], context: db.mainContext)
+        let child = try await store.create(name: "Child", parent: parent, protection: .password,
+            password: "PUBLIC child password", albums: [parent], context: db.mainContext)
+        let wrapped = child.wrappedKey
+        biometric.revoke = { store.lock(parent, albums: [parent, child]) }
+        await denied {
+            try await store.changeProtection(of: child, to: .faceIDOnly, password: "",
+                albums: [parent, child], context: db.mainContext)
+        }
+        #expect(biometric.writes == 0)
+        #expect(child.wrappedKey == wrapped)
+        #expect(child.protectionRawValue == AlbumProtection.password.rawValue)
+        #expect(child.biometricAccount == nil)
     }
 
     @Test

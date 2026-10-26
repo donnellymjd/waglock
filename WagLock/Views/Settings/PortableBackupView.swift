@@ -186,11 +186,11 @@ private struct ScopedPortableBackupView: View {
         if method == "password" {
             if useVaultPassword {
                 guard acknowledgedReuse, !password.isEmpty else { return false }
-            } else { guard password.count >= 12, Data(password.utf8) == Data(confirmation.utf8) else { return false } }
+            } else { guard password.count >= 12, PasswordText.matches(password, confirmation) else { return false } }
         } else { guard (try? AgeFileWriter.decodeRecipient(recipient.trimmingCharacters(in: .whitespacesAndNewlines))) != nil else { return false } }
         return session.rows.filter { $0.policy != .inherited }.allSatisfy { album in
             let value = albumPasswords[album.id] ?? ""
-            return album.policy == .faceIDOnly ? biometricConsent && value.count >= 12 && Data(value.utf8) == Data((albumConfirmations[album.id] ?? "").utf8) : !value.isEmpty
+            return album.policy == .faceIDOnly ? biometricConsent && value.count >= 12 && PasswordText.matches(value, albumConfirmations[album.id] ?? "") : !value.isEmpty
         }
     }
     private func start() {

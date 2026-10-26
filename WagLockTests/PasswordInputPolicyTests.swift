@@ -31,6 +31,38 @@ struct PasswordInputPolicyTests {
         #expect(keychain.verifyPassword("main-password"))
     }
 
+    @Test func setupRejectsCanonicallyEquivalentButByteDifferentConfirmation() async throws {
+        let storage = PasswordInputStorage()
+        let keychain = KeychainService(service: "PUBLIC-unicode-confirmation", storage: storage)
+        let auth = AuthenticationViewModel(keychainService: keychain, manageInstallationState: false,
+            contextFactory: { _, _, _ in throw VaultAccessError.invalidData })
+        defer { auth.logout() }
+        let composed = "PUBLIC-caf\u{00e9}-password", decomposed = "PUBLIC-cafe\u{0301}-password"
+        #expect(composed == decomposed, "Swift equality intentionally treats these strings as equivalent")
+        #expect(Array(composed.utf8) != Array(decomposed.utf8))
+        auth.password = composed; auth.confirmPassword = decomposed
+        auth.setupPassword()
+        let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+        while auth.isProcessing, ContinuousClock.now < deadline { await Task.yield() }
+        #expect(!auth.isProcessing)
+        #expect(!keychain.isPasswordSet(), "Mismatched confirmation bytes must never create credentials")
+        #expect(storage.items.isEmpty)
+        #expect(auth.errorMessage != nil)
+    }
+
+    @Test func confirmationMatchesOnlyExactCredentialBytes() throws {
+        let composed = "PUBLIC-caf\u{00e9}-password", decomposed = "PUBLIC-cafe\u{0301}-password"
+        #expect(!PasswordText.matches(composed, decomposed))
+        for value in [composed, decomposed, "135790", "  PUBLIC space preserved  ", "PUBLIC*._-password"] {
+            #expect(PasswordText.matches(value, value))
+        }
+        #expect(!PasswordText.matches("PUBLIC password ", "PUBLIC password"))
+        #expect(!PasswordText.matches("PUBLIC password", "PUBLIC Password"))
+        let envelope = try PasswordEnvelope.seal(Data("PUBLIC secret".utf8), password: composed, context: "PUBLIC-confirmation")
+        #expect(throws: (any Error).self) { try PasswordEnvelope.open(envelope, password: decomposed, context: "PUBLIC-confirmation") }
+        #expect(try PasswordEnvelope.open(envelope, password: composed, context: "PUBLIC-confirmation") == Data("PUBLIC secret".utf8))
+    }
+
     @Test func obviousWeakPatternsDoNotEarnHighScores() {
         for password in ["123456", "111111", "abcdef", "Password1!", "121212121212", "abcabcabcabc", "password password password", "violet-harbor-violet-harbor"] {
             #expect(PasswordAssessment(password).score < 30)

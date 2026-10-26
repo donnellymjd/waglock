@@ -1,3 +1,5 @@
+> **D2S-151 hold:** do not upload or submit64. The final review reproduced four issues; corrected65 is being verified. The64 inventory below is historical. See [the review](../../portable-vault/audits/D2S-151.md).
+
 # WagLock1.0 submission package — build64 verified local candidate
 
 Build63 is the owner-accepted security/provider baseline. Build64 adds an editable date/time-stamped backup default and uses the accepted dedicated password-manager association in the standard release configuration. Build64 local engineering checks pass; a short phone filename check and the external gates below remain. [Current pre-launch ledger](../prelaunch-status.md) is authoritative; old build50/53 handoffs and screenshots are historical.

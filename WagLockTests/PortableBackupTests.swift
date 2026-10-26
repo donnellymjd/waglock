@@ -45,6 +45,21 @@ final class PortableBackupTests: XCTestCase {
         }
     }
 
+    func testLowOrderX25519RecipientsCannotCreateAnAnyoneDecryptableBackup() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("PUBLIC-low-order-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: root) }
+        for (recipient, firstByte): (String, UInt8) in [
+            ("age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq5cu47z", 0), ("age1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj7vrya", 1)
+        ] {
+            var publicKey = Data(count: 32); publicKey[0] = firstByte
+            XCTAssertEqual(try AgeFileWriter.decodeRecipient(recipient), publicKey, "The recipient has a valid checksum")
+            let output = root.appendingPathComponent("must-not-exist.age")
+            XCTAssertThrowsError(try AgeFileWriter(to: output, credential: .recipient(recipient)))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: output.path))
+        }
+    }
+
     func testExistingOutputSurvivesAndCancelledWriterCannotFinish() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)

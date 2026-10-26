@@ -39,7 +39,7 @@ final class AudioServiceTests: XCTestCase {
         let url = try makeAudioFile()
         defer { try? FileManager.default.removeItem(at: url) }
         let original = try Data(contentsOf: url)
-        let item = try await AudioImportService.importFile(url: url, password: "audio-test-password")
+        let item = try await AudioImportService.importFile(url: url, password: "audio-test-password", storage: .shared)
         defer { try? FileStorageService.shared.deleteFile(path: item.encryptedPath) }
         XCTAssertEqual(item.type, .audio)
         XCTAssertEqual(item.fileExtension, ".wav")
@@ -77,6 +77,33 @@ final class AudioServiceTests: XCTestCase {
         XCTAssertEqual(try storageA.loadEncrypted(path: a.encryptedPath), savedA)
     }
 
+    func testGenericFileAudioDispatchUsesTheSelectedVaultStorage() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("PUBLIC-audio-dispatch-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let selected = FileStorageService(directory: root, availableCapacity: { _ in 1_000_000_000 })
+        let primary = FileStorageService.shared
+        let before = Set(primary.getAllEncryptedFiles())
+        var misplacedFixture: String?
+        defer {
+            // Remove only the exact newly minted fixture returned by this invocation.
+            if let path = misplacedFixture { try? primary.deleteFile(path: path) }
+        }
+        let source = try makeAudioFile()
+        defer { try? FileManager.default.removeItem(at: source) }
+        let original = try Data(contentsOf: source)
+        let service = MediaImportService(storage: selected)
+        let result = try await service.importSingleFile(url: source, password: "PUBLIC selected audio key")
+        let item = try XCTUnwrap(result)
+        if !before.contains(item.encryptedPath), primary.fileExists(path: item.encryptedPath) {
+            misplacedFixture = item.encryptedPath
+        }
+        XCTAssertTrue(selected.fileExists(path: item.encryptedPath))
+        XCTAssertEqual(Set(primary.getAllEncryptedFiles()), before, "The primary media root must remain unchanged")
+        let recovered = try await selected.loadDecryptedDataAsync(path: item.encryptedPath,
+            password: "PUBLIC selected audio key", preferredExtension: "wav")
+        XCTAssertEqual(recovered, original)
+    }
+
     private func capturePlayerForVisualReview(_ item: MediaItem) async throws {
         let controller = AudioSessionController(directory: FileManager.default.temporaryDirectory.appendingPathComponent("audio-ui-" + UUID().uuidString))
         defer { controller.cleanup() }
@@ -106,7 +133,7 @@ final class AudioServiceTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: url) }
         let before = Set(FileStorageService.shared.getAllEncryptedFiles())
         do {
-            _ = try await AudioImportService.importFile(url: url, password: "audio-test-password")
+            _ = try await AudioImportService.importFile(url: url, password: "audio-test-password", storage: .shared)
             XCTFail("Corrupt audio must be rejected")
         } catch {}
         XCTAssertEqual(Set(FileStorageService.shared.getAllEncryptedFiles()), before)
@@ -118,7 +145,7 @@ final class AudioServiceTests: XCTestCase {
         let before = Set(FileStorageService.shared.getAllEncryptedFiles())
         let task = Task { @MainActor in
             withUnsafeCurrentTask { $0?.cancel() }
-            _ = try await AudioImportService.importFile(url: url, password: "audio-test-password")
+            _ = try await AudioImportService.importFile(url: url, password: "audio-test-password", storage: .shared)
         }
         do {
             _ = try await task.value
@@ -146,7 +173,7 @@ final class AudioServiceTests: XCTestCase {
         let url = try makeAudioFile()
         defer { try? FileManager.default.removeItem(at: url) }
         let originalData = try Data(contentsOf: url)
-        let item = try await AudioImportService.importFile(url: url, password: "audio-export-test-password")
+        let item = try await AudioImportService.importFile(url: url, password: "audio-export-test-password", storage: .shared)
         defer { try? FileStorageService.shared.deleteFile(path: item.encryptedPath) }
 
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(

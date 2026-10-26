@@ -62,7 +62,7 @@ struct PasswordConfirmationButton: View {
         .buttonStyle(.borderless)
         .accessibilityIdentifier(identifier)
         .accessibilityHint("Fill confirmation with the password above. This does not save it.")
-        .disabled(password.isEmpty || password.utf8.elementsEqual(confirmation.utf8))
+        .disabled(password.isEmpty || PasswordText.matches(password, confirmation))
     }
 }
 

@@ -181,7 +181,7 @@ struct GuestModeSetupView: View {
     // MARK: - Computed Properties
 
     private var isValid: Bool {
-        KeychainService.validateGuestPassword(guestPassword).isValid && guestPassword == confirmPassword
+        KeychainService.validateGuestPassword(guestPassword).isValid && PasswordText.matches(guestPassword, confirmPassword)
     }
 
     // MARK: - Methods
@@ -198,7 +198,7 @@ struct GuestModeSetupView: View {
         }
 
         // 2. 检查密码匹配
-        guard guestPassword == confirmPassword else {
+        guard PasswordText.matches(guestPassword, confirmPassword) else {
             errorMessage = String(localized: "guestMode.error.mismatch")
             return
         }

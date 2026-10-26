@@ -4,8 +4,8 @@
   "gates": [
     {
       "id": "security-review",
-      "status": "passed",
-      "evidence": "Accepted63 plus checked-in current launch closeout; current64 regression recorded separately."
+      "status": "pending",
+      "evidence": "D2S-151 final adversarial review in progress. D2S-179 album-preview binding bypass reproduced in buffered/streamed tests;64 held pending corrected candidate verification."
     },
     {
       "id": "provider-and-recovery",

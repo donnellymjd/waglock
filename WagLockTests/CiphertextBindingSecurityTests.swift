@@ -62,6 +62,59 @@ final class CiphertextBindingSecurityTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: output) }
         XCTAssertEqual(try Data(contentsOf: output), Data(repeating: 7, count: 512 * 1024))
     }
+    func testAlbumPreviewRejectsSwappedBufferedCiphertext() async throws {
+        try await albumPreviewRejectsSubstitution(streamed: false)
+    }
+    func testAlbumPreviewRejectsSwappedStreamedCiphertext() async throws {
+        try await albumPreviewRejectsSubstitution(streamed: true)
+    }
+    private func albumPreviewRejectsSubstitution(streamed: Bool) async throws {
+        let (root, storage, repository, _, _) = try fixture()
+        defer { repository.revoke() }
+        try await repository.bindStorage(storage)
+        let albums = AlbumStore(attemptStorage: InMemoryAttemptStorage(), storage: storage,
+                                mediaLoader: MediaLoaderService(storage: storage), thumbnails: ThumbnailImageLoader())
+        albums.beginSession(vaultSecret: "PUBLIC root secret")
+        defer { albums.endSession() }
+        let context = repository.container.mainContext
+        let album = try await albums.create(name: "PUBLIC protected album", parent: nil, protection: .password,
+            password: "PUBLIC album password", albums: [], context: context)
+        let key = try albums.sourceKeyForBackup(albumID: album.id, albums: [album], expectedRevision: albums.revision)
+        let payloads = [Data("PUBLIC first original".utf8), Data("PUBLIC second original".utf8)]
+        var assets: [AlbumAsset] = []
+        for (index, bytes) in payloads.enumerated() {
+            let path: String
+            if streamed {
+                let source = root.appendingPathComponent("source.txt")
+                try bytes.write(to: source)
+                path = try storage.saveEncryptedFile(from: source, password: key)
+            } else {
+                path = try storage.saveEncrypted(data: EncryptionService.shared.encrypt(data: bytes, password: key))
+            }
+            assets.append(AlbumAsset(id: UUID(), fileName: "PUBLIC sample \(index).txt", encryptedPath: path,
+                fileSize: Int64(bytes.count), type: .document, thumbnail: nil, createdAt: Date()))
+        }
+        album.encryptedCatalog = try EncryptionService.shared.encrypt(data: JSONEncoder().encode(assets), password: key)
+        try LibraryWriteCoordinator.save(context)
+        let firstURL = try storage.getFileURL(for: assets[0].encryptedPath)
+        let original = try Data(contentsOf: firstURL)
+        let second = try Data(contentsOf: storage.getFileURL(for: assets[1].encryptedPath))
+        let valid = try await albums.preview(assets[0], in: album, albums: [album])
+        XCTAssertEqual(try Data(contentsOf: valid), payloads[0])
+        try FileManager.default.removeItem(at: valid.deletingLastPathComponent())
+        try second.write(to: firstURL)
+        do {
+            let invalid = try await albums.preview(assets[0], in: album, albums: [album])
+            defer { try? FileManager.default.removeItem(at: invalid.deletingLastPathComponent()) }
+            XCTFail("Album preview published substituted same-key ciphertext")
+        } catch { }
+        XCTAssertEqual(try Data(contentsOf: firstURL), second, "Rejection must not delete or rewrite source data")
+        try original.write(to: firstURL)
+        let restored = try await albums.preview(assets[0], in: album, albums: [album])
+        defer { try? FileManager.default.removeItem(at: restored.deletingLastPathComponent()) }
+        XCTAssertEqual(try Data(contentsOf: restored), payloads[0])
+        XCTAssertEqual(try Data(contentsOf: storage.getFileURL(for: assets[1].encryptedPath)), second)
+    }
     func testStreamDigestMismatchPreservesExistingDestinationAndRawCiphertext() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("stream-digest-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false); roots.append(root)

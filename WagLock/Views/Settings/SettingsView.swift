@@ -505,7 +505,7 @@ struct ChangePasswordView: View {
     }
 
     private var isValid: Bool {
-        !currentPassword.isEmpty && !newPassword.isEmpty && newPassword == confirmPassword
+        !currentPassword.isEmpty && !newPassword.isEmpty && PasswordText.matches(newPassword, confirmPassword)
             && KeychainService.validatePasswordStrength(newPassword).isValid
     }
 
@@ -581,7 +581,7 @@ struct AlternativePasswordChangeView: View {
             .textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier(id)
     }
     private var isValid: Bool {
-        !primaryPassword.isEmpty && !currentPassword.isEmpty && newPassword.utf8.elementsEqual(confirmation.utf8)
+        !primaryPassword.isEmpty && !currentPassword.isEmpty && PasswordText.matches(newPassword, confirmation)
             && KeychainService.validatePasswordStrength(newPassword).isValid
     }
     private func clear() { primaryPassword = ""; currentPassword = ""; newPassword = ""; confirmation = ""; errorMessage = nil }

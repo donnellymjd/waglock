@@ -207,20 +207,20 @@ struct SetupPasswordView: View {
                 if !viewModel.confirmPassword.isEmpty {
                     HStack {
                         Image(
-                            systemName: viewModel.password == viewModel.confirmPassword
+                            systemName: PasswordText.matches(viewModel.password, viewModel.confirmPassword)
                                 ? "checkmark.circle.fill" : "xmark.circle.fill"
                         )
                         .foregroundColor(
-                            viewModel.password == viewModel.confirmPassword ? .green : .red)
+                            PasswordText.matches(viewModel.password, viewModel.confirmPassword) ? .green : .red)
 
                         Text(
-                            viewModel.password == viewModel.confirmPassword
+                            PasswordText.matches(viewModel.password, viewModel.confirmPassword)
                                 ? String(localized: "setup.passwordMatch")
                                 : String(localized: "setup.passwordMismatch")
                         )
                         .font(.caption)
                         .foregroundColor(
-                            viewModel.password == viewModel.confirmPassword ? .green : .red)
+                            PasswordText.matches(viewModel.password, viewModel.confirmPassword) ? .green : .red)
 
                         Spacer()
                     }

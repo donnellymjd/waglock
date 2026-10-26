@@ -220,8 +220,8 @@ class MediaImportService {
         }
     }
 
-    /// 导入单个文件
-    private func importSingleFile(url: URL, password: String) async throws -> MediaItem? {
+    /// Caller holds provider access; all type dispatch retains this instance's storage.
+    func importSingleFile(url: URL, password: String) async throws -> MediaItem? {
         try Task.checkCancellation()
 
         let fileName = url.deletingPathExtension().lastPathComponent
@@ -237,7 +237,7 @@ class MediaImportService {
         }
 
         if mediaType == .audio {
-            return try await AudioImportService.importFile(url: url, password: password)
+            return try await AudioImportService.importFile(url: url, password: password, storage: storageService)
         }
         if mediaType == .photo { return try processOriginalImage(url, password: password) }
 

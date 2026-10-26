@@ -4,7 +4,7 @@ import Foundation
 /// Validates audio before writing encrypted content. Database ownership stays with the caller.
 @MainActor
 enum AudioImportService {
-    static func importFile(url: URL, password: String, storage: FileStorageService = .shared) async throws -> MediaItem {
+    static func importFile(url: URL, password: String, storage: FileStorageService) async throws -> MediaItem {
         try Task.checkCancellation()
         guard !password.isEmpty else { throw ImportError.permissionDenied }
         let asset = AVURLAsset(url: url)

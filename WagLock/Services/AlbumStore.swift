@@ -135,7 +135,7 @@ final class AlbumStore: ObservableObject {
         let wrappedKey = try crypto.encrypt(data: envelope, password: parentSecret)
         let catalog = try crypto.encrypt(data: JSONEncoder().encode([AlbumAsset]()), password: secret)
         if protection.usesBiometrics {
-            try await biometrics.store(factor, account: biometricAccount)
+            try await biometrics.store(factor, account: biometricAccount, authorizing: { self.generation == token })
         }
         do {
             guard generation == token else { throw CancellationError() }
@@ -237,7 +237,7 @@ final class AlbumStore: ObservableObject {
         if protection != .inherited { envelope = try PasswordEnvelope.seal(envelope, password: factor, context: "album:" + album.id.uuidString) }
         let wrapped = try crypto.encrypt(data: envelope, password: parentSecret)
         let account = UUID().uuidString
-        if protection.usesBiometrics { try await biometrics.store(factor, account: account) }
+        if protection.usesBiometrics { try await biometrics.store(factor, account: account, authorizing: { self.generation == token }) }
         let previous = (album.wrappedKey, album.protectionRawValue, album.biometricAccount)
         do {
             guard token == generation else { throw CancellationError() }
@@ -343,13 +343,15 @@ final class AlbumStore: ObservableObject {
             throw VaultAccessError.invalidData
         }
         let token = generation
+        let source = try storage.getFileURL(for: asset.encryptedPath)
+        let expectedDigest = try storage.expectedCiphertextDigest(path: asset.encryptedPath)
         let directory = try ProtectedTemporaryFiles.createDirectory()
         let suffix = asset.fileExtension.filter { $0.isLetter || $0.isNumber }
         let url = directory.appendingPathComponent("preview").appendingPathExtension(suffix)
-        let source = try storage.getFileURL(for: asset.encryptedPath)
         do {
             try await Task.detached(priority: .userInitiated) {
-                try EncryptionService.shared.decryptFile(inputURL: source, to: url, password: secret)
+                try EncryptionService.shared.decryptFile(inputURL: source, to: url, password: secret,
+                    expectedCiphertextDigest: expectedDigest)
             }.value
         } catch {
             try? FileManager.default.removeItem(at: directory)

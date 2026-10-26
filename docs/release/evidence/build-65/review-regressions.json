@@ -1,0 +1,134 @@
+{
+  "album-binding-before": {
+    "result": "Failed",
+    "totalTestCount": 5,
+    "passedTests": 3,
+    "failedTests": 2,
+    "skippedTests": 0,
+    "testFailures": [
+      {
+        "failureText": "failed - Album preview published substituted same-key ciphertext",
+        "targetName": "WagLockTests",
+        "testIdentifier": 1,
+        "testIdentifierString": "CiphertextBindingSecurityTests/testAlbumPreviewRejectsSwappedBufferedCiphertext()",
+        "testIdentifierURL": "test://com.apple.xcode/WagLock/WagLockTests/CiphertextBindingSecurityTests/testAlbumPreviewRejectsSwappedBufferedCiphertext",
+        "testName": "testAlbumPreviewRejectsSwappedBufferedCiphertext()"
+      },
+      {
+        "failureText": "failed - Album preview published substituted same-key ciphertext",
+        "targetName": "WagLockTests",
+        "testIdentifier": 2,
+        "testIdentifierString": "CiphertextBindingSecurityTests/testAlbumPreviewRejectsSwappedStreamedCiphertext()",
+        "testIdentifierURL": "test://com.apple.xcode/WagLock/WagLockTests/CiphertextBindingSecurityTests/testAlbumPreviewRejectsSwappedStreamedCiphertext",
+        "testName": "testAlbumPreviewRejectsSwappedStreamedCiphertext()"
+      }
+    ],
+    "localResultBundle": "/private/tmp/waglock-d2s151-album-binding-before.xcresult"
+  },
+  "album-binding-after": {
+    "result": "Passed",
+    "totalTestCount": 5,
+    "passedTests": 5,
+    "failedTests": 0,
+    "skippedTests": 0,
+    "testFailures": [],
+    "localResultBundle": "/private/tmp/waglock-d2s151-album-binding-after.xcresult"
+  },
+  "unicode-before": {
+    "result": "Failed",
+    "totalTestCount": 5,
+    "passedTests": 4,
+    "failedTests": 1,
+    "skippedTests": 0,
+    "testFailures": [
+      {
+        "failureText": "Expectation failed: !keychain.isPasswordSet()\nkeychain.isPasswordSet() \u2192 false: Mismatched confirmation bytes must never create credentials",
+        "targetName": "WagLockTests",
+        "testIdentifier": 3,
+        "testIdentifierString": "PasswordInputPolicyTests/setupRejectsCanonicallyEquivalentButByteDifferentConfirmation()",
+        "testIdentifierURL": "test://com.apple.xcode/WagLock/WagLockTests/PasswordInputPolicyTests/setupRejectsCanonicallyEquivalentButByteDifferentConfirmation()",
+        "testName": "setupRejectsCanonicallyEquivalentButByteDifferentConfirmation()"
+      }
+    ],
+    "localResultBundle": "/private/tmp/waglock-d2s151-unicode-before.xcresult"
+  },
+  "confirmation-after": {
+    "result": "Passed",
+    "totalTestCount": 11,
+    "passedTests": 11,
+    "failedTests": 0,
+    "skippedTests": 0,
+    "testFailures": [],
+    "localResultBundle": "/private/tmp/waglock-d2s151-confirmation-after.xcresult"
+  },
+  "audio-before": {
+    "result": "Failed",
+    "totalTestCount": 1,
+    "passedTests": 0,
+    "failedTests": 1,
+    "skippedTests": 0,
+    "testFailures": [
+      {
+        "failureText": "XCTAssertTrue failed",
+        "targetName": "WagLockTests",
+        "testIdentifier": 1,
+        "testIdentifierString": "AudioServiceTests/testGenericFileAudioDispatchUsesTheSelectedVaultStorage()",
+        "testIdentifierURL": "test://com.apple.xcode/WagLock/WagLockTests/AudioServiceTests/testGenericFileAudioDispatchUsesTheSelectedVaultStorage",
+        "testName": "testGenericFileAudioDispatchUsesTheSelectedVaultStorage()"
+      }
+    ],
+    "localResultBundle": "/private/tmp/waglock-d2s151-audio-before.xcresult"
+  },
+  "audio-after": {
+    "result": "Passed",
+    "totalTestCount": 9,
+    "passedTests": 9,
+    "failedTests": 0,
+    "skippedTests": 0,
+    "testFailures": [],
+    "localResultBundle": "/private/tmp/waglock-d2s151-audio-after.xcresult"
+  },
+  "enrollment-before": {
+    "result": "Failed",
+    "totalTestCount": 16,
+    "passedTests": 14,
+    "failedTests": 2,
+    "skippedTests": 0,
+    "testFailures": [
+      {
+        "failureText": "Expectation failed: biometric.writes == 0\nbiometric.writes \u2192 1",
+        "targetName": "WagLockTests",
+        "testIdentifier": 1,
+        "testIdentifierString": "AlbumSecurityTests/lockingDuringAlbumCreationConsentCannotWriteABiometricFactor()",
+        "testIdentifierURL": "test://com.apple.xcode/WagLock/WagLockTests/AlbumSecurityTests/lockingDuringAlbumCreationConsentCannotWriteABiometricFactor()",
+        "testName": "lockingDuringAlbumCreationConsentCannotWriteABiometricFactor()"
+      },
+      {
+        "failureText": "Expectation failed: biometric.writes == 0\nbiometric.writes \u2192 1",
+        "targetName": "WagLockTests",
+        "testIdentifier": 2,
+        "testIdentifierString": "AlbumSecurityTests/lockingParentDuringProtectionConsentCannotWriteOrChangeAlbum()",
+        "testIdentifierURL": "test://com.apple.xcode/WagLock/WagLockTests/AlbumSecurityTests/lockingParentDuringProtectionConsentCannotWriteOrChangeAlbum()",
+        "testName": "lockingParentDuringProtectionConsentCannotWriteOrChangeAlbum()"
+      }
+    ],
+    "localResultBundle": "/private/tmp/waglock-d2s151-enrollment-before.xcresult"
+  },
+  "intermediate-361": {
+    "result": "Passed",
+    "totalTestCount": 361,
+    "passedTests": 361,
+    "failedTests": 0,
+    "skippedTests": 0,
+    "testFailures": [],
+    "localResultBundle": "/private/tmp/waglock-d2s151-final.xcresult"
+  },
+  "final-363": {
+    "result": "Passed",
+    "totalTestCount": 363,
+    "passedTests": 363,
+    "failedTests": 0,
+    "skippedTests": 0,
+    "localResultBundle": "/private/tmp/waglock-d2s151-final363.xcresult"
+  }
+}

@@ -120,3 +120,8 @@ Current355-test suite and actual-release dated/custom-backup, decoy-copy/isolati
 ## Build64 distribution signing approval and completion — October26
 
 Owner explicitly approved refreshing/creating distribution signing resources for the existing WagLock App ID, preserving existing credentials, without upload/submission. Xcode -allowProvisioningUpdates local export succeeded. The exported IPA verifies Apple Distribution signing, an App Store profile, no debugger entitlement and the exact accepted webcredentials association. See docs/release/evidence/build-64/distribution-signing.json. Prior blocked-provisioning statements are historical for this approved repair. No credential revocation/deletion was requested, no upload/submission occurred, and broader account/compliance gates remain. Preserve immutable candidate-1.0-build64; signing receipts do not require recompiling or retagging source.
+
+
+## D2S-151 adversarial review — build65
+
+Build64 is held after four reproduced integration defects. Preserve ADR-028: album previews require selected-storage ciphertext binding; all audio import callers supply storage explicitly; confirmation/indicators compare exact credential UTF-8; album biometric enrollment rechecks captured generation before Keychain mutation. No normalization, key rotation, format migration, singleton fallback, orphan cross-vault migration or deletion is authorized by these fixes. Keep candidate-1.0-build64 immutable and retain independent Dev/owner libraries. See docs/portable-vault/audits/D2S-151.md and build65 evidence. This developer-AI review is not independent certification; material residual-risk acceptance, focused phone UAT and external submission gates remain explicit.
