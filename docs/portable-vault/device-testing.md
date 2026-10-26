@@ -1,3 +1,5 @@
+> **October26 build62:** optional verified vault-password backups and private monthly reminders, configurable/off.349 full security tests, actual-release UI and independent public-fixture recovery pass; signed62 installed over61, retaining Dev44. [Evidence and hardware checks](../release/evidence/build-62/README.md). Both phone vaults preserved; owner UAT pending.
+
 > **October26 build61:** explicit Use entered password action for setup/change/alternative setup; actual Release regression passes and signed61 installed over60, retaining Dev44. [Evidence](../release/evidence/build-61/README.md). Both vaults preserved; owner1Password acceptance is pending.
 
 > **October25 build60:** forgotten-password help and explicit erase/start-over are verified by342 unit/security tests and the full actual-release simulator workflow. [Evidence and deliberate hardware test](../release/evidence/build-60/README.md). Signed candidate60 installed successfully over59; installed inventory confirms60 and retained Dev44. Owner UAT is pending. Nothing has been erased on the phone. Earlier build notes below are historical.

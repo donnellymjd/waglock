@@ -13,6 +13,10 @@ struct MainTabView: View {
     // MARK: - Environment
 
     @EnvironmentObject var authViewModel: AuthenticationViewModel
+    @EnvironmentObject private var services: VaultSessionContext
+    @EnvironmentObject private var reminders: BackupReminderStore
+    @State private var showBackupReminder = false
+    @State private var showBackup = false
     @State private var selectedTab = 0
 
     // MARK: - Body
@@ -69,6 +73,25 @@ struct MainTabView: View {
                 .tag(4)
         }
         .tint(ColorTheme.accent)  // TabBar 选中颜色
+        .task {
+            await Task.yield()
+            guard services.isActive, authViewModel.isAuthenticated, GuestModeManager.shared.isOwnerMode,
+                  authViewModel.librarySessionID == services.sessionID else { return }
+            showBackupReminder = reminders.claimDuePrompt()
+        }
+        .alert("Time for a backup", isPresented: $showBackupReminder) {
+            Button("Open backups") { showBackup = true }
+            Button("Remind me in a week") { reminders.remindInAWeek() }
+            Button("Not now", role: .cancel) { }
+        } message: {
+            Text("Keep a recoverable encrypted copy of this library. You choose where to save it.")
+        }
+        .sheet(isPresented: $showBackup) {
+            NavigationStack {
+                PortableBackupView()
+                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { showBackup = false } } }
+            }
+        }
     }
 }
 

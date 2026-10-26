@@ -86,3 +86,7 @@ The owner authorized1.0 help and a deliberate erase/start-over flow, not automat
 ## Explicit password confirmation — build61
 
 D2S-175 owner reports1Password fills only the first new-password field on setup/change. The explicit Use entered password action is a fallback, not verified provider pairing. Preserve newPassword hints, independent manual mismatch validation, exact text and background clearing. Never guess AutoFill from input length/paste, mirror typing automatically, use clipboard access or submit from this action. See docs/release/evidence/build-61/README.md.
+
+## Backup convenience and reminders — D2S-177/build62
+
+Follow docs/portable-vault/backup-password-and-reminders.md. Current-vault-password reuse requires explicit risk consent and selected-vault fresh verification through the durable settings budget; never recover an unlock password from a data key/Face ID grant or lower independent new-backup password requirements. Preserve all separate album factors and origin/session guards. Default monthly reminders are device-only, per-vault and unlocked-only; do not add lock-screen notifications, automatic backups/uploads or cross-vault UI disclosure. Record saved dates only from successful Files callbacks in the original active context; preparation/cancellation/stale callbacks do not count, and provider acceptance is not cloud completion. Preserve checked Keychain errors and the exact erase namespace coverage.

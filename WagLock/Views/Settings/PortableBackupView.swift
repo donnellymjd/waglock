@@ -12,11 +12,15 @@ private struct ScopedPortableBackupView: View {
             albums: services.albums, storage: services.storage))
     }
     @EnvironmentObject private var auth: AuthenticationViewModel
+    @EnvironmentObject private var services: VaultSessionContext
+    @EnvironmentObject private var reminders: BackupReminderStore
     @EnvironmentObject private var mounts: LibraryMountCoordinator
     @EnvironmentObject private var mode: GuestModeManager
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var session: PortableBackupSession
     @State private var method = "password"
+    @State private var useVaultPassword = false
+    @State private var acknowledgedReuse = false
     @State private var password = ""
     @State private var confirmation = ""
     @State private var recipient = ""
@@ -46,11 +50,22 @@ private struct ScopedPortableBackupView: View {
                     }.pickerStyle(.segmented).accessibilityIdentifier("backup.method")
                     if method == "password" {
                         PasswordKeyboardPicker(selection: $keyboard)
-                        passwordField("New backup password", text: $password, identifier: "backup.password", contentType: .newPassword)
-                        passwordField("Confirm backup password", text: $confirmation, identifier: "backup.confirm", contentType: .newPassword)
-                        PasswordStrengthView(password: password)
-                        Text("Use at least 12 characters, preferably several random words. This password protects the copy; it does not change your WagLock password.")
-                            .font(.footnote)
+                        Toggle("Use this vault's password", isOn: $useVaultPassword)
+                            .accessibilityIdentifier("backup.useVaultPassword")
+                        if useVaultPassword {
+                            passwordField("Current vault password", text: $password, identifier: "backup.vaultPassword", contentType: .password)
+                            Text("Enter this library's password again, even if you unlocked with Face ID. It will be verified before export. This does not use your device passcode.").font(.footnote)
+                            Text("An exported backup can be guessed offline. Short PINs give weaker protection. Changing your vault password later does not change existing backups; each copy needs the password used when it was made.").font(.footnote)
+                            Toggle("I understand the risks of using the same password for this backup", isOn: $acknowledgedReuse)
+                                .accessibilityIdentifier("backup.reuseConsent")
+                        } else {
+                            passwordField("New backup password", text: $password, identifier: "backup.password", contentType: .newPassword)
+                            passwordField("Confirm backup password", text: $confirmation, identifier: "backup.confirm", contentType: .newPassword)
+                            PasswordConfirmationButton(password: password, confirmation: $confirmation, identifier: "backup.confirmEntered")
+                            PasswordStrengthView(password: password)
+                            Text("Use at least 12 characters, preferably several random words. This password protects the copy; it does not change your WagLock password.")
+                                .font(.footnote)
+                        }
                     } else {
                         TextField("age1… public recipient", text: $recipient)
                             .textInputAutocapitalization(.never).autocorrectionDisabled()
@@ -127,6 +142,11 @@ private struct ScopedPortableBackupView: View {
             if saved {
                 Section { Text("Saved to Files. Your provider manages cloud upload; verify the copy on another device.").accessibilityIdentifier("backup.saved") }
             }
+            Section("Reminders") {
+                NavigationLink("Backup reminders") { BackupReminderSettingsView() }
+                    .accessibilityIdentifier("backup.reminder.settings")
+                Text("Monthly by default, only after unlock. Change the frequency or turn reminders off in Settings.").font(.footnote)
+            }
             Section("Recovery") {
                 Text("Open the .tar.age file with the open-source age tool, then verify and extract it using WagLock's recovery helper. Protected child archives need their separate passwords.")
                 Link("Recovery instructions", destination: URL(string: "https://github.com/donnellymjd/waglock/blob/main/docs/portable-vault/backup-recovery.md")!)
@@ -136,16 +156,20 @@ private struct ScopedPortableBackupView: View {
         .wagLockList().navigationTitle("Encrypted backup").navigationBarTitleDisplayMode(.inline)
         .onAppear { session.refresh(mounts: mounts, request: request) }
         .onDisappear { session.cancel(); clearCredentials() }
+        .onChange(of: useVaultPassword) { _, _ in password = ""; confirmation = ""; acknowledgedReuse = false }
+        .onChange(of: method) { _, _ in clearCredentials() }
         .onChange(of: scenePhase) { _, phase in if phase == .background { session.cancel(); clearCredentials() } }
         .onChange(of: session.readyURL) { _, url in if url != nil { password = ""; confirmation = ""; albumPasswords = [:]; albumConfirmations = [:] } }
         .sheet(item: $handoff, onDismiss: { if session.handingOff { session.finishHandoff() } }) { file in
             SystemBackupSave(url: file.url) { success in
-                saved = success; session.finishHandoff(); handoff = nil
+                saved = success
+                if success, services.isActive, auth.librarySessionID == services.sessionID { reminders.recordSavedToFiles() }
+                session.finishHandoff(); handoff = nil
             }
         }
     }
     private func clearCredentials() {
-        password = ""; confirmation = ""; albumPasswords = [:]; albumConfirmations = [:]
+        password = ""; confirmation = ""; acknowledgedReuse = false; albumPasswords = [:]; albumConfirmations = [:]
     }
 
     private func passwordField(_ title: String, text: Binding<String>, identifier: String,
@@ -157,7 +181,9 @@ private struct ScopedPortableBackupView: View {
     private var canStart: Bool {
         guard mode.isOwnerMode, auth.isAuthenticated else { return false }
         if method == "password" {
-            guard password.count >= 12, Data(password.utf8) == Data(confirmation.utf8) else { return false }
+            if useVaultPassword {
+                guard acknowledgedReuse, !password.isEmpty else { return false }
+            } else { guard password.count >= 12, Data(password.utf8) == Data(confirmation.utf8) else { return false } }
         } else { guard (try? AgeFileWriter.decodeRecipient(recipient.trimmingCharacters(in: .whitespacesAndNewlines))) != nil else { return false } }
         return session.rows.filter { $0.policy != .inherited }.allSatisfy { album in
             let value = albumPasswords[album.id] ?? ""
@@ -168,7 +194,9 @@ private struct ScopedPortableBackupView: View {
         saved = false
         let credential: AgeFileWriter.Credential = method == "password" ? .password(password) : .recipient(recipient.trimmingCharacters(in: .whitespacesAndNewlines))
         session.start(mounts: mounts, auth: auth, rootCredential: credential, passwords: albumPasswords,
-            consent: biometricConsent ? Set(biometricRows.map(\.id)) : [])
+            consent: biometricConsent ? Set(biometricRows.map(\.id)) : [],
+            passwordSource: method == "password" && useVaultPassword ? .currentVault : .independent,
+            acknowledgedReuse: acknowledgedReuse)
     }
 }
 

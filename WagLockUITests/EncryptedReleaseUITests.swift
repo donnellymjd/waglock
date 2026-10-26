@@ -619,6 +619,108 @@ final class EncryptedReleaseUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["PUBLIC confirmation sample"].exists)
     }
 
+    @MainActor func testVaultPasswordBackupAndPrivateReminderSettingsStayWithinSelectedLibrary() throws {
+        guard ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"]?.hasPrefix("WagLock Encrypted Release QA Confirmation") == true else {
+            throw XCTSkip("Requires the retained public confirmation fixture")
+        }
+        continueAfterFailure = false
+        let app = XCUIApplication(bundleIdentifier: "com.d2sci.waglock")
+        app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-waglock.passwordKeyboard", "fullKeyboard"]
+        let primary = "PUBLIC-confirmation*._-changed", secondary = "PUBLIC-confirmation*._-alternative"
+        func reach(_ element: XCUIElement, towardTop: Bool = false) {
+            let scroll = app.collectionViews.firstMatch.exists ? app.collectionViews.firstMatch
+                : app.tables.firstMatch.exists ? app.tables.firstMatch
+                : app.scrollViews.firstMatch.exists ? app.scrollViews.firstMatch : app
+            for phase in 0..<2 {
+                for _ in 0..<6 {
+                    if element.exists && element.isHittable { return }
+                    let down = element.exists ? element.frame.minY < scroll.frame.minY : (phase == 0 ? towardTop : !towardTop)
+                    if down { scroll.swipeDown() } else { scroll.swipeUp() }
+                }
+            }
+            XCTAssertTrue(element.isHittable, app.debugDescription)
+        }
+        func openSettings() {
+            app.buttons["Settings"].firstMatch.tap()
+        }
+        func openReminders() {
+            let button = app.buttons["settings.backupReminders"]; reach(button); button.tap()
+            XCTAssertTrue(app.buttons["backup.reminder.frequency"].waitForExistence(timeout: 8))
+        }
+        func frequency(_ expected: String) {
+            let picker = app.buttons["backup.reminder.frequency"]
+            XCTAssertTrue(NSPredicate(format: "value == %@", expected).evaluate(with: picker), app.debugDescription)
+        }
+        func setFrequency(_ value: String) {
+            let picker = app.buttons["backup.reminder.frequency"]
+            if picker.value as? String == value { return }
+            let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: picker)
+            XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 5), .completed)
+            picker.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5)).tap()
+            XCTAssertTrue(app.buttons[value].waitForExistence(timeout: 5)); app.buttons[value].tap()
+            frequency(value)
+        }
+        func openBackup() {
+            let button = app.buttons["settings.backup"]; reach(button); button.tap()
+            let toggle = app.switches["backup.useVaultPassword"]
+            XCTAssertTrue(toggle.waitForExistence(timeout: 8))
+            toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+            XCTAssertTrue(app.secureTextFields["backup.vaultPassword"].waitForExistence(timeout: 5))
+        }
+        func prepare(_ password: String, expectSuccess: Bool) {
+            let field = app.secureTextFields["backup.vaultPassword"]
+            reach(field, towardTop: true); replace(field, with: password + "\n")
+            let consent = app.switches["backup.reuseConsent"]
+            let create = app.buttons["backup.create"]
+            reach(consent)
+            if consent.value as? String == "0" {
+                reach(create); XCTAssertFalse(create.isEnabled)
+                reach(consent, towardTop: true); consent.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+            }
+            reach(create); XCTAssertTrue(create.isEnabled); create.tap()
+            if expectSuccess { XCTAssertTrue(app.buttons["backup.save"].waitForExistence(timeout: 45), app.debugDescription) }
+            else {
+                let error = app.staticTexts["backup.error"]; reach(error)
+                XCTAssertTrue(error.exists)
+                XCTAssertFalse(app.buttons["backup.save"].exists)
+            }
+        }
+        app.launch(); unlock(app, password: primary)
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); openSettings(); openReminders()
+        setFrequency("Monthly"); XCTAssertFalse(app.staticTexts["Last saved to Files"].exists)
+        setFrequency("Weekly")
+        app.terminate(); app.launch(); unlock(app, password: primary)
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); openSettings(); openReminders()
+        frequency("Weekly"); setFrequency("Off")
+        app.navigationBars.buttons.element(boundBy: 0).tap(); openBackup()
+        prepare("PUBLIC wrong password", expectSuccess: false)
+        prepare(primary, expectSuccess: true)
+        reach(app.buttons["backup.save"]); app.buttons["backup.save"].tap()
+        let cancel = app.buttons["Cancel"].firstMatch
+        if !cancel.waitForExistence(timeout: 5), app.buttons["Browse"].firstMatch.exists {
+            app.buttons["Browse"].firstMatch.tap()
+        }
+        if cancel.waitForExistence(timeout: 5) { cancel.tap() }
+        else {
+            // Native Files can reopen inside On My iPhone with cancellation on its parent.
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.085)).press(forDuration: 0.1,
+                thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95)))
+        }
+        XCTAssertFalse(app.staticTexts["backup.saved"].exists)
+        app.navigationBars.buttons.element(boundBy: 0).tap(); openReminders()
+        frequency("Off"); XCTAssertFalse(app.staticTexts["Last saved to Files"].exists)
+        app.terminate(); app.launch(); unlock(app, password: secondary)
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); openSettings(); openReminders()
+        frequency("Monthly")
+        app.navigationBars.buttons.element(boundBy: 0).tap(); openBackup()
+        prepare(primary, expectSuccess: false)
+        prepare(secondary, expectSuccess: true)
+        app.buttons["backup.discard"].tap()
+        app.terminate(); app.launch(); unlock(app, password: primary)
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["PUBLIC confirmation sample"].waitForExistence(timeout: 8))
+    }
+
     @MainActor func testReleasePasswordChangePreservesLibrary() throws {
         let app = try launch()
         app.buttons["Notes"].firstMatch.tap(); app.navigationBars.buttons["New"].tap()

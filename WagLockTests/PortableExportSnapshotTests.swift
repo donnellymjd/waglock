@@ -440,6 +440,64 @@ final class PortableExportSnapshotTests: XCTestCase {
         XCTAssertThrowsError(try collector.capture(f.request, approvedBiometricAlbums: [UUID()]))
     }
 
+    func testBackupMayReuseVerifiedShortVaultPasswordOnlyWithConsent() async throws {
+        let f = try Fixture(); defer { f.cleanup() }
+        let keychain = KeychainService(service: "PUBLIC-reuse-backup-" + UUID().uuidString)
+        defer { keychain.clearAllKeychainData() }
+        _ = try keychain.savePassword("123456")
+        let auth = AuthenticationViewModel(keychainService: keychain, manageInstallationState: false, documentPreviewService: f.authority)
+        defer { auth.logout() }
+        auth.password = "123456"; await (try XCTUnwrap(auth.login())).value
+        let request = LibraryMountCoordinator.Request(sessionID: auth.librarySessionID, scope: .legacyOwner)
+        await f.mounts.mount(request) { true }
+        f.db.mainContext.insert(SecretNote(title: "PUBLIC reused password", content: "PUBLIC preserved note"))
+        try LibraryWriteCoordinator.save(f.db.mainContext)
+        let session = PortableBackupSession(authority: f.authority)
+        defer { session.cancel() }
+        func finish() async throws {
+            let deadline = Date().addingTimeInterval(30)
+            while session.isWorking, Date() < deadline { try await Task.sleep(for: .milliseconds(10)) }
+            XCTAssertFalse(session.isWorking)
+        }
+        session.start(mounts: f.mounts, auth: auth, rootCredential: .password("123456"), passwords: [:], consent: [])
+        try await finish(); XCTAssertNil(session.readyURL); XCTAssertNotNil(session.error)
+        session.start(mounts: f.mounts, auth: auth, rootCredential: .password("123456"), passwords: [:], consent: [], passwordSource: .currentVault)
+        try await finish(); XCTAssertNil(session.readyURL)
+        session.start(mounts: f.mounts, auth: auth, rootCredential: .password("654321"), passwords: [:], consent: [], passwordSource: .currentVault, acknowledgedReuse: true)
+        try await finish(); XCTAssertNil(session.readyURL)
+        XCTAssertEqual(try keychain.passwordAttemptLimiter(scope: "settings:primary").status().failures, 1)
+        session.start(mounts: f.mounts, auth: auth, rootCredential: .password("123456"), passwords: [:], consent: [], passwordSource: .currentVault, acknowledgedReuse: true)
+        try await finish()
+        let output = try XCTUnwrap(session.readyURL, session.error ?? "No backup")
+        XCTAssertEqual(try keychain.passwordAttemptLimiter(scope: "settings:primary").status().failures, 0)
+        XCTAssertTrue(try Data(contentsOf: output).starts(with: Data("age-encryption.org/v1".utf8)))
+        let archive = XCTAttachment(contentsOfFile: output); archive.name = "PUBLIC-reused-vault-password.tar.age"
+        archive.lifetime = .keepAlways; add(archive)
+        XCTAssertTrue(auth.isAuthenticated); XCTAssertTrue(keychain.verifyPassword("123456"))
+    }
+
+    func testBackupReuseWrongPasswordsShareDurableSettingsCooldown() async throws {
+        let f = try Fixture(); defer { f.cleanup() }
+        let keychain = KeychainService(service: "PUBLIC-reuse-budget-" + UUID().uuidString)
+        defer { keychain.clearAllKeychainData() }
+        _ = try keychain.savePassword("PUBLIC vault password")
+        let auth = AuthenticationViewModel(keychainService: keychain, manageInstallationState: false, documentPreviewService: f.authority)
+        defer { auth.logout() }
+        auth.password = "PUBLIC vault password"; await (try XCTUnwrap(auth.login())).value
+        await f.mounts.mount(.init(sessionID: auth.librarySessionID, scope: .legacyOwner)) { true }
+        let session = PortableBackupSession(authority: f.authority)
+        defer { session.cancel() }
+        for candidate in Array(repeating: "PUBLIC wrong password", count: 5) + ["PUBLIC vault password"] {
+            session.start(mounts: f.mounts, auth: auth, rootCredential: .password(candidate), passwords: [:], consent: [], passwordSource: .currentVault, acknowledgedReuse: true)
+            let deadline = Date().addingTimeInterval(10)
+            while session.isWorking, Date() < deadline { try await Task.sleep(for: .milliseconds(10)) }
+            XCTAssertNil(session.readyURL); XCTAssertNotNil(session.error)
+        }
+        let state = try keychain.passwordAttemptLimiter(scope: "settings:primary").status()
+        XCTAssertEqual(state.failures, 5); XCTAssertNotNil(state.blockedUntil)
+        XCTAssertTrue(auth.isAuthenticated); XCTAssertTrue(keychain.verifyPassword("PUBLIC vault password"))
+    }
+
     func testBackupSessionHandoffKeepsOnlyFinishedCiphertextAcrossRevocation() async throws {
         let f = try Fixture(); defer { f.cleanup() }
         let keychain = KeychainService(service: "backup-session-" + UUID().uuidString)

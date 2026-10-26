@@ -43,3 +43,5 @@ Start with these docs and the root [AGENTS.md](../../AGENTS.md). Historical upst
 - [Fresh encrypted release library: bootstrap, persistence, recovery and limits](fresh-encrypted-library.md)
 
 - [Forgotten-password help and deliberate erasure](forgotten-password-and-erasure.md) — D2S-176; no password bypass or native recovery key.
+
+- [Vault-password backup protection and private reminders](backup-password-and-reminders.md) — D2S-177; monthly default, configurable/off, unlocked-only prompts.

@@ -11,7 +11,8 @@ final class PortableBackupSession: ObservableObject {
         let name: String
         let policy: AlbumProtection
     }
-    enum Failure: Error { case unavailable, credentials, changed }
+    enum Failure: Error { case unavailable, credentials, changed, vaultPassword }
+    enum PasswordSource { case independent, currentVault }
     @Published private(set) var rows: [AlbumRow] = []
     @Published private(set) var isWorking = false
     @Published private(set) var progress: Double = 0
@@ -52,7 +53,8 @@ final class PortableBackupSession: ObservableObject {
     }
 
     func start(mounts: LibraryMountCoordinator, auth: AuthenticationViewModel,
-               rootCredential: AgeFileWriter.Credential, passwords: [UUID: String], consent: Set<UUID>) {
+               rootCredential: AgeFileWriter.Credential, passwords: [UUID: String], consent: Set<UUID>,
+               passwordSource: PasswordSource = .independent, acknowledgedReuse: Bool = false) {
         guard !handingOff else { return }
         cancel()
         BackupCleanup.retry()
@@ -72,8 +74,15 @@ final class PortableBackupSession: ObservableObject {
             do {
                 try check()
                 if case .password(let password) = rootCredential {
-                    guard password.count >= 12, password.utf8.count <= 16384 else { throw Failure.credentials }
-                } else if case .recipient(let recipient) = rootCredential { _ = try AgeFileWriter.decodeRecipient(recipient) }
+                    guard password.utf8.count <= 16384 else { throw Failure.credentials }
+                    if passwordSource == .currentVault {
+                        guard acknowledgedReuse, !password.isEmpty, auth.verifyPassword(password) else { throw Failure.vaultPassword }
+                        try check()
+                    } else { guard password.count >= 12 else { throw Failure.credentials } }
+                } else if case .recipient(let recipient) = rootCredential {
+                    guard passwordSource == .independent else { throw Failure.credentials }
+                    _ = try AgeFileWriter.decodeRecipient(recipient)
+                }
                 let records = try mount.container.mainContext.fetch(FetchDescriptor<VaultAlbum>())
                 // Copy the hierarchy before awaiting; never fault models after a revoked mount.
                 let topology = try records.map { album -> AlbumRow in
@@ -140,6 +149,7 @@ final class PortableBackupSession: ObservableObject {
                 guard self.token == id else { return }
                 worker = nil; self.lease = nil; isWorking = false
                 if error is CancellationError { self.error = "Backup stopped. Unlock and start again." }
+                else if case Failure.vaultPassword = error { self.error = "Unable to verify this vault password. Check it and try again; repeated failures require waiting before another attempt." }
                 else if case BackupArchiveBuilder.Failure.lowSpace = error { self.error = "There is not enough free space to prepare this backup. Your library is unchanged." }
                 else if case BackupArchiveBuilder.Failure.legacyFileTooLarge = error { self.error = "An older large file needs a streaming recovery adapter before a complete backup can be made. Nothing was exported." }
                 else { self.error = "Unable to create the complete backup. Check every album password, use different passwords for protected parent and child albums, and try again. Nothing was exported." }

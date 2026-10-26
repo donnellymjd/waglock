@@ -112,3 +112,7 @@ See [format and cryptographic decisions](age-backup-design.md), [validation evid
 The same age recovery command supports exports from the new encrypted-metadata library. Draft origin `encryptedVault` identifies the encrypted native source; older preference/Keychain origins remain readable. This affects provenance, not the password prompt. Native device-only keys and biometric registrations are not exported. Raw native-folder copies plus a password are not a supported recovery substitute.
 
 The [public encrypted-library fixture](../../tools/fixtures/encrypted-library-backup/README.md) verifies seven actual PNG/MOV/PDF/WAV samples, Unicode, notes/drafts and independent nested password domains using official age 1.3.2 without phone/Keychain access. Full supported exports still reject unsupported/locked material rather than omit it. Keep independent originals and test your own readable recovery before relying on a backup.
+
+## Backups made with the vault password
+
+When **Use this vault’s password** was selected during export, enter that vault password as it was **when the backup was created** at the outer age prompt. A later vault password change does not update older backup files. Protected albums still need their own required credentials. Short PINs are easier to guess offline; prefer a strong independent backup password or age recovery key for long-lived copies. Never post any password or backup in an issue/chat.

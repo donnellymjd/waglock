@@ -1,0 +1,17 @@
+# Build62 — vault-password backup choice and private reminders
+
+D2S-177, October26,2026. [Accepted behavior and boundaries](../../../portable-vault/backup-password-and-reminders.md). Optional current-vault-password backup mode requires fresh selected-vault verification through the durable settings budget and explicit risk acknowledgement; only this path accepts an existing short password. Independent new backup passwords retain12-character minimum. Protected albums keep separate factors. Monthly default reminders are per-vault/device-only, configurable daily/weekly/monthly/quarterly/off and shown only after unlock. No notifications, automatic export/upload or password cache.
+
+Focused28 backup/reminder tests pass in `/private/tmp/waglock-build62-focused.xcresult`. Full security suite result is in unit-tests.json. The new public6-digit-PIN export is independently opened with official age and the documented helper, which publishes its expected note in a readable Library; recovery.json records the decrypted archive digest. No owner data was read. Signed archive `/private/tmp/WagLock-1.0-build62-backup.xcarchive`, package and live signed-profile/domain AutoFill checks pass. This does not imply App Store distribution signing or submission.
+
+Final actual-release UI, source tag, phone installation and owner/provider acceptance are recorded below when available. No native format conversion, reset, private-media export or deployment.
+
+Early actual-release attempts corrected test-only assumptions about lazy Form rows, native picker dismissal, Form’s collection/table backing and Files reopening in a subfolder. No production bypass or weakened validation was added. Public simulator [reminder settings screenshot](reminders.png) shows the monthly schedule and private unlocked-only wording; no owner screenshots/content were captured.
+
+## Final verification
+
+Full349 unit/security tests pass, zero failures/skips (`/private/tmp/waglock-build62-security-full.xcresult`). The separately installed actual Release UI workflow passes1 test,105.612seconds, zero failures/skips (`/private/tmp/waglock-build62-backup-ui-files.xcresult`). It checks frequency selection, persistence through relaunch, Off, current-password opt-in/consent, wrong-password rejection, successful backup preparation, native Files cancellation without a false saved date, independent Monthly settings in the alternative library, primary-password rejection in that library, correct alternative-password backup, discard and retained original primary note after relaunch.
+
+The overdue scheduling/prompt-claim protocol is covered with an injected clock in unit tests. The actual UI run does not advance the device clock, wait a calendar month or establish provider cloud completion. Owner phone/provider/recovery acceptance remains separate. Source tag: candidate-1.0-build62. No native format conversion, app uninstall/reset, real media read/export or App Store upload/submission.
+
+Signed build62 installed successfully over61; inventory verifies WagLock1.0(62) and retained WagLock Dev1.3.8(44). No uninstall, reset, private-content read or phone export. Owner UAT is pending: use disposable samples, choose vault-password protection, save a backup through Files/cloud and independently recover it with its creation-time password; verify reminder frequency/off settings persist for the selected vault. Monthly prompts are in-app after unlock, not notifications.

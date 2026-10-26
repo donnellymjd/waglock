@@ -1,3 +1,5 @@
+> **October26 current candidate: build62.** [Vault-password backup option and private reminders](evidence/build-62/README.md) passes349 unit/security tests, actual-release UI and independent public-fixture age/helper recovery. Installed over61 with Dev44 retained; owner UAT and account-side distribution gates remain. Older checkpoints below are historical. No upload/submission.
+
 > **October26 current candidate: build61.** [Explicit confirmation after password-manager fill](evidence/build-61/README.md) passes the actual-release UI workflow and signed package/live association checks. Installed over60 with Dev44 retained; owner1Password UAT is pending. Older checkpoints below are historical. No upload/submission.
 
 > **October25 current work: build60.** [Forgotten-password help and explicit erasure](evidence/build-60/README.md) has342 passing unit/security tests plus a passing full release erase/cancel/fresh-library UI workflow; build60 is installed, with owner UAT pending. Build59 AutoFill association is live; provider UAT remains pending. Older checkpoints below are historical. No upload/submission.

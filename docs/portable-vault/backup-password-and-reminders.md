@@ -1,0 +1,23 @@
+# Vault-password backups and private reminders — D2S-177
+
+Owner requested optional current-vault-password backup protection and monthly reminders on October26,2026. Build62 retains optional/manual backup creation and independent password/age-recipient modes. No native format, KDF, Cryptomator dependency, migration or automatic upload is introduced.
+
+## Backup password choice
+
+Settings → Encrypted backup → Password offers **Use this vault’s password**. Enter that selected library’s current unlock password again, including after Face ID entry, and acknowledge offline guessing/reuse risks. Verification runs inside PortableBackupSession through AuthenticationViewModel.verifyPassword, consuming the existing selected-vault settings attempt budget and checking the live origin around authorization. It never fetches or caches an unlock password from a biometric/data-key grant. A primary password cannot authorize a secondary export. Failure/cooldown/unavailable credentials deny the backup without changing source content.
+
+Only this verified and acknowledged path permits an existing password shorter than12 characters. New independent backup passwords still require12 characters and confirmation. Short vault PINs have low resistance to offline guessing; native online throttling cannot protect an exported file. A changed vault password does not re-encrypt earlier exports: each old copy still requires its creation-time password. No password provenance flag, plaintext password or native key is added to archive metadata. Separate protected-album factors, explicit Face ID-only export consent and distinct parent/child passwords remain required. Recovery uses the existing open-source age/helper workflow.
+
+## Reminder contract
+
+Reminders default to **Monthly**, starting from the first successful unlock with this feature. Options: Daily, Weekly, Monthly, Every3months, Off. Settings → Backup reminders and the encrypted-backup screen expose the same setting. A due prompt appears only in the selected unlocked mounted library. No notification authorization, lock-screen notification, network service, background job or cloud upload is scheduled. The legacy presentation-only guest view does not prompt.
+
+State contains only scheduling preferences/dates, persisted device-only in Keychain under the immutable vault namespace, account waglock.backup-reminders.v1. Each vault’s schedule is separate; ordinary UI does not advertise another vault. No vault names, file names, passwords, content counts or keys are recorded. The existing scoped erase namespace grammar already includes this service; explicit start-over removes it. Device settings/reminder dates are not portable backup content.
+
+A checked successful Files callback from the original still-active vault records the saved date and restarts the selected interval. Preparing ciphertext, cancelling/discarding or a stale/revoked callback does not count. Files acceptance is not proof of completed cloud upload. If app backgrounding revokes the originating context before a provider callback, the schedule conservatively remains unchanged. Prompt presentation advances its next eligible interval before displaying, so ordinary dismissal/cold relaunch does not nag each unlock; **Remind me in a week** explicitly snoozes7days. **Not now** retains the selected interval. Frequency changes re-evaluate the schedule from the last saved/initial date and prior prompt. Calendar calculations use Gregorian UTC; this is advisory scheduling, not a security clock or an exact alarm.
+
+Checked Keychain absence initializes defaults. Corrupt/unavailable/readback-failed state is not replaced by guessed defaults; reminder errors do not block manual backup or vault access. The store never clears or changes credentials. Session revocation clears its cached state. Older exports and independently saved Photos/Files copies are unaffected.
+
+## Validation
+
+Five reminder tests cover default due dates/relaunch, successful-save rescheduling, off/frequency persistence, per-vault storage separation, explicit snoozing, month-end boundaries, advisory clock changes, and corrupt/unavailable/unwritten state. Two backend tests prove consent, rejection of short independent passwords, verified6-digit-PIN export, wrong-password durable settings throttling and continued vault access. The exported public PIN fixture independently decrypts with official age; the documented helper produces a readable Library with the expected public note. Existing snapshot/album/session cancellation tests remain. [Build62 evidence](../release/evidence/build-62/README.md) records full suite, signed package, release UI and owner acceptance separately.

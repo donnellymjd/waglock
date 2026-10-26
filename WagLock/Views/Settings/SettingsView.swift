@@ -11,6 +11,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var vaultServices: VaultSessionContext
+    @EnvironmentObject private var backupReminders: BackupReminderStore
 
     // MARK: - Environment
 
@@ -70,6 +71,9 @@ struct SettingsView: View {
                             NavigationLink { PortableBackupView() } label: {
                                 settingsCard("externaldrive.badge.icloud", "Encrypted backup", "Export to Files, iCloud Drive or another provider")
                             }.accessibilityIdentifier("settings.backup")
+                            NavigationLink { BackupReminderSettingsView() } label: {
+                                settingsCard("calendar", "Backup reminders", backupReminders.frequency.title)
+                            }.accessibilityIdentifier("settings.backupReminders")
                         }
                         Button { showAboutSheet = true } label: {
                             settingsCard("info.circle", "About WagLock", LibraryStoragePolicy.encryptedMetadata ? "Open source · On-device encryption" : "Open source · Early test build")

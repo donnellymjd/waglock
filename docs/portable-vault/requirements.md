@@ -85,3 +85,7 @@ All three are Backlog items; the existing top-priority export, recovery, nested-
 ## 2026-10-22 — Backup choices and system cloud destinations
 
 The owner authorized the complete export work, cryptographic options and optional on-device cloud backup through the iOS interface. Build 39 uses an additional standard age format (password/scrypt or X25519 recovery recipient), preserving the current native store and Cryptomator proposal. The native Files export picker receives completed ciphertext and lets the user choose local, iCloud Drive or installed providers. This is manual copy, not automatic backup/sync. Device settings/biometric registrations are excluded explicitly; each independently protected child keeps its own password. Face ID-only export requires explicit copy consent, real biometrics and a new confirmed export password without changing native policy. [Implementation/limits](age-backup-design.md), [recovery procedure](backup-recovery.md). Existing recovery/security/distribution gates are narrowed by the recorded evidence, not waived.
+
+## Owner follow-up — October26,2026: D2S-177
+
+Offer explicit verified reuse of the selected vault password for backup. Warn about offline guessing and creation-time passwords for older exports; keep independent password/recovery-key options and protected-album factors. Enable monthly backup reminders by default with frequency/off settings. Build62 implements private reminders only after unlock, separate per vault, with no notification or automatic upload. [Contract/evidence](backup-password-and-reminders.md).

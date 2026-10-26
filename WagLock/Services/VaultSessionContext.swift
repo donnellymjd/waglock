@@ -15,6 +15,7 @@ final class VaultSessionContext: ObservableObject {
     let albums: AlbumStore
     let exports: ExportService
     let documents: DocumentPreviewService
+    let backupReminders: BackupReminderStore
     let audio: AudioSessionController
     @Published private(set) var isActive = true
     private var isRevoking = false
@@ -38,6 +39,7 @@ final class VaultSessionContext: ObservableObject {
         self.mediaLoader = loader
         self.thumbnails = thumbnails
         let namespace = keychainNamespace + ".vault." + vaultID.uuidString
+        self.backupReminders = BackupReminderStore(storage: SystemKeychainStorage(service: namespace))
         self.albums = AlbumStore(biometrics: BiometricSecretStore(service: preservePrimaryNamespaces ? keychainNamespace + ".biometrics" : namespace + ".album-biometrics"),
             attemptStorage: SystemKeychainStorage(service: preservePrimaryNamespaces ? keychainNamespace + ".album-attempts" : namespace + ".album-attempts"),
             storage: storage, mediaLoader: loader, thumbnails: thumbnails)
@@ -63,6 +65,7 @@ final class VaultSessionContext: ObservableObject {
         isRevoking = true
         documents.flushNotesBeforeSuspending(sessionID)
         isActive = false
+        backupReminders.clearCachedState()
         LibraryMountCoordinator.invalidateSession(sessionID)
         exports.endSession(matching: sessionID)
         documents.endSession(matching: sessionID)

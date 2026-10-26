@@ -1,0 +1,10 @@
+{
+  "fixtureOnly": true,
+  "fixture": "PUBLIC-reused-vault-password.tar.age",
+  "verifiedWithOfficialAgeCLI": true,
+  "publicTestVaultPINCharacters": 6,
+  "expectedPublicNoteRecovered": true,
+  "decryptedArchiveSHA256": "dd38de75b05083465cd05e2db69cd1eabe969c93611148894b5936426b23aa21",
+  "documentedHelperRecoveryVerified": true,
+  "readableLibraryPublished": true
+}

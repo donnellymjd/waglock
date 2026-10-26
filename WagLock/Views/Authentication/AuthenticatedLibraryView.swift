@@ -27,6 +27,7 @@ struct AuthenticatedLibraryView: View {
                     .environmentObject(services.albums)
                     .environmentObject(services.exports)
                     .environmentObject(services.audio)
+                    .environmentObject(services.backupReminders)
                     .modelContainer(mounted.container)
                     .id(mounted.id)
             } else if library.failed {
