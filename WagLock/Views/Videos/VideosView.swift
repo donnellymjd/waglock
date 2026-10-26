@@ -2,8 +2,8 @@
 //  VideosView.swift
 //  WagLock
 //
-//  视频视图
-//  列表展示所有视频，支持播放
+//  Videos view
+//  Lists all videos with playback
 //
 
 import AVKit
@@ -18,7 +18,7 @@ struct VideosView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var authViewModel: AuthenticationViewModel
 
-    // 只查询视频类型的媒体
+    // Query only video media
     @Query(
         filter: #Predicate<MediaItem> { item in
             item.typeRawValue == "video"
@@ -47,7 +47,7 @@ struct VideosView: View {
         VStack(spacing: 12) {
             WagLockSearchField(title: "Search videos", text: $searchText).padding(.horizontal, 24)
             ZStack {
-            // 访客模式下始终显示空状态
+            // Always show the empty state in guest mode
             if guestModeManager.isGuestMode || videos.isEmpty {
                 emptyStateView
             } else {
@@ -58,7 +58,7 @@ struct VideosView: View {
         }.background(ColorTheme.primaryBackground)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                // 访客模式下隐藏导入按钮
+                // Hide the import button in guest mode
                 if guestModeManager.isOwnerMode {
                     Button {
                         showImportView = true
@@ -156,8 +156,8 @@ struct VideosView: View {
     private func deleteVideo(_ video: MediaItem) {
         let encryptedPath = video.encryptedPath
 
-        // 先提交数据库删除，成功后再删文件，
-        // 避免 save 失败时留下指向已删除文件的记录
+        // Commit the database deletion first and delete files only after it succeeds,
+        // so a failed save never leaves records pointing at deleted files
         modelContext.delete(video)
         do {
             try LibraryWriteCoordinator.save(modelContext)
@@ -172,7 +172,7 @@ struct VideosView: View {
         do {
             try vaultServices.storage.deleteFile(path: encryptedPath)
         } catch {
-            // 记录已删除，文件删除失败只会残留无引用的加密文件
+            // The record is gone; a failed file delete only leaves an unreferenced encrypted file
         }
     }
 }
@@ -192,9 +192,9 @@ struct VideoCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // 视频缩略图
+            // Video thumbnail
             ZStack {
-                // 缩略图或占位背景
+                // Thumbnail or placeholder background
                 if let thumbnailImage {
                     VideoThumbnailImage(image: thumbnailImage)
                 } else {
@@ -209,13 +209,13 @@ struct VideoCardView: View {
                         .aspectRatio(16 / 9, contentMode: .fit)
                 }
 
-                // 播放图标
+                // Play icon
                 Image(systemName: "play.circle.fill")
                     .font(.system(size: 50))
                     .foregroundColor(.white)
                     .shadow(color: .black.opacity(0.3), radius: 10)
 
-                // 时长标签（右下角）
+                // Duration label (bottom right)
                 VStack {
                     Spacer()
                     HStack {
@@ -234,7 +234,7 @@ struct VideoCardView: View {
             }
             .aspectRatio(16.0 / 9.0, contentMode: .fit)
 
-            // 视频信息
+            // Video info
             VStack(alignment: .leading, spacing: 6) {
                 Text(video.fileName)
                     .font(.headline)

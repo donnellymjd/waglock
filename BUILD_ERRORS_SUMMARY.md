@@ -202,20 +202,20 @@ See [D2S-105 initial audit](docs/portable-vault/audits/D2S-105.md) for source fi
 - Logs: `/private/tmp/portable-vault-audit-build.log`, `/private/tmp/portable-vault-audit-tests.log` (ephemeral local files).
 - Follow-up coverage: chunk truncation/reordering, key-update failure/recovery, independent decoy isolation, plaintext database/temp leakage, crash-safe imports and original-quality migration. No storage/security implementation changed during documentation setup.
 
-# 计算器解锁验证记录（2026-10-08）
+# Calculator unlock verification (2026-10-08)
 
-## 原因与修复
+## Cause and fix
 
-计算器原先解密 `disguisePassword` 副本后比对输入；副本使用
-`identifierForVendor` 派生的字符串加密。开发包与 App Store 包的 vendor ID
-可能不同，副本解密失败时密码序列为空，但 `isDisguisePasswordSet` 标记仍存在，
-用户留在计算器页且正确密码不触发解锁。旧副本未同步也会匹配过期密码。
+The calculator used to decrypt a `disguisePassword` copy and compare it with the input. That copy was encrypted with a string derived from
+`identifierForVendor`. The development and App Store packages can have different vendor IDs; when the copy failed to decrypt, the password
+sequence was empty but the `isDisguisePasswordSet` flag remained, so the user stayed on the calculator and the correct password never unlocked.
+An unsynchronized old copy could also match an outdated password.
 
-计算器现在直接调用 `verifyPassword` 验证主密码哈希，与普通登录共用验证依据，
-不再读取设备标识绑定的副本。保持原有数据密码解密及访客验证流程。
-旧 Keychain 条目和媒体数据没有清除或重加密。
+The calculator now calls `verifyPassword` to check the main password hash directly, sharing the same check as the normal login,
+and no longer reads the device-bound copy. The existing data-password decryption and guest verification flows are unchanged.
+Old Keychain items and media data were not deleted or re-encrypted.
 
-## 验证命令与结果
+## Verification commands and results
 
 ```sh
 xcodebuild test -scheme ZeroNet-Space -configuration Release -destination 'platform=iOS Simulator,id=7D7DA111-3384-4622-8976-F59F28EFFE4F' -derivedDataPath /tmp/zeronet-auth-release -only-testing:ZeroNet-SpaceTests/CalculatorUnlockTests ENABLE_TESTABILITY=YES
@@ -224,53 +224,53 @@ xcodebuild build -scheme ZeroNet-Space -configuration Release -destination 'gene
 git diff --check
 ```
 
-- 修复前：4 项新增测试中 3 项失败；vendor ID 变化和副本缺失时正确密码无法解锁，过期副本可错误触发解锁。访客/错误密码用例通过。
-- 修复后：37 项单元测试全部通过，0 项跳过；4 项新增回归测试全部通过。
-- iOS arm64 Release 构建通过；未签名，未安装到真机。
-- 日志：`/tmp/zeronet-auth-regression-before.log`、`/tmp/zeronet-auth-regression-after.log`、`/tmp/zeronet-auth-device-release.log`。
-- 测试使用 UUID 命名的 Keychain service 和独立 NotificationCenter，避免改动正常凭据或触发应用的认证通知。
+- Before the fix: 3 of the 4 new tests failed; with a changed vendor ID or a missing copy the correct password could not unlock, and an outdated copy could unlock incorrectly. Guest and wrong-password cases passed.
+- After the fix: all 37 unit tests passed, 0 skipped; all 4 new regression tests passed.
+- iOS arm64 Release build passed; unsigned and not installed on a physical device.
+- Logs: `/tmp/zeronet-auth-regression-before.log`, `/tmp/zeronet-auth-regression-after.log`, `/tmp/zeronet-auth-device-release.log`.
+- Tests used a UUID-named Keychain service and a separate NotificationCenter, so normal credentials were untouched and no app authentication notifications fired.
 
-## 尚需验证
+## Still to verify
 
-尚未读取用户真机上的故障日志，vendor ID 变化是与症状一致、已由回归测试复现的原因，
-并未测量该手机实际的旧/新 ID。未覆盖安装现有 App Store 包到修复发行包的升级过程。
-需要发布修复版本后，在原有数据保留的前提下，输入原主密码并按等号验证解锁与媒体读取。
-现有 Swift 并发兼容性和资源警告未在本次修复中处理。
+The failure logs from the user's phone have not been read. The vendor ID change matches the symptoms and was reproduced by regression tests,
+but the phone's actual old and new IDs were not measured. Upgrading from the existing App Store package to the fixed release was not covered.
+After the fix ships, with existing data preserved, enter the original main password and press equals to confirm unlock and media reading.
+Existing Swift concurrency compatibility and resource warnings were not addressed in this fix.
 
-# 音频模块验证记录（2026-09-06）
+# Audio module verification (2026-09-06)
 
-## 验证环境
+## Environment
 
-Xcode / iOS 26.5 SDK，iPhone 17 模拟器。当前机器没有 iPhone 15 模拟器，所以使用可用的 iPhone 17。应用最低版本仍为 iOS 17.6。
+Xcode / iOS 26.5 SDK, iPhone 17 simulator. This machine has no iPhone 15 simulator, so the available iPhone 17 was used. The app's minimum version remains iOS 17.6.
 
-模拟器测试使用 `CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES` 本地临时签名；未修改项目的开发团队或签名配置。关闭签名的构建可编译，但模拟器登录流程写入 Keychain 会失败。
+Simulator tests used local ad hoc signing (`CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES`); the project's development team and signing settings were not changed. Builds with signing disabled compile, but the simulator login flow fails to write to the Keychain.
 
-## 需真机验收
+## Needs physical-device acceptance
 
-- 麦克风首次授权、拒绝后从系统设置重新授权。
-- 录音音质、长时间录制、暂停/继续与来电中断。
-- 锁屏/切后台自动结束保存，返回后按现有自动锁定策略重新认证。
-- 低存储空间时保留录音供重试；取消、保存完成和退出认证后的临时文件清理。
-- 访客模式隐藏音频列表并禁止导入、录音、播放、重命名与删除。
-- iOS 17.6 与 iPad 布局尚未在对应运行时验收。
+- First-time microphone permission, and re-granting from Settings after a denial.
+- Recording quality, long recordings, pause/resume and interruption by an incoming call.
+- Locking the screen or backgrounding ends and saves the recording; on return, re-authentication follows the existing auto-lock policy.
+- With low storage, the recording is kept for retry; temporary files are cleaned up after cancel, after a successful save and after leaving the authenticated session.
+- Guest mode hides the audio list and blocks import, recording, playback, rename and delete.
+- iOS 17.6 and iPad layouts have not been accepted on matching runtimes.
 
-## 构建提示
+## Build notes
 
-已有 SwiftData 主线程隔离/Swift 6 兼容性及资源目录未分配图片警告仍存在。本次未更改这些无关配置或资源。
+Existing SwiftData main-thread isolation / Swift 6 compatibility warnings and asset-catalog unassigned-image warnings remain. These unrelated settings and resources were not changed.
 
-## 已完成的验证
+## Completed verification
 
-- `xcodebuild -scheme ZeroNet-Space -destination 'platform=iOS Simulator,id=F2782680-DF7F-4426-BD3E-38B904C76527' -derivedDataPath /tmp/zeronet-audio-build build CODE_SIGNING_ALLOWED=NO`：构建通过。
-- 最终本地签名测试：`xcodebuild -scheme ZeroNet-Space -destination 'platform=iOS Simulator,id=F2782680-DF7F-4426-BD3E-38B904C76527' -derivedDataPath /tmp/zeronet-audio-build -resultBundlePath /tmp/zeronet-audio-final.xcresult -only-testing:ZeroNet-SpaceTests -only-testing:ZeroNet-SpaceUITests/AudioUITests -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 90 test CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES`。
-- 19 项单元测试通过（14 项 XCTest + 5 项 Swift Testing），其中 6 项新增音频测试覆盖格式识别、旧数据兼容、真实 WAV 加密往返、损坏输入拒绝、取消导入及遗留明文清理。
-- `AudioUITests.testAudioNavigationAndImportPicker` 通过：底部五项顺序、音频按钮、设置打开/关闭、系统音频文件选择器打开/取消。
-- `git diff --check` 通过；`plutil -lint` 检查项目文件和中英文 InfoPlist.strings 通过；构建产物包含 NSMicrophoneUsageDescription。
+- `xcodebuild -scheme ZeroNet-Space -destination 'platform=iOS Simulator,id=F2782680-DF7F-4426-BD3E-38B904C76527' -derivedDataPath /tmp/zeronet-audio-build build CODE_SIGNING_ALLOWED=NO`: build passed.
+- Final locally signed test run: `xcodebuild -scheme ZeroNet-Space -destination 'platform=iOS Simulator,id=F2782680-DF7F-4426-BD3E-38B904C76527' -derivedDataPath /tmp/zeronet-audio-build -resultBundlePath /tmp/zeronet-audio-final.xcresult -only-testing:ZeroNet-SpaceTests -only-testing:ZeroNet-SpaceUITests/AudioUITests -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 90 test CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES`.
+- 19 unit tests passed (14 XCTest + 5 Swift Testing), including 6 new audio tests covering format detection, legacy data compatibility, a real WAV encryption round trip, rejection of corrupt input, cancelled import and cleanup of leftover plaintext.
+- `AudioUITests.testAudioNavigationAndImportPicker` passed: order of the five bottom tabs, the audio button, opening/closing Settings, and opening/cancelling the system audio file picker.
+- `git diff --check` passed; `plutil -lint` passed for the project file and the English and Chinese InfoPlist.strings; the built product includes NSMicrophoneUsageDescription.
 
-## 未通过的录音 UI 验证
+## Failed recording UI verification
 
-`AudioUITests.testAudioNavigationRecordingPlaybackAndDelete` 在当前 iOS 26.5 模拟器的 `AVAudioRecorder.prepareToRecord()` 卡住。进程采样落在 AudioToolbox 的 `AudioQueueObject::ConnectToIONodeEffects` / `AQMixEngine_Base::DevLock` 等待；未执行到暂停、保存、重命名、删除等后续断言。切换模拟器输出设备及重启未解决，输出设备已恢复为原系统默认值。不将此用例计为通过，完整录音链路仍需要真机验收。
+`AudioUITests.testAudioNavigationRecordingPlaybackAndDelete` hangs in `AVAudioRecorder.prepareToRecord()` on the current iOS 26.5 simulator. Process samples show it waiting in AudioToolbox's `AudioQueueObject::ConnectToIONodeEffects` / `AQMixEngine_Base::DevLock`; the later pause, save, rename and delete assertions never ran. Switching the simulator output device and restarting did not help, and the output device was restored to the original system default. This test is not counted as passing; the full recording path still needs physical-device acceptance.
 
-本次改为只录音的 AVAudioSession.record 类别，播放时单独切换 playback；不启用后台持续录音。已有可解码音频的加密和解密测试通过，但不等同于麦克风硬件验收。
+This change uses the record-only AVAudioSession.record category and switches to playback separately for playback; continuous background recording is not enabled. Existing encryption/decryption tests on decodable audio pass, but that is not a substitute for microphone hardware acceptance.
 
 ## 2026-10-22 — portable snapshot groundwork
 

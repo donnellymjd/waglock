@@ -2,21 +2,21 @@
 //  AVAudioSession+VideoPlayback.swift
 //  WagLock
 //
-//  视频播放音频会话配置
+//  Audio session configuration for video playback
 //
 
 import AVFoundation
 
 extension AVAudioSession {
 
-    /// 激活计数：内嵌预览和全屏播放器可能同时持有会话，只有最后一个释放时才真正停用。
-    /// 仅在主线程访问（所有调用点均为视图生命周期方法）。
+    /// Activation count: an inline preview and the full-screen player may both hold the session; it is deactivated only when the last one releases it.
+    /// Main-thread access only (every call site is a view lifecycle method).
     private static var playbackActivationCount = 0
 
-    /// 配置并激活视频播放的音频会话。
+    /// Configure and activate the audio session for video playback.
     ///
-    /// 使用 `.playback` 类别，保证播放声音不受设备静音开关影响；
-    /// 若 App 进入后台需由调用方暂停播放，避免后台继续出声。
+    /// Uses the `.playback` category so sound plays regardless of the silent switch;
+    /// callers must pause playback when the app goes to the background so audio doesn't continue.
     static func activateForVideoPlayback() {
         let session = AVAudioSession.sharedInstance()
         do {
@@ -29,8 +29,8 @@ extension AVAudioSession {
         }
     }
 
-    /// 结束视频播放后释放音频会话；仅当没有播放器再持有时才真正停用，
-    /// 避免一个播放器关闭时把另一个正在播放的播放器静音。
+    /// Release the audio session after video playback; it is deactivated only when no player still holds it,
+    /// so closing one player doesn't silence another that is still playing.
     static func deactivateAfterVideoPlayback() {
         playbackActivationCount = max(0, playbackActivationCount - 1)
         guard playbackActivationCount == 0 else { return }

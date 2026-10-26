@@ -3,8 +3,8 @@
 //  BatchExportView.swift
 //  WagLock
 //
-//  批量导出视图
-//  选择文件并导出到系统分享界面
+//  Batch export view
+//  Select files and export them through the system share sheet
 //
 
 import SwiftData
@@ -96,7 +96,7 @@ struct BatchExportView: View {
         VStack(spacing: 12) {
             WagLockInfoCard(title: "Export creates unencrypted copies", detail: "Recipients and destination apps can keep the files you share. Your vault originals stay in WagLock.")
                 .padding(.horizontal, 24).padding(.top, 16)
-            // 选择统计
+            // Selection summary
             HStack {
                 Text(String(format: String(localized: "export.selectedCount"), selectedItems.count))
                     .font(.subheadline)
@@ -129,7 +129,7 @@ struct BatchExportView: View {
 
             Divider()
 
-            // 文件列表
+            // File list
             if allItems.isEmpty {
                 emptyState
             } else {
@@ -206,10 +206,10 @@ struct BatchExportView: View {
     private func startExport() {
         guard !selectedItems.isEmpty else { return }
 
-        // 获取选中的媒体项
+        // Get the selected media items
         let itemsToExport = allItems.filter { selectedItems.contains($0.id) }
 
-        // 开始导出
+        // Start the export
         isExporting = true
         exportTotalCount = itemsToExport.count
         exportedCount = 0
@@ -221,7 +221,7 @@ struct BatchExportView: View {
                 exportTotalCount)
             : ""
 
-        // 获取当前密码
+        // Get the current password
         guard let password = authViewModel.sessionPassword else {
             errorMessage = String(localized: "export.error.noPassword")
             showError = true
@@ -229,7 +229,7 @@ struct BatchExportView: View {
             return
         }
 
-        // 执行导出
+        // Run the export
         exportErrorWasCancellation = false
 
         let exportSessionID = authViewModel.librarySessionID
@@ -251,7 +251,7 @@ struct BatchExportView: View {
                 exportedURLs = urls
                 exportedCount = exportTotalCount
 
-                // 延迟显示分享界面
+                // Show the share sheet after a short delay
                 let readyJob = exportService.jobID(for: urls)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     guard let readyJob, exportService.isReady(readyJob), authViewModel.isAuthenticated,
@@ -304,18 +304,18 @@ struct ExportItemRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
-                // 选择标记
+                // Selection mark
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
                     .foregroundColor(isSelected ? .blue : .gray)
 
-                // 文件图标
+                // File icon
                 Image(systemName: item.type.iconName)
                     .font(.title2)
                     .foregroundColor(.blue)
                     .frame(width: 40)
 
-                // 文件信息
+                // File info
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.fileName)
                         .font(.body)

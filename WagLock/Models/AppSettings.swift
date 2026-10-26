@@ -2,15 +2,15 @@
 //  AppSettings.swift
 //  WagLock
 //
-//  应用设置管理（UserDefaults包装）
-//  管理用户偏好设置
+//  App settings (UserDefaults wrapper)
+//  Manages user preferences
 //
 
 internal import Combine
 import Foundation
 import SwiftUI
 
-/// 离开后自动锁定时长
+/// Auto-lock delay after leaving the app
 enum AutoLockTimeout: Int, CaseIterable, Identifiable {
     case immediately = 0
     case oneMinute = 60
@@ -29,7 +29,7 @@ enum AutoLockTimeout: Int, CaseIterable, Identifiable {
     }
 }
 
-/// 应用设置管理器
+/// App settings manager
 class AppSettings: ObservableObject {
 
     // MARK: - Singleton
@@ -42,17 +42,17 @@ class AppSettings: ObservableObject {
 
     // MARK: - Published Properties
 
-    /// 排序方式
+    /// Sort order
     @Published var sortOrder: MediaItem.SortOrder {
         didSet {
             defaults.set(sortOrder.rawValue, forKey: AppConstants.UserDefaultsKeys.sortOrder)
         }
     }
 
-    /// 网格列数
+    /// Grid column count
     @Published var gridColumns: Int {
         didSet {
-            // 确保在有效范围内
+            // Keep within the valid range
             let validColumns = min(
                 max(gridColumns, AppConstants.gridColumnsRange.lowerBound),
                 AppConstants.gridColumnsRange.upperBound)
@@ -63,28 +63,28 @@ class AppSettings: ObservableObject {
         }
     }
 
-    /// 是否首次启动
+    /// Whether this is the first launch
     @Published var isFirstLaunch: Bool {
         didSet {
             defaults.set(isFirstLaunch, forKey: AppConstants.UserDefaultsKeys.isFirstLaunch)
         }
     }
 
-    /// 最后访问时间
+    /// Last access time
     @Published var lastAccessTime: Date {
         didSet {
             defaults.set(lastAccessTime, forKey: AppConstants.UserDefaultsKeys.lastAccessTime)
         }
     }
 
-    /// 访客模式是否启用
+    /// Whether guest mode is enabled
     @Published var guestModeEnabled: Bool {
         didSet {
             defaults.set(guestModeEnabled, forKey: AppConstants.UserDefaultsKeys.guestModeEnabled)
         }
     }
 
-    /// 离开后自动锁定时长
+    /// Auto-lock delay after leaving the app
     @Published var autoLockTimeout: AutoLockTimeout {
         didSet {
             defaults.set(
@@ -95,13 +95,13 @@ class AppSettings: ObservableObject {
     // MARK: - Initialization
 
     private init() {
-        // 从UserDefaults读取设置
+        // Read settings from UserDefaults
         if let sortOrderString = defaults.string(forKey: AppConstants.UserDefaultsKeys.sortOrder),
             let sortOrder = MediaItem.SortOrder(rawValue: sortOrderString)
         {
             self.sortOrder = sortOrder
         } else {
-            self.sortOrder = .dateNewest  // 默认最新优先
+            self.sortOrder = .dateNewest  // Default: newest first
         }
 
         let savedColumns = defaults.integer(forKey: AppConstants.UserDefaultsKeys.gridColumns)
@@ -122,7 +122,7 @@ class AppSettings: ObservableObject {
         self.guestModeEnabled = defaults.bool(
             forKey: AppConstants.UserDefaultsKeys.guestModeEnabled)
 
-        // 未设置时默认"立即锁定"（隐私优先）
+        // When unset, default to "lock immediately" (privacy first)
         if defaults.object(forKey: AppConstants.UserDefaultsKeys.autoLockTimeout) == nil {
             self.autoLockTimeout = .immediately
         } else {
@@ -136,7 +136,7 @@ class AppSettings: ObservableObject {
 
     // MARK: - Public Methods
 
-    /// 重置所有设置为默认值
+    /// Reset all settings to defaults
     func resetToDefaults() {
         sortOrder = .dateNewest
         gridColumns = AppConstants.defaultGridColumns
@@ -145,43 +145,43 @@ class AppSettings: ObservableObject {
 
     }
 
-    /// 更新最后访问时间
+    /// Update the last access time
     func updateLastAccessTime() {
         lastAccessTime = Date()
     }
 
-    /// 标记已完成首次启动
+    /// Mark first launch as completed
     func completeFirstLaunch() {
         isFirstLaunch = false
     }
 
     // MARK: - Grid Settings
 
-    /// 增加网格列数
+    /// Increase grid column count
     func increaseGridColumns() {
         if gridColumns < AppConstants.gridColumnsRange.upperBound {
             gridColumns += 1
         }
     }
 
-    /// 减少网格列数
+    /// Decrease grid column count
     func decreaseGridColumns() {
         if gridColumns > AppConstants.gridColumnsRange.lowerBound {
             gridColumns -= 1
         }
     }
 
-    /// 网格项宽度（根据屏幕宽度和列数计算）
+    /// Grid item width (computed from screen width and column count)
     func gridItemWidth(containerWidth: CGFloat) -> CGFloat {
         let spacing = AppConstants.gridSpacing * CGFloat(gridColumns - 1)
-        let padding: CGFloat = 32  // 左右各16
+        let padding: CGFloat = 32  // 16 on each side
         let availableWidth = containerWidth - spacing - padding
         return availableWidth / CGFloat(gridColumns)
     }
 
     // MARK: - Statistics
 
-    /// 应用使用时长（自首次启动以来的天数）
+    /// Days the app has been in use (since first launch)
     var daysSinceFirstLaunch: Int {
         if isFirstLaunch {
             return 0
@@ -194,7 +194,7 @@ class AppSettings: ObservableObject {
 
 #if DEBUG
     extension AppSettings {
-        /// 预览用的模拟设置
+        /// Mock settings for previews
         static var preview: AppSettings {
             let settings = AppSettings.shared
             settings.sortOrder = .dateNewest

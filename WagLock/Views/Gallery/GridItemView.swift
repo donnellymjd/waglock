@@ -2,8 +2,8 @@
 //  GridItemView.swift
 //  WagLock
 //
-//  网格项视图
-//  展示媒体缩略图
+//  Grid item view
+//  Shows a media thumbnail
 //
 
 import SwiftUI
@@ -26,7 +26,7 @@ struct GridItemView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .bottomLeading) {
-                // 背景和缩略图
+                // Background and thumbnail
                 thumbnailView(size: geometry.size)
 
                 if showsMetadata {
@@ -34,7 +34,7 @@ struct GridItemView: View {
                     overlayInfo
                 }
 
-                // 选择模式标记
+                // Selection mode marker
                 if isSelectionMode {
                     selectionOverlay
                 }
@@ -56,7 +56,7 @@ struct GridItemView: View {
     @ViewBuilder
     private func thumbnailView(size: CGSize) -> some View {
         if let image = thumbnailImage {
-            // 显示缩略图
+            // Show the thumbnail
             if mediaItem.type == .video {
                 VideoThumbnailImage(image: image)
             } else {
@@ -73,7 +73,7 @@ struct GridItemView: View {
                         .tint(.white)
                 }
         } else {
-            // 占位符
+            // Placeholder
             placeholderView
         }
     }
@@ -82,10 +82,10 @@ struct GridItemView: View {
 
     private var placeholderView: some View {
         ZStack {
-            // 背景颜色
+            // Background color
             mediaItem.type.iconColor.opacity(0.2)
 
-            // 类型图标
+            // Type icon
             VStack(spacing: 8) {
                 Image(systemName: mediaItem.type.iconName)
                     .font(.system(size: 40))
@@ -103,7 +103,7 @@ struct GridItemView: View {
 
     private var overlayInfo: some View {
         HStack(alignment: .bottom) {
-            // 类型图标
+            // Type icon
             Image(systemName: mediaItem.type.iconName)
                 .font(.caption)
                 .foregroundColor(.white)
@@ -112,7 +112,7 @@ struct GridItemView: View {
 
             Spacer()
 
-            // 视频时长
+            // Video duration
             if mediaItem.type == .video, let duration = mediaItem.formattedDuration {
                 Text(duration)
                     .font(.caption2)
@@ -147,7 +147,7 @@ struct GridItemView: View {
     // MARK: - Helpers
 
     private func loadThumbnailIfNeeded() async {
-        // 失败过的缩略图不再重复尝试，避免每次重新出现都重新解密解码
+        // Don't retry thumbnails that already failed, so each reappearance doesn't decrypt and decode again
         guard thumbnailImage == nil,
             !isLoadingThumbnail,
             !didFailToLoadThumbnail,

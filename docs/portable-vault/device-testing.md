@@ -47,7 +47,7 @@ For command-line installation, replace `YOUR_DEVICE_ID` with the paired identifi
 
 ```sh
 xcrun devicectl device install app --device YOUR_DEVICE_ID \
-  '/tmp/vaultito-device/Build/Products/Debug-iphoneos/零网络空间.app'
+  '/tmp/vaultito-device/Build/Products/Debug-iphoneos/WagLock.app'
 xcrun devicectl device process launch --device YOUR_DEVICE_ID com.d2sci.vaultito.dev
 ```
 

@@ -2,8 +2,8 @@
 //  PhotoDetailView.swift
 //  WagLock
 //
-//  相片详细预览视图
-//  支持缩放、滑动切换、手势交互
+//  Photo detail preview view
+//  Supports zoom, swipe navigation and gestures
 //
 
 import SwiftUI
@@ -25,7 +25,7 @@ struct PhotoDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
-    // 本地副本：删除成功后先从数组移除，避免 dismiss 动画期间渲染已删除的对象
+    // Local copy: remove an item from the array right after a successful delete so the dismiss animation never renders a deleted object
     @State private var exportJobID: UUID?
     @Environment(\.scenePhase) private var exportScenePhase
     @State private var photos: [Entry]
@@ -46,7 +46,7 @@ struct PhotoDetailView: View {
         self.originatingSessionID = sessionID
         _photos = State(initialValue: allPhotos.map(Entry.init))
 
-        // 找到当前图片的索引
+        // Find the current image's index
         if let index = allPhotos.firstIndex(where: { $0.id == photo.id }) {
             _currentIndex = State(initialValue: index)
         } else {
@@ -194,8 +194,8 @@ struct PhotoDetailView: View {
 
         let encryptedPath = photoToDelete.encryptedPath
 
-        // 先提交数据库删除，成功后再关页面、删文件；
-        // 失败时留在页面上提示，而不是无声地 dismiss
+        // Commit the database deletion first, then close the screen and delete files;
+        // on failure, stay on the screen and show an error instead of dismissing silently
         modelContext.delete(photoToDelete)
         do {
             try LibraryWriteCoordinator.save(modelContext)
@@ -209,7 +209,7 @@ struct PhotoDetailView: View {
             return
         }
 
-        // 从本地数组移除，避免 dismiss 动画期间渲染已删除的对象
+        // Remove it from the local array so the dismiss animation never renders a deleted object
         if let index = photos.firstIndex(where: { $0.id == entry.id }) {
             photos.remove(at: index)
             if currentIndex >= photos.count {
@@ -220,7 +220,7 @@ struct PhotoDetailView: View {
         do {
             try vaultServices.storage.deleteFile(path: encryptedPath)
         } catch {
-            // 记录已删除，文件删除失败只会残留无引用的加密文件
+            // The record is gone; a failed file delete only leaves an unreferenced encrypted file
         }
 
         isDeleting = false
@@ -253,7 +253,7 @@ struct ZoomableImageView: View {
     @State private var loadedImage: UIImage?
     @State private var isLoading = false
     @State private var loadError: String?
-    // 缩放/平移状态归每页私有，避免翻页时把上一张的缩放带到下一张
+    // Zoom/pan state is private to each page so one photo's zoom doesn't carry over to the next
     @State private var scale: CGFloat = 1.0
     @State private var offset: CGSize = .zero
     @State private var lastScale: CGFloat = 1.0
@@ -263,17 +263,17 @@ struct ZoomableImageView: View {
         GeometryReader { geometry in
             ZStack {
                 if let image = loadedImage {
-                    // 显示加载的图片
+                    // Show the loaded image
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                 } else if isLoading {
-                    // 加载中
+                    // Loading
                     ProgressView()
                         .scaleEffect(1.5)
                         .tint(ColorTheme.accent)
                 } else if let error = loadError {
-                    // 加载失败
+                    // Load failed
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.system(size: 60))
@@ -287,7 +287,7 @@ struct ZoomableImageView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
 
-                        // 重试按钮
+                        // Retry button
                         Button {
                             Task { await loadImage() }
                         } label: {
@@ -303,7 +303,7 @@ struct ZoomableImageView: View {
                         }
                     }
                 } else {
-                    // 初始占位
+                    // Initial placeholder
                     Rectangle()
                         .fill(Color.gray.opacity(0.2))
                         .overlay {
@@ -323,13 +323,13 @@ struct ZoomableImageView: View {
                         lastScale = value
                         scale *= delta
 
-                        // 限制缩放范围
+                        // Clamp the zoom range
                         scale = min(max(scale, 1.0), 5.0)
                     }
                     .onEnded { _ in
                         lastScale = 1.0
 
-                        // 如果缩放小于1，重置
+                        // Reset if zoomed below 1
                         if scale < 1.0 {
                             withAnimation(.spring()) {
                                 scale = 1.0
@@ -337,15 +337,15 @@ struct ZoomableImageView: View {
                                 lastOffset = .zero
                             }
                         } else {
-                            // 缩放结束后把偏移收敛到放大图像的边界内
+                            // After zooming, pull the offset back within the zoomed image's bounds
                             offset = clampedOffset(offset, containerSize: geometry.size)
                             lastOffset = offset
                         }
                     }
             )
-            // 平移手势只在放大(scale > 1)时挂载；
-            // 未放大时不挂载，把左右滑动让给外层 TabView 完成翻页，
-            // 否则 DragGesture 会抢占页面切换手势导致无法左右滑动
+            // The pan gesture is attached only when zoomed in (scale > 1);
+            // when not zoomed it isn't attached, leaving horizontal swipes to the outer TabView for paging,
+            // otherwise the DragGesture would steal the page-change gesture and swiping wouldn't work
             .simultaneousGesture(
                 scale > 1.0
                     ? AnyGesture(
@@ -364,7 +364,7 @@ struct ZoomableImageView: View {
                     : nil
             )
             .onTapGesture(count: 2) {
-                // 双击缩放
+                // Double-tap to zoom
                 withAnimation(.spring()) {
                     if scale > 1.0 {
                         scale = 1.0
@@ -385,13 +385,13 @@ struct ZoomableImageView: View {
         }
     }
 
-    /// 将平移偏移限制在放大图像的边界内，避免图片被拖出屏幕
+    /// Clamp the pan offset to the zoomed image's bounds so it can't be dragged off screen
     private func clampedOffset(_ proposed: CGSize, containerSize: CGSize) -> CGSize {
         guard scale > 1.0, let image = loadedImage else {
             return .zero
         }
 
-        // 图片按 aspectFit 显示在容器内，先算出未缩放的显示尺寸
+        // The image is aspect-fit in its container; first compute its unzoomed display size
         let imageAspect = image.size.width / image.size.height
         let containerAspect = containerSize.width / containerSize.height
         let displayedSize: CGSize
@@ -405,7 +405,7 @@ struct ZoomableImageView: View {
                 height: containerSize.height)
         }
 
-        // 缩放后超出容器的部分就是允许平移的范围
+        // The part that extends beyond the container after zooming is the allowed pan range
         let scaledWidth = displayedSize.width * scale
         let scaledHeight = displayedSize.height * scale
         let maxX = max(0, (scaledWidth - containerSize.width) / 2)

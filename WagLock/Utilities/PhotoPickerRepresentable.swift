@@ -2,20 +2,20 @@
 //  PhotoPickerRepresentable.swift
 //  WagLock
 //
-//  PHPickerViewController的SwiftUI桥接
-//  用于选择照片和视频
+//  SwiftUI bridge for PHPickerViewController
+//  Used to pick photos and videos
 //
 
 import PhotosUI
 import SwiftUI
 
-/// PHPicker结果
+/// PHPicker result
 struct PhotoPickerResult {
     let itemProvider: NSItemProvider
     let assetIdentifier: String?
 }
 
-/// PhotoPicker SwiftUI表示
+/// SwiftUI representable for the photo picker
 struct PhotoPickerRepresentable: UIViewControllerRepresentable {
 
     // MARK: - Properties
@@ -29,7 +29,7 @@ struct PhotoPickerRepresentable: UIViewControllerRepresentable {
 
     init(
         isPresented: Binding<Bool>,
-        selectionLimit: Int = 0,  // 0 = 无限制
+        selectionLimit: Int = 0,  // 0 = unlimited
         filter: PHPickerFilter = .any(of: [.images, .videos]),
         onSelect: @escaping ([PHPickerResult]) -> Void
     ) {
@@ -53,7 +53,7 @@ struct PhotoPickerRepresentable: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {
-        // 不需要更新
+        // No update needed
     }
 
     func makeCoordinator() -> Coordinator {
@@ -81,7 +81,7 @@ struct PhotoPickerRepresentable: UIViewControllerRepresentable {
 
 // MARK: - Document Picker Representable
 
-/// 文档选择器SwiftUI表示
+/// SwiftUI representable for the document picker
 struct DocumentPickerRepresentable: UIViewControllerRepresentable {
 
     // MARK: - Properties
@@ -117,7 +117,7 @@ struct DocumentPickerRepresentable: UIViewControllerRepresentable {
     func updateUIViewController(
         _ uiViewController: UIDocumentPickerViewController, context: Context
     ) {
-        // 不需要更新
+        // No update needed
     }
 
     func makeCoordinator() -> Coordinator {

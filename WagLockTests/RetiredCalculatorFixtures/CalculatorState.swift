@@ -3,34 +3,34 @@
 //  CalculatorState.swift
 //  WagLock
 //
-//  计算器状态模型
-//  用于伪装模式的计算器功能
+//  Calculator state model
+//  Calculator behavior used by disguise mode
 //
 
 import Foundation
 import SwiftUI
 
-/// 计算器状态模型
+/// Calculator state model
 struct CalculatorState {
     var displayValue: String = "0"
     var previousValue: Double = 0
     var currentOperation: Operation? = nil
     var shouldResetDisplay: Bool = false
-    var inputHistory: [String] = []  // 仅用于密码检测，不显示给用户
+    var inputHistory: [String] = []  // Used only for password detection; never shown to the user
 
     /// Present the canonical decimal value without changing parser/password syntax.
     func localizedDisplayValue(locale: Locale = .current) -> String {
         displayValue.replacingOccurrences(of: ".", with: locale.decimalSeparator ?? ".")
     }
 
-    /// 计算运算符
+    /// Calculator operator
     enum Operation: String {
         case add = "+"
         case subtract = "-"
         case multiply = "×"
         case divide = "÷"
 
-        /// 执行计算
+        /// Perform the calculation
         func calculate(_ a: Double, _ b: Double) -> Double {
             switch self {
             case .add: return a + b
@@ -42,7 +42,7 @@ struct CalculatorState {
     }
 }
 
-/// 计算器按钮定义
+/// Calculator button definitions
 enum CalculatorButton: Hashable {
     case zero, one, two, three, four, five, six, seven, eight, nine
     case add, subtract, multiply, divide

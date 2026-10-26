@@ -2,8 +2,8 @@
 //  KeychainService.swift
 //  WagLock
 //
-//  Keychain密码管理服务
-//  功能：安全存储和验证用户密码
+//  Keychain password service
+//  Securely stores and verifies the user's password
 //
 
 import CryptoKit
@@ -11,12 +11,12 @@ import Foundation
 import Security
 import UIKit
 
-/// Keychain操作错误类型
+/// Keychain error types
 enum KeychainError: Error {
-    case duplicateItem  // 重复项
-    case itemNotFound  // 项不存在
-    case invalidData  // 无效数据
-    case unexpectedStatus(OSStatus)  // 未预期的状态码
+    case duplicateItem  // Duplicate item
+    case itemNotFound  // Item not found
+    case invalidData  // Invalid data
+    case unexpectedStatus(OSStatus)  // Unexpected status code
 
     var localizedDescription: String {
         switch self {
@@ -44,10 +44,10 @@ enum VaultPasswordManagementError: LocalizedError {
     }
 }
 
-/// Keychain密码管理服务
+/// Keychain password service
 /// Owner verification and data-secret wrapping share one authenticated record.
 /// Legacy salted SHA-256 credentials remain readable until successful promotion.
-/// 安全级别：kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+/// Accessibility: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
 class KeychainService: LibraryIdentityAnchor, LibraryCommitAnchor {
     // Avoid the isolated-deinit back-deployment path when a scoped instance is released
     // from a SwiftUI property graph on older iOS. No credential work belongs in teardown.
@@ -56,7 +56,7 @@ class KeychainService: LibraryIdentityAnchor, LibraryCommitAnchor {
     // MARK: - Singleton
 
     static let shared = KeychainService()
-    /// 独立命名空间用于隔离凭据，不迁移其他 service 的数据。
+    /// A separate namespace isolates credentials; data from other services is never migrated.
     init(service: String = AppConstants.bundleIdentifier, storage: (any KeychainStorage)? = nil,
          makeDataPassword: (() throws -> String)? = nil,
          allowLegacyCredentials: Bool = !LibraryStoragePolicy.encryptedMetadata) {
@@ -100,12 +100,12 @@ class KeychainService: LibraryIdentityAnchor, LibraryCommitAnchor {
     private let isSetAccount = "isPasswordSet"
     private let dataPasswordAccount = "dataEncryptionPassword"
 
-    // 访客模式相关账户
+    // Guest mode accounts
     private let guestPasswordAccount = "guestPassword"
     private let guestSaltAccount = "guestPasswordSalt"
     private let isGuestSetAccount = "isGuestPasswordSet"
 
-    // 计算器登录模式相关账户
+    // Calculator login accounts
     private let disguisePasswordAccount = "disguisePassword"
     private let isDisguiseSetAccount = "isDisguisePasswordSet"
 
@@ -129,8 +129,8 @@ class KeychainService: LibraryIdentityAnchor, LibraryCommitAnchor {
 
     // MARK: - Public Methods
 
-    /// 保存密码（首次设置）
-    /// - Parameter password: 用户密码
+    /// Save the password (first-time setup)
+    /// - Parameter password: User password
     /// - Throws: KeychainError
     @discardableResult
     func savePassword(_ password: String) throws -> String {
@@ -145,15 +145,15 @@ class KeychainService: LibraryIdentityAnchor, LibraryCommitAnchor {
         return dataPassword
     }
 
-    /// 验证密码
-    /// - Parameter password: 用户输入的密码
-    /// - Returns: 密码是否正确
+    /// Verify the password
+    /// - Parameter password: Password entered by the user
+    /// - Returns: Whether the password is correct
     func verifyPassword(_ password: String) -> Bool {
         (try? readDataPassword(using: password)) != nil
     }
 
-    /// 检查是否已设置密码
-    /// - Returns: 是否已设置密码
+    /// Check whether a password has been set
+    /// - Returns: Whether a password has been set
     func isPasswordSet() -> Bool {
         // Unavailable, corrupt or partial credentials must never route to setup.
         for account in [ownerAccount, passwordAccount, saltAccount, isSetAccount, dataPasswordAccount] {
@@ -169,7 +169,7 @@ class KeychainService: LibraryIdentityAnchor, LibraryCommitAnchor {
         return false
     }
 
-    /// 删除密码（重置应用）
+    /// Delete the password (app reset)
     /// - Throws: KeychainError
     func deletePassword() throws {
         BiometricSecretStore.remove(account: "vault-unlock", service: service + ".biometrics")
@@ -181,36 +181,36 @@ class KeychainService: LibraryIdentityAnchor, LibraryCommitAnchor {
 
     }
 
-    /// 清空所有Keychain数据（包括主密码、访客密码、计算器登录密码）
+    /// Clear all Keychain data (main, guest and calculator login passwords)
     /// Explicit reset/test-fixture cleanup only. Never infer consent from preferences.
     func clearAllKeychainData() {
         try? deleteFromKeychain(account: "waglock.library-identity.v1")
         BiometricSecretStore.remove(account: "vault-unlock", service: service + ".biometrics")
         try? deleteFromKeychain(account: ownerAccount)
-        // 清空主密码
+        // Clear the main password
         try? deleteFromKeychain(account: passwordAccount)
         try? deleteFromKeychain(account: saltAccount)
         try? deleteFromKeychain(account: isSetAccount)
         try? deleteFromKeychain(account: dataPasswordAccount)
 
-        // 清空访客密码
+        // Clear the guest password
         try? deleteFromKeychain(account: guestPasswordAccount)
         try? deleteFromKeychain(account: guestSaltAccount)
         try? deleteFromKeychain(account: isGuestSetAccount)
 
-        // 清空计算器登录密码
+        // Clear the calculator login password
         try? deleteFromKeychain(account: disguisePasswordAccount)
         try? deleteFromKeychain(account: isDisguiseSetAccount)
 
-        // 清空私密笔记草稿
+        // Clear the secret note draft
         deleteSecretNoteDraft()
 
     }
 
-    /// 更改密码
+    /// Change the password
     /// - Parameters:
-    ///   - oldPassword: 旧密码
-    ///   - newPassword: 新密码
+    ///   - oldPassword: Old password
+    ///   - newPassword: New password
     /// - Throws: KeychainError
     @discardableResult
     func changePassword(oldPassword: String, newPassword: String) throws -> String {
@@ -313,7 +313,7 @@ class KeychainService: LibraryIdentityAnchor, LibraryCommitAnchor {
         }
     }
 
-    /// 生成随机盐值（16字节）
+    /// Generate a random salt (16 bytes)
     private func generateSalt() throws -> Data {
         var salt = Data(count: 16)
         let status = salt.withUnsafeMutableBytes { bytes in
@@ -323,11 +323,11 @@ class KeychainService: LibraryIdentityAnchor, LibraryCommitAnchor {
         return salt
     }
 
-    /// 使用SHA-256哈希密码
+    /// Hash a password with SHA-256
     /// - Parameters:
-    ///   - password: 密码字符串
-    ///   - salt: 盐值
-    /// - Returns: 哈希值
+    ///   - password: Password string
+    ///   - salt: Salt
+    /// - Returns: Hash value
     private func hashPassword(_ password: String, salt: Data) -> Data {
         let passwordData = Data(password.utf8)
         let combined = passwordData + salt
@@ -353,7 +353,7 @@ class KeychainService: LibraryIdentityAnchor, LibraryCommitAnchor {
 
 extension KeychainService {
 
-    /// 保存访客密码
+    /// Save the guest password
     /// - Parameter password: Guest credential, using the same 6–128 character policy as the owner.
     /// - Throws: KeychainError
     func saveGuestPassword(_ password: String) throws {
@@ -363,7 +363,7 @@ extension KeychainService {
             throw KeychainError.invalidData
         }
 
-        // 2. 服务层校验：访客密码不能与主密码相同（安全约束）
+        // 2. Service-level check: the guest password must differ from the main password (security constraint)
         guard !verifyPassword(password) else {
             throw KeychainError.invalidData
         }
@@ -377,9 +377,9 @@ extension KeychainService {
 
     }
 
-    /// 验证访客密码
-    /// - Parameter password: 用户输入的密码
-    /// - Returns: 密码是否正确
+    /// Verify the guest password
+    /// - Parameter password: Password entered by the user
+    /// - Returns: Whether the password is correct
     func verifyGuestPassword(_ password: String) -> Bool {
         guard allowLegacyCredentials else { return false }
         do {
@@ -392,8 +392,8 @@ extension KeychainService {
         }
     }
 
-    /// 检查是否已设置访客密码
-    /// - Returns: 是否已设置访客密码
+    /// Check whether a guest password has been set
+    /// - Returns: Whether a guest password has been set
     func isGuestPasswordSet() -> Bool {
         guard allowLegacyCredentials else { return false }
         do {
@@ -404,7 +404,7 @@ extension KeychainService {
         }
     }
 
-    /// 删除访客密码
+    /// Delete the guest password
     /// - Throws: KeychainError
     func deleteGuestPassword() throws {
         try deleteFromKeychain(account: guestPasswordAccount)
@@ -412,9 +412,9 @@ extension KeychainService {
         try deleteFromKeychain(account: isGuestSetAccount)
     }
 
-    /// 验证访客密码格式（纯数字，6-8位）
-    /// - Parameter password: 密码
-    /// - Returns: (是否有效, 错误信息)
+    /// Validate the guest password format (same policy as the owner password)
+    /// - Parameter password: Password
+    /// - Returns: (isValid, error message)
     static func validateGuestPassword(_ password: String) -> (isValid: Bool, message: String?) {
         validatePasswordStrength(password)
     }
@@ -560,9 +560,9 @@ extension KeychainService {
 
 extension KeychainService {
 
-    /// 验证密码强度
-    /// - Parameter password: 密码
-    /// - Returns: (是否有效, 错误信息)
+    /// Validate password strength
+    /// - Parameter password: Password
+    /// - Returns: (isValid, error message)
     static func validatePasswordStrength(_ password: String) -> (isValid: Bool, message: String?) {
         if password.isEmpty {
             return (false, AppConstants.ErrorMessages.passwordEmpty)
@@ -601,8 +601,8 @@ extension KeychainService {
 
     private var secretNoteDraftAccount: String { "secretNoteDraft" }
 
-    /// 保存私密笔记草稿（覆盖旧值）
-    /// - Returns: 是否写入成功（锁屏等场景下 Keychain 可能不可写）
+    /// Save the secret note draft (overwrites any previous value)
+    /// - Returns: Whether the write succeeded (Keychain may be unwritable, e.g. while the device is locked)
     @discardableResult
     func saveSecretNoteDraft(_ data: Data) -> Bool {
         do {
@@ -613,7 +613,7 @@ extension KeychainService {
         }
     }
 
-    /// 读取私密笔记草稿
+    /// Read the secret note draft
     func loadSecretNoteDraft() -> Data? {
         try? readFromKeychain(account: secretNoteDraftAccount)
     }
@@ -623,7 +623,7 @@ extension KeychainService {
         try optionalItem(account: secretNoteDraftAccount)
     }
 
-    /// 删除私密笔记草稿
+    /// Delete the secret note draft
     func deleteSecretNoteDraft() {
         try? deleteFromKeychain(account: secretNoteDraftAccount)
     }
@@ -633,9 +633,9 @@ extension KeychainService {
 
 extension KeychainService {
 
-    /// 早期构建使用的 Keychain service 标识符。
-    /// 若不迁移，从旧包升级的用户会被当作全新安装，
-    /// 旧登录密码和数据加密密钥读不到，已加密数据将永久无法解密
+    /// Keychain service identifier used by early builds.
+    /// Without migration, users upgrading from the old package would be treated as a fresh install,
+    /// their old login password and data key would be unreadable, and encrypted data would be permanently lost
     private static let legacyService = "com.wq.ZeroNet-Space"
 
     private var legacyMigratableAccounts: [String] {
@@ -646,11 +646,11 @@ extension KeychainService {
         ]
     }
 
-    /// 把旧 service 下的条目迁移到当前 service。
-    /// 逐项进行：写入新 service 成功后才删除旧项；任何一项失败（如
-    /// Keychain 暂不可写）都保留旧数据，等下次启动重试，绝不丢数据
+    /// Migrate items from the old service to the current service.
+    /// Item by item: an old item is deleted only after its new copy is written; if any item fails (for
+    /// example Keychain is temporarily unwritable) the old data is kept and retried on next launch, so nothing is lost
     fileprivate func migrateFromLegacyServiceIfNeeded() {
-        // 新 service 下已有主密码，说明用户已在新体系内，不做任何覆盖
+        // The new service already has a main password, so the user is on the new scheme; never overwrite anything
         if (try? readFromKeychain(account: isSetAccount)) != nil { return }
 
         var migratedCount = 0

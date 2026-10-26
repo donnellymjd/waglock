@@ -7,15 +7,15 @@
 
 import Foundation
 
-/// 用户认证模式
+/// User authentication mode
 enum AuthenticationMode {
-    /// 主人模式 - 完整访问权限
+    /// Owner mode - full access
     case owner
     case secondaryOwner
 
-    /// 访客模式 - 受限访问权限（隐藏所有内容）
+    /// Guest mode - restricted access (all content hidden)
     case guest
 
-    /// 未认证状态 - 默认状态，需要登录
+    /// Unauthenticated - default state; login required
     case unauthenticated
 }

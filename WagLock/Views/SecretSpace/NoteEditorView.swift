@@ -3,7 +3,7 @@
 //  NoteEditorView.swift
 //  WagLock
 //
-//  简洁的笔记编辑界面
+//  Simple note editor
 //
 
 import SwiftUI
@@ -99,10 +99,10 @@ struct NoteEditorView: View {
         title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// 底部工具栏
+    /// Bottom toolbar
     private var bottomToolbar: some View {
         HStack {
-            // 字数统计
+            // Word count
             HStack(spacing: 4) {
                 Image(systemName: "doc.text")
                     .font(.caption2)
@@ -113,7 +113,7 @@ struct NoteEditorView: View {
 
             Spacer()
 
-            // 自动保存状态
+            // Autosave status
             if let lastSaved = autosave.lastSavedAt {
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark.circle.fill")

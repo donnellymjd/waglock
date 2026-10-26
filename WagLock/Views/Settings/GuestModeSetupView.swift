@@ -3,7 +3,7 @@
 //  WagLock
 //
 //  Created by Claude on 2025-01-17.
-//  访客密码设置界面
+//  Guest password setup screen
 //
 
 import SwiftUI
@@ -39,7 +39,7 @@ struct GuestModeSetupView: View {
             Form {
                 Section {
                     VStack(alignment: .leading, spacing: 16) {
-                        // 标题说明
+                        // Title and explanation
                         HStack {
                             Image(systemName: "lock.shield.fill")
                                 .font(.title)
@@ -64,7 +64,7 @@ struct GuestModeSetupView: View {
                 Section {
                     PasswordKeyboardPicker(selection: $keyboard)
                         .onChange(of: keyboard) { _, _ in hideKeyboard() }
-                    // 访客密码输入
+                    // Guest password field
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Image(systemName: "number")
@@ -87,7 +87,7 @@ struct GuestModeSetupView: View {
                     }
                     .padding(.vertical, 4)
 
-                    // 确认密码
+                    // Confirm password
                     HStack {
                         Image(systemName: "checkmark.shield")
                             .foregroundColor(.secondary)
@@ -118,7 +118,7 @@ struct GuestModeSetupView: View {
 
                 Section {
                     VStack(spacing: 12) {
-                        // 安全说明
+                        // Security note
                         infoRow(
                             icon: "eye.slash.fill",
                             text: "Each vault has independent content and keys.")
@@ -190,20 +190,20 @@ struct GuestModeSetupView: View {
         guard !LibraryStoragePolicy.encryptedMetadata || auth.canChangeVaultPasswords else { return }
         errorMessage = nil
 
-        // 1. 验证格式
+        // 1. Validate the format
         let validation = KeychainService.validateGuestPassword(guestPassword)
         guard validation.isValid else {
             errorMessage = validation.message
             return
         }
 
-        // 2. 检查密码匹配
+        // 2. Check that the passwords match
         guard PasswordText.matches(guestPassword, confirmPassword) else {
             errorMessage = String(localized: "guestMode.error.mismatch")
             return
         }
 
-        // 3. 检查与主密码不冲突
+        // 3. Make sure it doesn't collide with the main password
         if keychainService.verifyPassword(guestPassword) {
             errorMessage = String(localized: "guestMode.error.sameAsMain")
             return
@@ -211,7 +211,7 @@ struct GuestModeSetupView: View {
 
         isProcessing = true
 
-        // 4. 保存访客密码
+        // 4. Save the guest password
         Task {
             do {
                 if LibraryStoragePolicy.encryptedMetadata { try auth.provisionSecondaryVault(password: guestPassword) }

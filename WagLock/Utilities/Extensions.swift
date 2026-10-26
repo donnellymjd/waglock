@@ -2,7 +2,7 @@
 //  Extensions.swift
 //  WagLock
 //
-//  常用扩展
+//  Common extensions
 //
 
 import Foundation
@@ -12,7 +12,7 @@ import UIKit
 // MARK: - View Extensions
 
 extension View {
-    /// 条件性应用修饰符
+    /// Apply a modifier conditionally
     @ViewBuilder
     func `if`<Transform: View>(_ condition: Bool, transform: (Self) -> Transform) -> some View {
         if condition {
@@ -22,13 +22,13 @@ extension View {
         }
     }
 
-    /// 隐藏键盘
+    /// Hide the keyboard
     func hideKeyboard() {
         UIApplication.shared.sendAction(
             #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 
-    /// 添加圆角和阴影
+    /// Add corner radius and shadow
     func cardStyle(cornerRadius: CGFloat = 12, shadowRadius: CGFloat = 5) -> some View {
         self
             .background(Color(.systemBackground))
@@ -40,7 +40,7 @@ extension View {
 // MARK: - Date Extensions
 
 extension Date {
-    /// 相对时间描述
+    /// Relative time description
     var relativeTime: String {
         let formatter = RelativeDateTimeFormatter()
         formatter.locale = AppConstants.presentationLocale
@@ -48,7 +48,7 @@ extension Date {
         return formatter.localizedString(for: self, relativeTo: Date())
     }
 
-    /// 短日期格式
+    /// Short date format
     var shortDate: String {
         let formatter = DateFormatter()
         formatter.locale = AppConstants.presentationLocale
@@ -57,7 +57,7 @@ extension Date {
         return formatter.string(from: self)
     }
 
-    /// 详细日期时间格式
+    /// Detailed date and time format
     var detailedDateTime: String {
         let formatter = DateFormatter()
         formatter.locale = AppConstants.presentationLocale
@@ -70,7 +70,7 @@ extension Date {
 // MARK: - Int64 Extensions
 
 extension Int64 {
-    /// 格式化文件大小
+    /// Formatted file size
     var formattedFileSize: String {
         ByteCountFormatter.string(fromByteCount: self, countStyle: .file)
     }
@@ -79,12 +79,12 @@ extension Int64 {
 // MARK: - String Extensions
 
 extension String {
-    /// 文件扩展名
+    /// File extension
     var fileExtension: String {
         (self as NSString).pathExtension
     }
 
-    /// 不带扩展名的文件名
+    /// File name without extension
     var fileNameWithoutExtension: String {
         (self as NSString).deletingPathExtension
     }
@@ -93,7 +93,7 @@ extension String {
 // MARK: - Color Extensions
 
 extension Color {
-    /// 从十六进制创建颜色
+    /// Create a color from a hex string
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0
@@ -126,7 +126,7 @@ extension Color {
 // MARK: - UIImage Extensions
 
 extension UIImage {
-    /// 调整图片大小
+    /// Resize the image
     func resized(to size: CGSize) -> UIImage? {
         UIGraphicsBeginImageContextWithOptions(size, false, scale)
         defer { UIGraphicsEndImageContext() }
@@ -134,23 +134,23 @@ extension UIImage {
         return UIGraphicsGetImageFromCurrentImageContext()
     }
 
-    /// 生成缩略图
+    /// Generate a thumbnail
     func thumbnail(maxSize: CGFloat) -> UIImage? {
         let aspectRatio = self.size.width / self.size.height
         var thumbnailSize: CGSize
 
         if aspectRatio > 1 {
-            // 横向图片
+            // Landscape image
             thumbnailSize = CGSize(width: maxSize, height: maxSize / aspectRatio)
         } else {
-            // 纵向图片
+            // Portrait image
             thumbnailSize = CGSize(width: maxSize * aspectRatio, height: maxSize)
         }
 
         return resized(to: thumbnailSize)
     }
 
-    /// 压缩为JPEG数据
+    /// Compress to JPEG data
     func compressedJPEGData(quality: CGFloat = 0.7) -> Data? {
         return self.jpegData(compressionQuality: quality)
     }
@@ -159,7 +159,7 @@ extension UIImage {
 // MARK: - Data Extensions
 
 extension Data {
-    /// 转换为UIImage
+    /// Convert to UIImage
     var asUIImage: UIImage? {
         return UIImage(data: self)
     }

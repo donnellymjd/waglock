@@ -3,8 +3,8 @@
 //  SecretSpaceView.swift
 //  WagLock
 //
-//  隐藏空间记事本列表
-//  轻量级的私密笔记体验
+//  Secret space notes list
+//  Lightweight private notes
 //
 
 import SwiftData
@@ -182,7 +182,7 @@ struct SecretSpaceView: View {
         }
     }
 
-    /// 保存失败时回滚，保证 UI（@Query）与持久化状态一致
+    /// Roll back if saving fails so the UI (@Query) matches what was persisted
     private func saveOrRollback() {
         do {
             try LibraryWriteCoordinator.save(modelContext)

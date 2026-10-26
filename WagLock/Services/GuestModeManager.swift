@@ -3,21 +3,21 @@
 //  WagLock
 //
 //  Created by Claude on 2025-01-17.
-//  访客模式管理器 - 管理认证模式和内容可见性
+//  Guest mode manager - tracks the authentication mode and content visibility
 //
 
 internal import Combine
 import Foundation
 
-/// 访客模式管理器
-/// 功能：
-/// 1. 跟踪当前认证模式（主人/访客/未认证）
-/// 2. 提供内容可见性控制
-/// 3. 会话级别存储（App重启后需重新认证）
+/// Guest mode manager
+/// Responsibilities:
+/// 1. Track the current authentication mode (owner/guest/unauthenticated)
+/// 2. Control content visibility
+/// 3. Session-scoped state (authentication is required again after relaunch)
 ///
-/// 安全特性：
-/// - 默认为未认证状态，防止重启后数据泄露
-/// - @MainActor 确保线程安全
+/// Security properties:
+/// - Defaults to unauthenticated so nothing leaks after a relaunch
+/// - @MainActor keeps access thread-safe
 @MainActor
 final class GuestModeManager: ObservableObject {
 
@@ -29,34 +29,34 @@ final class GuestModeManager: ObservableObject {
 
     // MARK: - Published Properties
 
-    /// 当前认证模式
+    /// Current authentication mode
     @Published private(set) var currentMode: AuthenticationMode = .unauthenticated
 
     // MARK: - Public Methods
 
-    /// 设置认证模式
-    /// - Parameter mode: 认证模式（主人/访客/未认证）
+    /// Set the authentication mode
+    /// - Parameter mode: Authentication mode (owner/guest/unauthenticated)
     func setAuthenticationMode(_ mode: AuthenticationMode) {
         currentMode = mode
     }
 
-    /// 判断是否应该显示内容
-    /// - Returns: 主人模式返回true，访客模式返回false
+    /// Whether content should be shown
+    /// - Returns: true in owner mode, false in guest mode
     var shouldShowContent: Bool {
         return currentMode == .owner || currentMode == .secondaryOwner
     }
 
-    /// 判断是否为访客模式
+    /// Whether guest mode is active
     var isGuestMode: Bool {
         return currentMode == .guest
     }
 
-    /// 判断是否为主人模式
+    /// Whether owner mode is active
     var isOwnerMode: Bool {
         return currentMode == .owner || currentMode == .secondaryOwner
     }
 
-    /// 重置为未认证状态（用于登出时）
+    /// Reset to unauthenticated (used on logout)
     func reset() {
         currentMode = .unauthenticated
     }

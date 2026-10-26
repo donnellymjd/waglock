@@ -2,21 +2,21 @@
 //  AuthenticationViewModel.swift
 //  WagLock
 //
-//  认证逻辑视图模型
-//  管理登录、设置密码、认证状态
+//  Authentication view model
+//  Manages login, password setup and authentication state
 //
 
 internal import Combine
 import Foundation
 import SwiftUI
 
-/// 认证视图模型
+/// Authentication view model
 @MainActor
 final class AuthenticationViewModel: ObservableObject {
 
     // MARK: - Published Properties
 
-    /// 是否已认证
+    /// Whether the user is authenticated
     @Published var isAuthenticated: Bool = false
 
     /// Fresh identity whenever session key material is replaced or cleared.
@@ -31,28 +31,28 @@ final class AuthenticationViewModel: ObservableObject {
     private static let primaryVaultID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
     private struct BiometricGrant: Codable { let version: Int; let secondaryID: UUID?; let secret: String }
 
-    /// 是否已设置密码
+    /// Whether a password has been set
     @Published var isPasswordSet: Bool = false
 
-    /// 当前输入的密码
+    /// Password currently being entered
     @Published var password: String = ""
 
-    /// 确认密码（设置时使用）
+    /// Password confirmation (used during setup)
     @Published var confirmPassword: String = ""
 
-    /// 错误消息
+    /// Error message
     @Published var errorMessage: String?
 
-    /// 是否正在处理
+    /// Whether processing is in progress
     @Published var isProcessing: Bool = false
 
-    /// 是否显示密码
+    /// Whether to show the password
     @Published var showPassword: Bool = false
 
-    /// 加密用密码（引用语义容器，置换/登出时就地清零）
+    /// Encryption password (reference container; zeroed in place when replaced or on logout)
     @Published private(set) var sessionPasswordData: SecureBytes? {
         willSet {
-            // 零化旧密码内存
+            // Zero the old password's memory
             sessionPasswordData?.wipe()
         }
         didSet {
@@ -66,20 +66,20 @@ final class AuthenticationViewModel: ObservableObject {
         }
     }
 
-    /// 获取会话密码（String格式，仅在需要时转换）
+    /// Session password as a String (converted only when needed)
     var sessionPassword: String? {
         sessionPasswordData?.string
     }
 
-    /// 登录失败次数
+    /// Failed login count
     @Published private(set) var failedAttempts: Int = 0
 
-    /// 锁定截止时间
+    /// Lockout end time
     @Published private(set) var lockoutUntil: Date?
 
     // MARK: - Constants
 
-    private let maxAttempts = 5  // 最多尝试5次
+    private let maxAttempts = 5  // At most 5 attempts
 
     @Published private(set) var requiresEraseCompletion = false
     @Published private(set) var isErasing = false
@@ -136,7 +136,7 @@ final class AuthenticationViewModel: ObservableObject {
     }
 
     deinit {
-        // 取消所有进行中的任务
+        // Cancel all in-flight tasks
         loginTask?.cancel()
         savePasswordTask?.cancel()
     }
@@ -150,7 +150,7 @@ final class AuthenticationViewModel: ObservableObject {
         UserDefaults.standard.set(true, forKey: AppConstants.UserDefaultsKeys.appInitialized)
     }
 
-    /// 检查密码设置状态
+    /// Check whether a password has been set
     func checkPasswordStatus() {
         if let resetService {
             do { requiresEraseCompletion = try resetService.hasPendingErase() }
@@ -163,21 +163,21 @@ final class AuthenticationViewModel: ObservableObject {
         isPasswordSet = keychainService.isPasswordSet()
     }
 
-    /// 设置密码（首次）
+    /// Set the password (first time)
     func setupPassword() {
         guard !isProcessing, !requiresEraseCompletion, !isErasing else { return }
 
-        // 清除之前的错误
+        // Clear any previous error
         errorMessage = nil
 
-        // 验证密码
+        // Validate the password
         let validation = KeychainService.validatePasswordStrength(password)
         guard validation.isValid else {
             errorMessage = validation.message
             return
         }
 
-        // 检查密码匹配
+        // Check that the passwords match
         guard PasswordText.matches(password, confirmPassword) else {
             errorMessage = AppConstants.ErrorMessages.passwordMismatch
             return
@@ -195,12 +195,12 @@ final class AuthenticationViewModel: ObservableObject {
             do {
                 let dataPassword = try keychainService.savePassword(inputPassword)
 
-                // 保存成功
+                // Saved successfully
                 sessionPasswordData = SecureBytes(dataPassword)
                 isPasswordSet = true
                 isAuthenticated = true
 
-                // 设置为主人模式（首次设置密码后直接进入主页）
+                // Switch to owner mode (go straight to the main screen after first-time setup)
                 GuestModeManager.shared.setAuthenticationMode(.owner)
                 resumeAlbumAccess()
 
@@ -215,15 +215,15 @@ final class AuthenticationViewModel: ObservableObject {
         }
     }
 
-    /// 登录验证
+    /// Log in
     @discardableResult
     func login() -> Task<Void, Never>? {
         guard !isProcessing, !requiresEraseCompletion, !isErasing else { return nil }
 
-        // 取消之前的登录任务
+        // Cancel any previous login task
         loginTask?.cancel()
 
-        // 清除之前的错误
+        // Clear any previous error
         errorMessage = nil
 
         guard !password.isEmpty else {
@@ -248,10 +248,10 @@ final class AuthenticationViewModel: ObservableObject {
         let token = UUID()
         authenticationGeneration = token
 
-        // 创建新的登录任务
+        // Start a new login task
         loginTask = Task(priority: .userInitiated) {
             defer { if token == authenticationGeneration { isProcessing = false } }
-            // 在后台执行耗时的Keychain操作，避免阻塞主线程
+            // Run the slow Keychain work in the background so the main thread isn't blocked
             let ownerKey: String?
             let ownerMatch: Bool
             if independentVaultsEnabled {
@@ -271,7 +271,7 @@ final class AuthenticationViewModel: ObservableObject {
 
             guard token == authenticationGeneration, !Task.isCancelled else { return }
 
-            // 回到主线程更新UI状态
+            // Back on the main thread, update UI state
             if ownerMatch && independentGuest == nil {
                 do {
                     let dataPassword: String
@@ -285,11 +285,11 @@ final class AuthenticationViewModel: ObservableObject {
                     secondaryVaultID = nil
                     isAuthenticated = true
 
-                    // 设置为主人模式
+                    // Switch to owner mode
                     GuestModeManager.shared.setAuthenticationMode(.owner)
                     resumeAlbumAccess()
 
-                    // ✅ 登录成功，重置失败计数
+                    // ✅ Login succeeded; reset the failure count
                     failedAttempts = 0
                     lockoutUntil = nil
 
@@ -312,26 +312,26 @@ final class AuthenticationViewModel: ObservableObject {
             } else if guestMatch {
                 do { try attemptLimiter.recordSuccess(reservation) }
                 catch { errorMessage = "Unable to complete login protection. Try again."; return }
-                // 访客模式登录成功
-                // 保存访客密码以便伪装模式解锁时使用
+                // Guest mode login succeeded
+                // Keep the guest password for later disguise-mode unlocks
                 sessionPasswordData = SecureBytes(inputPassword)
                 isAuthenticated = true
 
-                // 设置为访客模式
+                // Switch to guest mode
                 GuestModeManager.shared.setAuthenticationMode(.guest)
 
-                // ✅ 登录成功，重置失败计数
+                // ✅ Login succeeded; reset the failure count
                 failedAttempts = 0
                 lockoutUntil = nil
 
                 clearFields()
             } else {
-                // ❌ 两个密码都验证失败
+                // ❌ Neither password matched
                 // The guess was already persisted before any password verification.
                 failedAttempts = reservation.failures
                 password = ""
 
-                // 检查是否需要锁定
+                // Check whether to lock out
                 if failedAttempts >= maxAttempts {
                     lockoutUntil = reservation.blockedUntil
                     let minutes = Int(ceil(max(0, reservation.blockedUntil?.timeIntervalSinceNow ?? 0) / 60))
@@ -348,7 +348,7 @@ final class AuthenticationViewModel: ObservableObject {
         return loginTask
     }
 
-    /// 登出
+    /// Log out
     func logout() {
         vaultContext?.revoke()
         authenticationGeneration = UUID()
@@ -357,15 +357,15 @@ final class AuthenticationViewModel: ObservableObject {
         isProcessing = false
         isAuthenticated = false
 
-        // 🔒 安全清理密码内存（willSet 中就地清零）
+        // 🔒 Securely clear password memory (zeroed in place in willSet)
         sessionPasswordData = nil
         secondaryVaultID = nil
 
-        // 清空解密图片缓存，确保明文像素不跨会话残留
+        // Clear the decrypted image cache so plaintext pixels don't outlive the session
         MediaLoaderService.shared.clearCache()
         ThumbnailImageLoader.shared.clearAll()
 
-        // 重置访客模式为主人模式
+        // Reset the authentication mode
         GuestModeManager.shared.reset()
 
         clearFields()
@@ -512,19 +512,19 @@ final class AuthenticationViewModel: ObservableObject {
         }
     }
 
-    /// 切换密码可见性
+    /// Toggle password visibility
     func togglePasswordVisibility() {
         showPassword.toggle()
     }
 
-    /// 清除输入字段
+    /// Clear the input fields
     func clearFields() {
         password = ""
         confirmPassword = ""
         errorMessage = nil
     }
 
-    /// 验证密码是否正确
+    /// Check whether a password is correct
     func verifyPassword(_ password: String) -> Bool {
         (try? verifyCurrentPassword(password)) == true
     }
@@ -624,12 +624,12 @@ final class AuthenticationViewModel: ObservableObject {
 
     // MARK: - Computed Properties
 
-    /// 设置密码按钮是否可用
+    /// Whether the set-password button is enabled
     var isSetupButtonEnabled: Bool {
         !password.isEmpty && !confirmPassword.isEmpty && !isProcessing && !requiresEraseCompletion && !isErasing
     }
 
-    /// 登录按钮是否可用
+    /// Whether the login button is enabled
     var isLoginButtonEnabled: Bool {
         !password.isEmpty && !isProcessing && !requiresEraseCompletion && !isErasing
     }
@@ -639,11 +639,11 @@ final class AuthenticationViewModel: ObservableObject {
 
 extension AuthenticationViewModel {
 
-    /// 密码强度等级
+    /// Password strength level
     enum PasswordStrength {
-        case weak  // 弱
-        case medium  // 中等
-        case strong  // 强
+        case weak  // Weak
+        case medium  // Medium
+        case strong  // Strong
 
         var color: Color {
             switch self {
@@ -662,7 +662,7 @@ extension AuthenticationViewModel {
         }
     }
 
-    /// 计算密码强度
+    /// Calculate password strength
     var passwordStrength: PasswordStrength {
         let score = PasswordAssessment(password).score
         return score >= 80 ? .strong : score >= 40 ? .medium : .weak

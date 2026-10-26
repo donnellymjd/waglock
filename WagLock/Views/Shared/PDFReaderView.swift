@@ -2,8 +2,8 @@
 //  PDFReaderView.swift
 //  WagLock
 //
-//  简洁的PDF阅读器组件
-//  专注核心阅读体验
+//  Simple PDF reader component
+//  Focused on the core reading experience
 //
 
 import PDFKit
@@ -29,7 +29,7 @@ struct PDFReaderView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            // PDF内容 - 全屏显示
+            // PDF content - full screen
             PDFKitView(
                 data: data,
                 document: pdfDocument,
@@ -41,7 +41,7 @@ struct PDFReaderView: View {
                 toggleControls()
             }
 
-            // 顶部控制条 - 浮动显示
+            // Top control bar - floating
             if showControls {
                 VStack {
                     topControlBar
@@ -50,7 +50,7 @@ struct PDFReaderView: View {
                 }
             }
 
-            // 底部页码指示器 - 始终显示
+            // Bottom page indicator - always shown
             VStack {
                 Spacer()
                 pageIndicator
@@ -66,7 +66,7 @@ struct PDFReaderView: View {
 
     private var topControlBar: some View {
         HStack(spacing: 16) {
-            // 页码显示
+            // Page number
             Text("\(currentPageIndex + 1) / \(pageCount)")
                 .font(.callout)
                 .fontWeight(.medium)
@@ -78,7 +78,7 @@ struct PDFReaderView: View {
 
             Spacer()
 
-            // 分享按钮
+            // Share button
             if let onShare = onShare {
                 Button(action: onShare) {
                     Image(systemName: "square.and.arrow.up")
@@ -103,16 +103,16 @@ struct PDFReaderView: View {
 
     private var pageIndicator: some View {
         HStack(spacing: 8) {
-            // 页面缩略图滑动条（简化版）
+            // Page thumbnail slider (simplified)
             if pageCount > 1 {
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
-                        // 背景轨道
+                        // Background track
                         RoundedRectangle(cornerRadius: 2)
                             .fill(Color.white.opacity(0.2))
                             .frame(height: 4)
 
-                        // 进度指示器
+                        // Progress indicator
                         RoundedRectangle(cornerRadius: 2)
                             .fill(Color.white)
                             .frame(
@@ -191,12 +191,12 @@ struct PDFKitView: UIViewRepresentable {
                 pdfView.bottomAnchor.constraint(equalTo: bottomAnchor),
             ])
 
-            // PDF显示设置
+            // PDF display settings
             pdfView.autoScales = true
             pdfView.displayMode = .singlePageContinuous
             pdfView.displayDirection = .vertical
             pdfView.backgroundColor = .black
-            // 不使用pageViewController模式，避免导航方向错误
+            // Don't use pageViewController mode; it causes navigation direction bugs
             pdfView.usePageViewController(false)
         }
 
@@ -263,7 +263,7 @@ struct PDFKitView: UIViewRepresentable {
             context.coordinator.publishPageState(container.pdfView, includePage: false)
         }
 
-        // 根据当前页索引跳转
+        // Jump to the current page index
         if currentPageIndex >= 0 && currentPageIndex < document.pageCount {
             if let page = document.page(at: currentPageIndex),
                 container.pdfView.currentPage != page

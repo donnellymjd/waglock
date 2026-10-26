@@ -2,8 +2,8 @@
 //  EncryptionService.swift
 //  WagLock
 //
-//  文件加密/解密服务
-//  使用AES-256-GCM加密算法
+//  File encryption/decryption service
+//  Uses AES-256-GCM
 //
 
 import Darwin
@@ -11,20 +11,20 @@ import CommonCrypto
 import CryptoKit
 import Foundation
 
-/// 加密错误类型
+/// Encryption error types
 enum EncryptionError: Error {
     case randomGenerationFailed
-    case invalidPassword  // 无效密码
-    case encryptionFailed(underlying: Error?)  // 加密失败（包含底层错误）
-    case decryptionFailed(underlying: Error?)  // 解密失败（包含底层错误）
-    case invalidData  // 无效数据
-    case keyDerivationFailed  // 密钥派生失败
-    case dataCorrupted  // 数据损坏或被篡改
-    case fileTooLarge(size: Int64, limit: Int64)  // 文件过大
-    case fileNotFound(path: String)  // 文件不存在
-    case fileAccessDenied(path: String)  // 文件访问权限不足
-    case insufficientStorage  // 存储空间不足
-    case ioError(underlying: Error)  // IO错误
+    case invalidPassword  // Invalid password
+    case encryptionFailed(underlying: Error?)  // Encryption failed (with underlying error)
+    case decryptionFailed(underlying: Error?)  // Decryption failed (with underlying error)
+    case invalidData  // Invalid data
+    case keyDerivationFailed  // Key derivation failed
+    case dataCorrupted  // Data corrupted or tampered with
+    case fileTooLarge(size: Int64, limit: Int64)  // File too large
+    case fileNotFound(path: String)  // File not found
+    case fileAccessDenied(path: String)  // Insufficient file access permission
+    case insufficientStorage  // Insufficient storage
+    case ioError(underlying: Error)  // I/O error
 
     var localizedDescription: String {
         switch self {
@@ -77,8 +77,8 @@ enum EncryptionError: Error {
     }
 }
 
-/// 加密服务
-/// 提供AES-256-GCM加密和解密功能
+/// Encryption service
+/// Provides AES-256-GCM encryption and decryption
 nonisolated class EncryptionService: @unchecked Sendable {
 
     // MARK: - Singleton
@@ -95,41 +95,41 @@ nonisolated class EncryptionService: @unchecked Sendable {
 
     // MARK: - Constants
 
-    private let saltLength = AppConstants.saltLength  // 16字节
-    private let ivLength = AppConstants.ivLength  // 12字节（GCM推荐）
-    private let tagLength = AppConstants.tagLength  // 16字节
-    private let iterations = AppConstants.pbkdf2Iterations  // 10万次
+    private let saltLength = AppConstants.saltLength  // 16 bytes
+    private let ivLength = AppConstants.ivLength  // 12 bytes (recommended for GCM)
+    private let tagLength = AppConstants.tagLength  // 16 bytes
+    private let iterations = AppConstants.pbkdf2Iterations  // 100,000 iterations
     private let chunkMagic = "ZNSC".data(using: .utf8)!
     private let chunkVersion: UInt8 = 2
     private let maximumChunkSize = 16 * 1024 * 1024
     private let maximumLegacyChunkSize = 64 * 1024 * 1024
     private let chunkSize = 4 * 1024 * 1024  // 4MB
-    private let maxFileSize: Int64 = 500 * 1024 * 1024  // 500MB（单个文件限制）
-    private let minFreeSpace: Int64 = 100 * 1024 * 1024  // 100MB（最小可用空间）
+    private let maxFileSize: Int64 = 500 * 1024 * 1024  // 500 MB (per-file limit)
+    private let minFreeSpace: Int64 = 100 * 1024 * 1024  // 100 MB (minimum free space)
 
     // MARK: - Public Methods
 
-    /// 加密数据
+    /// Encrypt data
     /// - Parameters:
-    ///   - data: 原始数据
-    ///   - password: 用户密码
-    /// - Returns: 加密后的数据（格式：盐值 + IV + 标签 + 密文）
+    ///   - data: Plaintext data
+    ///   - password: User password
+    /// - Returns: Encrypted data (format: salt + IV + tag + ciphertext)
     /// - Throws: EncryptionError
     func encrypt(data: Data, password: String) throws -> Data {
         guard !password.isEmpty else {
             throw EncryptionError.invalidPassword
         }
 
-        // 1. 生成随机盐值
+        // 1. Generate a random salt
         let salt = try generateSalt()
 
-        // 2. 从密码派生加密密钥
+        // 2. Derive the encryption key from the password
         let key = try deriveKey(from: password, salt: salt)
 
-        // 3. 生成随机IV（初始化向量）
+        // 3. Generate a random IV (initialization vector)
         let iv = try generateIV()
 
-        // 4. 使用AES-GCM加密
+        // 4. Encrypt with AES-GCM
         do {
             let sealedBox = try AES.GCM.seal(
                 data,
@@ -143,7 +143,7 @@ nonisolated class EncryptionService: @unchecked Sendable {
                 throw EncryptionError.encryptionFailed(underlying: nil)
             }
 
-            // 5. 组合：盐值(16) + IV(12) + 标签(16) + 密文(N)
+            // 5. Combine: salt(16) + IV(12) + tag(16) + ciphertext(N)
             var encryptedData = Data()
             encryptedData.append(salt)
             encryptedData.append(iv)
@@ -157,24 +157,24 @@ nonisolated class EncryptionService: @unchecked Sendable {
         }
     }
 
-    /// 解密数据
+    /// Decrypt data
     /// - Parameters:
-    ///   - encryptedData: 加密的数据
-    ///   - password: 用户密码
-    /// - Returns: 解密后的原始数据
+    ///   - encryptedData: Encrypted data
+    ///   - password: User password
+    /// - Returns: Decrypted plaintext
     /// - Throws: EncryptionError
     func decrypt(encryptedData: Data, password: String) throws -> Data {
         guard !password.isEmpty else {
             throw EncryptionError.invalidPassword
         }
 
-        // 验证数据长度
+        // Validate data length
         let minLength = saltLength + ivLength + tagLength
         guard encryptedData.count >= minLength else {
             throw EncryptionError.invalidData
         }
 
-        // 1. 解析加密数据：盐值 + IV + 标签 + 密文
+        // 1. Parse the encrypted data: salt + IV + tag + ciphertext
         let salt = encryptedData.subdata(in: 0..<saltLength)
         let iv = encryptedData.subdata(in: saltLength..<(saltLength + ivLength))
         let tag = encryptedData.subdata(
@@ -182,10 +182,10 @@ nonisolated class EncryptionService: @unchecked Sendable {
         let ciphertext = encryptedData.subdata(
             in: (saltLength + ivLength + tagLength)..<encryptedData.count)
 
-        // 2. 从密码派生密钥（使用相同的盐值）
+        // 2. Derive the key from the password (same salt)
         let key = try deriveKey(from: password, salt: salt)
 
-        // 3. 使用AES-GCM解密
+        // 3. Decrypt with AES-GCM
         do {
             let sealedBox = try AES.GCM.SealedBox(
                 nonce: AES.GCM.Nonce(data: iv),
@@ -198,7 +198,7 @@ nonisolated class EncryptionService: @unchecked Sendable {
             return decryptedData
 
         } catch CryptoKitError.authenticationFailure {
-            // 认证失败 - 密码错误或数据被篡改
+            // Authentication failed - wrong password or tampered data
             throw EncryptionError.dataCorrupted
         } catch {
             throw EncryptionError.decryptionFailed(underlying: error)
@@ -207,24 +207,24 @@ nonisolated class EncryptionService: @unchecked Sendable {
 
     // MARK: - Convenience Methods
 
-    /// 加密文件
+    /// Encrypt a file
     /// - Parameters:
-    ///   - fileURL: 文件URL
-    ///   - password: 密码
-    /// - Returns: 加密后的数据
+    ///   - fileURL: File URL
+    ///   - password: Password
+    /// - Returns: Encrypted data
     /// - Throws: EncryptionError
     func encryptFile(at fileURL: URL, password: String) throws -> Data {
-        // 1. 检查文件是否存在
+        // 1. Check that the file exists
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
             throw EncryptionError.fileNotFound(path: fileURL.path)
         }
 
-        // 2. 检查文件是否可读
+        // 2. Check that the file is readable
         guard FileManager.default.isReadableFile(atPath: fileURL.path) else {
             throw EncryptionError.fileAccessDenied(path: fileURL.path)
         }
 
-        // 3. 检查文件大小
+        // 3. Check the file size
         do {
             let attributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
             let fileSize = attributes[.size] as? Int64 ?? 0
@@ -233,7 +233,7 @@ nonisolated class EncryptionService: @unchecked Sendable {
                 throw EncryptionError.fileTooLarge(size: fileSize, limit: maxFileSize)
             }
 
-            // 4. 检查存储空间（加密后大小会稍大）
+            // 4. Check storage space (encrypted output is slightly larger)
             let requiredSpace = Int64(Double(fileSize) * 1.1) + minFreeSpace
             if let freeSpace = try? getFreeSpace(), freeSpace < requiredSpace {
                 throw EncryptionError.insufficientStorage
@@ -244,7 +244,7 @@ nonisolated class EncryptionService: @unchecked Sendable {
             throw EncryptionError.ioError(underlying: error)
         }
 
-        // 5. 读取并加密
+        // 5. Read and encrypt
         do {
             let data = try Data(contentsOf: fileURL)
             return try encrypt(data: data, password: password)
@@ -255,29 +255,29 @@ nonisolated class EncryptionService: @unchecked Sendable {
         }
     }
 
-    /// 解密并保存到文件
+    /// Decrypt and save to a file
     /// - Parameters:
-    ///   - encryptedData: 加密数据
-    ///   - fileURL: 目标文件URL
-    ///   - password: 密码
+    ///   - encryptedData: Encrypted data
+    ///   - fileURL: Destination file URL
+    ///   - password: Password
     /// - Throws: EncryptionError
     func decryptAndSave(encryptedData: Data, to fileURL: URL, password: String) throws {
-        // 1. 解密数据
+        // 1. Decrypt the data
         let decryptedData = try decrypt(encryptedData: encryptedData, password: password)
 
-        // 2. 检查存储空间
+        // 2. Check storage space
         let requiredSpace = Int64(decryptedData.count) + minFreeSpace
         if let freeSpace = try? getFreeSpace(), freeSpace < requiredSpace {
             throw EncryptionError.insufficientStorage
         }
 
-        // 3. 检查目标目录是否可写
+        // 3. Check that the destination directory is writable
         let parentDir = fileURL.deletingLastPathComponent()
         guard FileManager.default.isWritableFile(atPath: parentDir.path) else {
             throw EncryptionError.fileAccessDenied(path: parentDir.path)
         }
 
-        // 4. 写入文件
+        // 4. Write the file
         do {
             try withAtomicOutput(to: fileURL) { try $0.write(contentsOf: decryptedData) }
         } catch {
@@ -494,7 +494,7 @@ nonisolated class EncryptionService: @unchecked Sendable {
 
     // MARK: - Private Methods
 
-    /// 获取可用存储空间
+    /// Get available storage space
     private func getFreeSpace() throws -> Int64 {
         let fileURL = URL(fileURLWithPath: NSHomeDirectory())
         do {
@@ -528,19 +528,19 @@ nonisolated class EncryptionService: @unchecked Sendable {
     private func generateSalt() throws -> Data { try randomData(count: saltLength) }
     private func generateIV() throws -> Data { try randomData(count: ivLength) }
 
-    /// 从密码派生加密密钥（使用PBKDF2）
+    /// Derive an encryption key from a password (PBKDF2)
     /// - Parameters:
-    ///   - password: 用户密码
-    ///   - salt: 盐值
-    /// - Returns: 256位对称密钥
+    ///   - password: User password
+    ///   - salt: Salt
+    /// - Returns: 256-bit symmetric key
     /// - Throws: EncryptionError
     private func deriveKey(from password: String, salt: Data) throws -> SymmetricKey {
         guard let passwordData = password.data(using: .utf8) else {
             throw EncryptionError.invalidPassword
         }
 
-        // 使用PBKDF2派生密钥
-        // 参数：10万次迭代，SHA-256哈希，32字节输出（256位）
+        // Derive the key with PBKDF2
+        // Parameters: 100,000 iterations, SHA-256, 32-byte (256-bit) output
         let derivedKey = try deriveKeyPBKDF2(
             password: passwordData,
             salt: salt,
@@ -551,7 +551,7 @@ nonisolated class EncryptionService: @unchecked Sendable {
         return SymmetricKey(data: derivedKey)
     }
 
-    /// PBKDF2密钥派生
+    /// PBKDF2 key derivation
     private func deriveKeyPBKDF2(
         password: Data,
         salt: Data,
@@ -602,5 +602,5 @@ nonisolated private extension FixedWidthInteger {
     }
 }
 
-// CCKeyDerivationPBKDF 需要 CommonCrypto
-// 已在上面的实现中使用
+// CCKeyDerivationPBKDF requires CommonCrypto
+// (used in the implementation above)

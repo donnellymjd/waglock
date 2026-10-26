@@ -2,16 +2,16 @@
 //  LoadingOverlay.swift
 //  WagLock
 //
-//  全局加载等待层
-//  提供统一的加载提示UI
+//  Global loading overlay
+//  Shared loading indicator UI
 //
 
 import SwiftUI
 
-/// 加载等待层视图
+/// Loading overlay view
 struct LoadingOverlay: View {
     let message: String
-    let progress: Double?  // 0.0 到 1.0，nil 表示不确定进度
+    let progress: Double?  // 0.0 to 1.0; nil means indeterminate
 
     init(message: String = String(localized: "common.loading"), progress: Double? = nil) {
         self.message = message
@@ -31,11 +31,11 @@ struct LoadingOverlay: View {
 // MARK: - View Extension
 
 extension View {
-    /// 显示加载等待层
+    /// Show the loading overlay
     /// - Parameters:
-    ///   - isShowing: 是否显示
-    ///   - message: 提示文字
-    ///   - progress: 进度（0.0-1.0，nil表示不确定）
+    ///   - isShowing: Whether to show it
+    ///   - message: Message text
+    ///   - progress: Progress (0.0-1.0; nil means indeterminate)
     func loadingOverlay(
         isShowing: Bool,
         message: String = String(localized: "common.loading"),

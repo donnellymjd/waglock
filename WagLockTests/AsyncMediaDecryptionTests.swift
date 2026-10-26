@@ -56,7 +56,7 @@ struct AsyncMediaDecryptionTests {
 
     @Test
     func loadsStreamEncryptedDataThroughAsyncBridge() async throws {
-        // 覆盖 loadDecryptedDataAsync 的 ZNSC 流式加密分支
+        // Covers the ZNSC streaming branch of loadDecryptedDataAsync
         let originalData = Data("stream encrypted content for async bridge".utf8)
         let password = "test-password"
         let sourceURL = FileManager.default.temporaryDirectory
@@ -64,7 +64,7 @@ struct AsyncMediaDecryptionTests {
         try originalData.write(to: sourceURL)
         defer { try? FileManager.default.removeItem(at: sourceURL) }
 
-        // saveEncryptedFile 使用流式加密（ZNSC 魔数）
+        // saveEncryptedFile uses streaming encryption (ZNSC magic)
         let path = try FileStorageService.shared.saveEncryptedFile(
             from: sourceURL,
             password: password,

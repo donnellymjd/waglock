@@ -1,145 +1,147 @@
-# 更新日志 (Changelog)
+# Changelog
 
-本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 规范。
-版本格式：`主版本.次版本.修订号`；`[未发布]` 区块记录尚未提交 App Store 的改动。
+This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+Version format: `major.minor.patch`; the `[Unreleased]` section records changes not yet submitted to the App Store.
 
-## [未发布] - 1.3.8
+The entries below record the development-app history inherited from the upstream ZeroNet Space project (translated to English). WagLock 1.0 release work is tracked in [BUILD_ERRORS_SUMMARY.md](BUILD_ERRORS_SUMMARY.md) and `docs/release/`.
 
-### 修复
+## [Unreleased] - 1.3.8
 
-- 计算器伪装登录直接验证主密码哈希，修复设备 vendor ID 变化或旧密码副本过期导致正确密码无法解锁的问题
+### Fixed
+
+- Calculator disguise login now verifies the main password hash directly, fixing cases where a changed device vendor ID or an outdated password copy stopped the correct password from unlocking
 
 ## [1.3.6] - 2026-09-22
 
-### 新增
+### Added
 
-- 应用图标选择加入现有 VIP 权益，提供纸页、计算器、山石、尺规四款专属图标（含默认图标共五款），支持免费恢复默认
-- 重新设计默认青环图标与应用内预览
+- App icon selection added to the existing VIP benefits, with four exclusive icons (Paper, Calculator, Pebble, Ruler; five including the default) and a free way to restore the default
+- Redesigned the default teal-ring icon and its in-app preview
 
-### 改进
+### Improved
 
-- 图标选择页改为紧凑列表，缩小预览并精简 VIP 区域
-- 启动页与登录页统一青环视觉，启动页适配浅色和深色外观
+- Icon picker is now a compact list with smaller previews and a trimmed VIP section
+- Launch and login screens share the teal-ring look; the launch screen adapts to light and dark appearance
 
-- 移除录音列表右滑分享，保留分享按钮；播放期间禁用列表滑动，播放器展开的行在暂停后仍禁用滑动
-- 音频加载时显示加载状态并阻止重复点击播放
-- 录音分享改用后台解密，支持取消分享准备并清理临时文件
-- 录音保存失败后明确提示内容已保留，提供重试与丢弃操作
+- Removed swipe-to-share on the recordings list but kept the share button; swiping is disabled during playback, and the row with an expanded player stays non-swipeable after pausing
+- Audio shows a loading state while loading and blocks repeated play taps
+- Recording sharing now decrypts in the background, can be cancelled while preparing, and cleans up temporary files
+- When saving a recording fails, the app clearly says the content was kept and offers retry and discard
 
 ## [1.3.5] - 2026-09-06
 
-### 新增
+### Added
 
-- **语音备忘录与录音功能**：新增录音及音频播放管理，支持长时间后台与锁屏录音保活
-- **统一导入入口**：相册、文件、音频统一至导入弹框，操作更加直观便捷
-- **录音分享权限控制**：新增 VIP 会员分享与导出保护限制
+- **Voice memos and recording**: recording and audio playback management, with keep-alive for long background and lock-screen recording
+- **Unified import entry**: photos, files and audio are imported from one sheet for a simpler flow
+- **Recording share controls**: sharing and export protections tied to VIP membership
 
-### 改进
+### Improved
 
-- **底栏标签精简**：影音合并至统一标签页，记事本与设置设为独立 Tab
-- **导入交互优化**：简化导入弹框界面布局，突出安全加密提示
+- **Leaner tab bar**: videos and audio merged into one tab; Notes and Settings are separate tabs
+- **Import sheet**: simplified layout with a prominent encryption notice
 
 ## [1.3.0] - 2026-08-16
 
-### 新增
+### Added
 
-- **视频双击快进/快退**：双击屏幕左半/右半区域 ±10 秒跳转，中央显示带动画的方向提示
-- **音量调节滑块**：播放器底部控制栏新增音量滑条（图标随音量变化），保留静音开关
-- **缓冲加载提示**：视频缓冲/加载时中央显示加载圈
-- **控制栏自动隐藏**：播放中 3.5 秒无操作自动隐藏，轻点唤出；暂停、拖动进度条时保持显示
-- **防自动锁屏**：播放视频时禁用系统空闲计时，暂停/退出时恢复
+- **Double-tap to seek**: double-tap the left or right half of the video to jump ±10 seconds, with an animated direction indicator in the center
+- **Volume slider**: a volume slider in the player's bottom bar (icon changes with volume); the mute toggle remains
+- **Buffering indicator**: a spinner in the center while video buffers or loads
+- **Auto-hiding controls**: controls hide after 3.5 seconds of inactivity during playback and reappear on tap; they stay visible while paused or scrubbing
+- **No auto-lock during playback**: the system idle timer is disabled while video plays and restored on pause or exit
 
-### 改进
+### Improved
 
-- **修复静音开关下视频无声**（核心修复）：激活 `.playback` 音频会话，视频声音不再受 iPhone 静音开关影响；退后台自动暂停，音频会话按播放器数量引用计数
-- **播放结束状态**：播完自动回到开头并显示重播按钮，不再卡在"暂停"状态
-- **进度条连续拖动**：去掉 1 秒步进，拖动中宽松容差预览、松手后精确定位
-- **倍速按钮统一尺寸**：0.5x/1x/1.5x/2x 胶囊按钮固定宽高，不再大小不一
-- **来电/闹钟中断处理**：中断时自动暂停，系统允许恢复时自动继续播放
-- **相册/文件页照片降采样解码**：详情预览改为后台线程按上限像素解码，大图不再卡顿主线程
+- **Video sound with the silent switch on** (core fix): activates the `.playback` audio session so video sound ignores the silent switch; playback pauses in the background, and the audio session is reference-counted across players
+- **End of playback**: returns to the start and shows a replay button instead of getting stuck in "paused"
+- **Continuous scrubbing**: removed the 1-second step; loose tolerance while dragging, precise seek on release
+- **Uniform speed buttons**: the 0.5x/1x/1.5x/2x capsule buttons have a fixed size
+- **Call/alarm interruptions**: playback pauses on interruption and resumes when the system allows
+- **Downsampled photo decoding in Photos/Files**: detail previews decode on a background thread with a pixel cap, so large images no longer stall the main thread
 
-### 修复
+### Fixed
 
-- 修复播放器解密任务不可取消导致的明文临时文件泄漏（中途退出播放器场景）
-- 修复解密数据读取为嗅探格式魔数把整个加密文件读入内存的问题（大文件内存峰值约减半）
-- 修复登出/修改密码后已解密图片仍留在内存缓存的问题
-- 修复缩略图缓存键未包含内容指纹、解码失败后重复重试的问题
-- 修复内嵌预览与全屏播放器互相停用共享音频会话导致的声音中断
+- Plaintext temporary file leak caused by non-cancellable player decryption tasks (when leaving the player mid-way)
+- Reading decrypted data to sniff the format magic loaded the whole encrypted file into memory (peak memory for large files roughly halved)
+- Decrypted images stayed in the memory cache after logout or a password change
+- Thumbnail cache keys lacked a content fingerprint, and failed decodes were retried repeatedly
+- The inline preview and full-screen player deactivated each other's shared audio session, cutting off sound
 
-### 安全
+### Security
 
-- 解密产生的明文临时文件（视频/文档）启用 `.completeFileProtection` 最高文件保护
-- 临时文件扩展名清洗，防御路径注入
-- 统一照片解密管线为 ZNSC 流式加密感知，消除双管线隐患
-- 归档构建号脚本增加归档成功前置条件，失败归档不再递增构建号
-- 移除误打包进 App 的源码备份文件 `MediaDetailView.swift.backup`
+- Plaintext temporary files produced by decryption (video/documents) use `.completeFileProtection`
+- Temporary file extensions are sanitized to prevent path injection
+- Unified the photo decryption pipeline to be ZNSC-streaming aware, removing the dual-pipeline risk
+- The archive build-number script now requires a successful archive, so failed archives no longer bump the build number
+- Removed the source backup file `MediaDetailView.swift.backup` that had been bundled into the app by mistake
 
 ---
 
 ## [1.2.0] - 2026-08-03
 
-### 新增
+### Added
 
-- **相片预览左右滑动切换**：在相册中打开一张照片后，可直接左右滑动浏览上一张/下一张，无需关闭再打开；底部显示页码（如 `3 / 12`）与手势提示
-- **相片搜索**：相册页支持按文件名/扩展名搜索
-- **相片多选批量删除**：工具栏新增"选择"，可点选/全选后批量删除
-- **文件预览左右滑动切换**：文件列表打开 PDF/文档后，可直接左右滑动切换文件
-- **"解锁无限导入"直达购买**：达到免费导入上限时，可在导入界面直接拉起内购，购买成功后立即生效并自动关闭导入页
-- **加载失败一键重试**：图片/视频/文件解密或加载失败时，错误页提供"重试"按钮
+- **Swipe between photos**: after opening a photo, swipe left/right to the previous/next one without closing it; a page counter (e.g. `3 / 12`) and gesture hint appear at the bottom
+- **Photo search**: search Photos by file name or extension
+- **Batch photo delete**: a new "Select" toolbar action lets you pick or select all, then delete in bulk
+- **Swipe between file previews**: after opening a PDF/document from the file list, swipe left/right to switch files
+- **Direct purchase for "Unlock unlimited imports"**: when the free import limit is reached, the in-app purchase can be started from the import screen; it takes effect immediately and closes the import screen
+- **One-tap retry on load failure**: when decrypting or loading an image, video or file fails, the error screen offers a "Retry" button
 
-### 改进
+### Improved
 
-- **视频播放器控制栏去重**：移除系统原生控制条与自绘控制栏重叠的问题，只保留一套播放控制（播放/±15 秒/进度条/倍速/静音）
-- **图片放大拖动边界限制**：放大后平移图片会被限制在画面边界内，不再把图片拖出屏幕后"找不回来"；缩回 1 倍自动居中
-- **导入成功反馈**：导入完成后显示"导入成功，已导入 N 个文件"，不再静默关闭
-- **内购状态统一**：购买/恢复购买/交易更新都会同步到持久化的解锁状态，避免"已购买但导入限制仍生效"
-- **计算器登录界面自适应**：改为按可用区域计算按钮尺寸，适配横屏、分屏和不同机型
-- **删除流程加固**：视频删除失败时会明确提示，不再静默失败；数据库删除失败时保留播放器可用状态
+- **No duplicate video controls**: removed the overlap between the system controls and the custom control bar, keeping one set (play, ±15 seconds, progress bar, speed, mute)
+- **Pan limits when zoomed**: panning a zoomed image stays within the frame, so it can't be dragged off screen and lost; zooming back to 1x re-centers it
+- **Import success feedback**: after importing, the app shows "Import successful, N files imported" instead of closing silently
+- **Consistent purchase state**: purchases, restores and transaction updates all sync to the persisted unlock state, so "purchased but still limited" no longer happens
+- **Adaptive calculator login screen**: button sizes are computed from the available area, fitting landscape, split view and different devices
+- **Hardened deletion**: a failed video delete now shows a clear error instead of failing silently; when the database delete fails, the player stays usable
 
-### 修复
+### Fixed
 
-- 修复相片预览无法左右滑动切换图片的问题（拖动手势抢占翻页手势）
-- 修复"解锁无限导入"在未打开过设置页时提示"未找到产品"的问题
-- 修复用户取消购买时错误地弹出"错误"提示的问题
+- Photo preview couldn't swipe between images (the drag gesture stole the paging gesture)
+- "Unlock unlimited imports" reported "product not found" if Settings had never been opened
+- Cancelling a purchase wrongly showed an "Error" alert
 
 ---
 
 ## [1.1.0] - 2026-07-09
 
-### 新增
+### Added
 
-- **离开后自动锁定**：设置 → 安全设置，可选 立即 / 1 分钟 / 5 分钟 / 从不（默认立即）
-- **后台隐私遮罩**：切换 App 时，多任务切换器只显示启动页，不再泄露照片/视频/笔记内容
+- **Auto-lock after leaving**: Settings → Security, with Immediately / 1 minute / 5 minutes / Never (default Immediately)
+- **Background privacy cover**: when switching apps, the app switcher shows only the launch screen instead of photos, videos or notes
 
-### 改进
+### Improved
 
-- 删除照片/视频/文件前增加确认提示，并确保加密数据从设备彻底清除
-- 私密笔记草稿改为 Keychain 加密存储
-- 相片查看器翻页时不再残留上一张的缩放状态
+- Deleting photos, videos or files now asks for confirmation and makes sure encrypted data is removed from the device
+- Secret note drafts are now stored encrypted in the Keychain
+- The photo viewer no longer carries the previous photo's zoom when paging
 
-### 修复
+### Fixed
 
-- 修复"解锁无限导入"提示未找到产品的问题（产品 ID 回归）
-- 修复已删除条目偶尔重新出现在列表中的问题
-- 旧版本升级用户的密码凭据自动迁移（Keychain service 迁移）
+- "Unlock unlimited imports" reported that the product was not found (product ID regression)
+- Deleted items occasionally reappeared in lists
+- Password credentials for users upgrading from older versions are migrated automatically (Keychain service migration)
 
-> 注意：1.1.1（build 8）为内部构建，未公开发布，相关内容并入 1.2.0。
+> Note: 1.1.1 (build 8) was an internal build that was never released publicly; its changes are included in 1.2.0.
 
 ---
 
 ## [1.0.0] - 2025-11-05
 
-### 新增
+### Added
 
-- 零网络离线隐私空间：照片、视频、文件的加密存储与浏览（AES-256，本地加密，无网络请求）
-- 计算器伪装登录模式
-- 私密笔记
-- 无限导入内购（`com.zeronetspace.unlimited_imports`）
-- 访客模式
-- 演示模式（审核用演示口令 `0.00000` 自动解锁高级功能）
-- 100% 开源
+- Zero-network offline private space: encrypted storage and browsing of photos, videos and files (AES-256, local encryption, no network requests)
+- Calculator disguise login mode
+- Private notes
+- Unlimited imports in-app purchase (`com.zeronetspace.unlimited_imports`)
+- Guest mode
+- Demo mode (App Review demo code `0.00000` automatically unlocks premium features)
+- 100% open source
 
-[未发布]: https://github.com/materialofair/zeroNet_Space
+[Unreleased]: https://github.com/materialofair/zeroNet_Space
 [1.3.6]: https://github.com/materialofair/zeroNet_Space/releases/tag/v1.3.6
 [1.3.5]: https://github.com/materialofair/zeroNet_Space/releases/tag/v1.3.5
 [1.3.0]: https://github.com/materialofair/zeroNet_Space/releases/tag/v1.3.0

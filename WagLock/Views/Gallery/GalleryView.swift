@@ -2,8 +2,8 @@
 //  GalleryView.swift
 //  WagLock
 //
-//  主图库界面
-//  网格展示所有导入的媒体
+//  Main gallery screen
+//  Shows all imported media in a grid
 //
 
 import SwiftData
@@ -41,12 +41,12 @@ private struct ScopedGalleryView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // 访客模式下始终显示空状态
+                // Always show the empty state in guest mode
                 if guestModeManager.isGuestMode || mediaItems.isEmpty {
-                    // 空状态
+                    // Empty state
                     emptyStateView
                 } else {
-                    // 媒体网格
+                    // Media grid
                     mediaGridView
                 }
             }
@@ -141,7 +141,7 @@ private struct ScopedGalleryView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
-            // 访客模式下隐藏导入按钮
+            // Hide the import button in guest mode
             if guestModeManager.isOwnerMode {
                 Button(action: {
                     viewModel.showImport()
@@ -173,7 +173,7 @@ private struct ScopedGalleryView: View {
             ) {
                 ForEach(sortedMediaItems) { item in
                     if viewModel.isSelectionMode {
-                        // 选择模式：点击切换选择状态
+                        // Selection mode: tap toggles selection
                         Button {
                             viewModel.toggleSelection(for: item)
                         } label: {
@@ -185,7 +185,7 @@ private struct ScopedGalleryView: View {
                         }
                         .buttonStyle(.plain)
                     } else {
-                        // 正常模式：导航到详情
+                        // Normal mode: navigate to details
                         NavigationLink(
                             destination: MediaDetailView(mediaItem: item, sessionID: authViewModel.librarySessionID)
                                 .environmentObject(authViewModel)
@@ -305,12 +305,12 @@ private struct ScopedGalleryView: View {
     private var sortedMediaItems: [MediaItem] {
         var items = mediaItems
 
-        // 应用搜索过滤
+        // Apply the search filter
         if !searchText.isEmpty {
             items = viewModel.search(items, query: searchText)
         }
 
-        // 应用排序
+        // Apply sorting
         let descriptor = viewModel.sortOrder.sortDescriptor
         return items.sorted(using: descriptor)
     }

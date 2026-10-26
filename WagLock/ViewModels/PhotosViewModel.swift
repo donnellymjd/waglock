@@ -2,7 +2,7 @@
 //  PhotosViewModel.swift
 //  WagLock
 //
-//  相片视图模型
+//  Photos view model
 //
 
 import Foundation

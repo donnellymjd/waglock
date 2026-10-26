@@ -2,8 +2,8 @@
 //  FilesView.swift
 //  WagLock
 //
-//  文件视图
-//  管理和预览各种文件类型（PDF、文本等）
+//  Files view
+//  Manages and previews file types (PDF, text, etc.)
 //
 
 import SwiftData
@@ -17,7 +17,7 @@ struct FilesView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var authViewModel: AuthenticationViewModel
 
-    // 只查询文件类型的媒体
+    // Query only file-type media
     @Query(
         filter: #Predicate<MediaItem> { item in
             item.typeRawValue == "document"
@@ -53,7 +53,7 @@ struct FilesView: View {
                     WagLockSearchField(title: "Search files", text: $searchText)
                 }.padding(.horizontal, 24).padding(.bottom, 12)
                 ZStack {
-                // 访客模式下始终显示空状态
+                // Always show the empty state in guest mode
                 if guestModeManager.isGuestMode || files.isEmpty {
                     emptyStateView
                 } else {
@@ -66,7 +66,7 @@ struct FilesView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    // 访客模式下隐藏导入按钮
+                    // Hide the import button in guest mode
                     if guestModeManager.isOwnerMode {
                         Button {
                             showImportView = true
@@ -86,7 +86,7 @@ struct FilesView: View {
             }
             .sheet(item: $selectedPreview) { selection in
                 NavigationStack {
-                    // 翻页容器：在多个文件之间左右滑动切换预览
+                    // Paging container: swipe left/right between file previews
                     selection.pager
                 }
                 .environment(\.modelContext, modelContext)
@@ -185,8 +185,8 @@ struct FilesView: View {
     private func deleteFile(_ file: MediaItem) {
         let encryptedPath = file.encryptedPath
 
-        // 先提交数据库删除，成功后再删文件，
-        // 避免 save 失败时留下指向已删除文件的记录
+        // Commit the database deletion first and delete files only after it succeeds,
+        // so a failed save never leaves records pointing at deleted files
         modelContext.delete(file)
         do {
             try LibraryWriteCoordinator.save(modelContext)
@@ -201,7 +201,7 @@ struct FilesView: View {
         do {
             try vaultServices.storage.deleteFile(path: encryptedPath)
         } catch {
-            // 记录已删除，文件删除失败只会残留无引用的加密文件
+            // The record is gone; a failed file delete only leaves an unreferenced encrypted file
         }
     }
 }
@@ -281,7 +281,7 @@ struct FileRowView: View {
 
 // MARK: - File Pager View
 
-/// 文件预览翻页容器：在多个文件之间左右滑动切换
+/// File preview paging container: swipe left/right between files
 struct FilePagerView: View {
     @EnvironmentObject private var authViewModel: AuthenticationViewModel
 

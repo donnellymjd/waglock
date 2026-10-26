@@ -2,24 +2,24 @@
 //  MediaType.swift
 //  WagLock
 //
-//  媒体类型枚举
-//  定义支持的媒体类型：照片、视频、文档
+//  Media type enum
+//  Defines the supported media types: photo, video, document
 //
 
 import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// 媒体类型
+/// Media type
 enum MediaType: String, Codable, CaseIterable {
-    case photo  // 照片（jpg, png, heic等）
-    case video  // 视频（mp4, mov等）
+    case photo  // Photo (jpg, png, heic, etc.)
+    case video  // Video (mp4, mov, etc.)
     case audio
-    case document  // 文档（pdf, doc, txt等）
+    case document  // Document (pdf, doc, txt, etc.)
 
     // MARK: - Display Properties
 
-    /// 类型显示名称
+    /// Display name for the type
     var displayName: String {
         switch self {
         case .photo:
@@ -33,7 +33,7 @@ enum MediaType: String, Codable, CaseIterable {
         }
     }
 
-    /// SF Symbol图标名称
+    /// SF Symbol icon name
     var iconName: String {
         switch self {
         case .photo:
@@ -47,7 +47,7 @@ enum MediaType: String, Codable, CaseIterable {
         }
     }
 
-    /// 图标颜色
+    /// Icon color
     var iconColor: Color {
         switch self {
         case .photo:
@@ -67,31 +67,31 @@ enum MediaType: String, Codable, CaseIterable {
 
     // MARK: - File Extension Detection
 
-    /// 从文件扩展名推断媒体类型
-    /// - Parameter fileExtension: 文件扩展名（如 "jpg", "mp4"）
-    /// - Returns: 媒体类型，如果无法识别则返回document
+    /// Infer the media type from a file extension
+    /// - Parameter fileExtension: File extension (e.g. "jpg", "mp4")
+    /// - Returns: The media type, or document if it can't be identified
     static func from(fileExtension: String) -> MediaType {
         let ext = fileExtension.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
 
-        // 图片格式
+        // Image formats
         if AppConstants.supportedImageFormats.contains(ext) {
             return .photo
         }
 
-        // 视频格式
+        // Video formats
         if AppConstants.supportedVideoFormats.contains(ext) {
             return .video
         }
 
         if supportedAudioFormats.contains(ext) { return .audio }
 
-        // 其他文档
+        // Other documents
         return .document
     }
 
-    /// 从UTType推断媒体类型
+    /// Infer the media type from a UTType
     /// - Parameter utType: UTType
-    /// - Returns: 媒体类型
+    /// - Returns: The media type
     static func from(utType: UTType) -> MediaType {
         if utType.conforms(to: .image) {
             return .photo
@@ -104,9 +104,9 @@ enum MediaType: String, Codable, CaseIterable {
         }
     }
 
-    /// 从MIME类型推断媒体类型
-    /// - Parameter mimeType: MIME类型（如 "image/jpeg"）
-    /// - Returns: 媒体类型
+    /// Infer the media type from a MIME type
+    /// - Parameter mimeType: MIME type (e.g. "image/jpeg")
+    /// - Returns: The media type
     static func from(mimeType: String) -> MediaType {
         if mimeType.hasPrefix("image/") {
             return .photo
@@ -121,9 +121,9 @@ enum MediaType: String, Codable, CaseIterable {
 
     // MARK: - File Validation
 
-    /// 验证文件是否为此媒体类型
-    /// - Parameter fileExtension: 文件扩展名
-    /// - Returns: 是否匹配
+    /// Check whether a file matches this media type
+    /// - Parameter fileExtension: File extension
+    /// - Returns: Whether it matches
     func matches(fileExtension: String) -> Bool {
         let ext = fileExtension.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
 
@@ -143,15 +143,15 @@ enum MediaType: String, Codable, CaseIterable {
 
     // MARK: - Quick Look Support
 
-    /// 是否支持Quick Look预览
+    /// Whether Quick Look preview is supported
     var supportsQuickLook: Bool {
-        // 所有类型都支持Quick Look
+        // All types support Quick Look
         return true
     }
 
-    /// 是否需要解密后才能预览
+    /// Whether decryption is required before preview
     var requiresDecryptionForPreview: Bool {
-        // 所有类型都需要解密
+        // All types require decryption
         return true
     }
 }
@@ -166,7 +166,7 @@ extension MediaType: Identifiable {
 
 extension MediaType: Comparable {
     static func < (lhs: MediaType, rhs: MediaType) -> Bool {
-        // 排序顺序：照片 < 视频 < 文档
+        // Sort order: photo < video < document
         let order: [MediaType] = [.photo, .video, .audio, .document]
         guard let lhsIndex = order.firstIndex(of: lhs),
             let rhsIndex = order.firstIndex(of: rhs)

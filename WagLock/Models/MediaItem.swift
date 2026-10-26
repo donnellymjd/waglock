@@ -2,59 +2,59 @@
 //  MediaItem.swift
 //  WagLock
 //
-//  媒体项数据模型（SwiftData）
-//  存储媒体文件的元数据
+//  Media item data model (SwiftData)
+//  Stores metadata for media files
 //
 
 import Foundation
 import SwiftData
 
-/// 媒体项模型
+/// Media item model
 @Model
 @MainActor
 final class MediaItem {
 
     // MARK: - Properties
 
-    /// 唯一标识符
+    /// Unique identifier
     var id: UUID
 
-    /// 原始文件名（如 "IMG_1234.jpg"）
+    /// Original file name (e.g. "IMG_1234.jpg")
     var fileName: String
 
-    /// 文件扩展名（如 ".jpg"）
+    /// File extension (e.g. ".jpg")
     var fileExtension: String
 
-    /// 文件大小（字节）
+    /// File size (bytes)
     var fileSize: Int64
 
-    /// 媒体类型（照片/视频/文档）
+    /// Media type (photo/video/document)
     var typeRawValue: String
 
-    /// 加密文件的完整路径
+    /// Full path of the encrypted file
     var encryptedPath: String
 
     /// Raw thumbnail bytes in the legacy database; not vault-encrypted (audit A01).
     var thumbnailData: Data?
 
-    /// 导入时间
+    /// Import time
     var createdAt: Date
 
-    /// 最后修改时间
+    /// Last modified time
     var modifiedAt: Date
 
-    /// 图片/视频宽度（像素）
+    /// Image/video width (pixels)
     var width: Int?
 
-    /// 图片/视频高度（像素）
+    /// Image/video height (pixels)
     var height: Int?
 
-    /// 视频时长（秒）
+    /// Video duration (seconds)
     var duration: Double?
 
     // MARK: - Computed Properties
 
-    /// 媒体类型（计算属性）
+    /// Media type (computed property)
     @Transient
     var type: MediaType {
         get {
@@ -69,19 +69,19 @@ final class MediaItem {
         }
     }
 
-    /// 完整文件名（带扩展名）
+    /// Full file name (with extension)
     @Transient
     var fullFileName: String {
         fileName + fileExtension
     }
 
-    /// 格式化的文件大小
+    /// Formatted file size
     @Transient
     var formattedFileSize: String {
         ByteCountFormatter.string(fromByteCount: fileSize, countStyle: .file)
     }
 
-    /// 格式化的创建时间
+    /// Formatted creation date
     @Transient
     var formattedCreatedDate: String {
         let formatter = DateFormatter()
@@ -91,13 +91,13 @@ final class MediaItem {
         return formatter.string(from: createdAt)
     }
 
-    /// 是否有尺寸信息
+    /// Whether dimensions are available
     @Transient
     var hasDimensions: Bool {
         width != nil && height != nil
     }
 
-    /// 格式化的尺寸信息
+    /// Formatted dimensions
     @Transient
     var formattedDimensions: String? {
         guard let width = width, let height = height else {
@@ -106,7 +106,7 @@ final class MediaItem {
         return "\(width) × \(height)"
     }
 
-    /// 格式化的视频时长
+    /// Formatted video duration
     @Transient
     var formattedDuration: String? {
         guard let duration = duration else {
@@ -155,25 +155,25 @@ final class MediaItem {
 
     // MARK: - Methods
 
-    /// 更新最后修改时间
+    /// Update the last modified time
     func touch() {
         modifiedAt = Date()
     }
 
-    /// 设置尺寸信息
+    /// Set dimensions
     func setDimensions(width: Int, height: Int) {
         self.width = width
         self.height = height
         touch()
     }
 
-    /// 设置视频时长
+    /// Set video duration
     func setDuration(_ duration: Double) {
         self.duration = duration
         touch()
     }
 
-    /// 更新缩略图
+    /// Update thumbnail
     func updateThumbnail(_ data: Data?) {
         self.thumbnailData = data
         touch()
@@ -184,7 +184,7 @@ final class MediaItem {
 
 extension MediaItem: Comparable {
     static func < (lhs: MediaItem, rhs: MediaItem) -> Bool {
-        // 默认按创建时间降序排序（最新在前）
+        // Default: creation date descending (newest first)
         lhs.createdAt > rhs.createdAt
     }
 }
@@ -225,7 +225,7 @@ extension MediaItem {
             }
         }
 
-        /// 排序描述符
+        /// Sort descriptors
         var sortDescriptor: [SortDescriptor<MediaItem>] {
             switch self {
             case .dateNewest:
@@ -248,7 +248,7 @@ extension MediaItem {
             }
         }
 
-        /// SF Symbol图标
+        /// SF Symbol icon
         var icon: String {
             switch self {
             case .dateNewest:

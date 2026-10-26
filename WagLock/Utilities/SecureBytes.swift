@@ -2,16 +2,16 @@
 //  SecureBytes.swift
 //  WagLock
 //
-//  引用语义的敏感字节容器
-//  Data/Array 是写时复制（COW）值类型：对一个存在共享的值调用
-//  withUnsafeMutableBytes 会先复制缓冲区，清零的只是副本，
-//  原始明文仍留在内存中。这里用 class 独占持有字节、从不对外
-//  暴露底层存储，保证清零发生在真正的缓冲区上。
+//  Reference-semantics container for sensitive bytes
+//  Data/Array are copy-on-write (COW) value types: calling
+//  withUnsafeMutableBytes on a shared value copies the buffer first, so only the copy is zeroed
+//  and the original plaintext stays in memory. This class owns the bytes exclusively and never
+//  exposes the underlying storage, so zeroing happens on the real buffer.
 //
 
 import Foundation
 
-/// 持有会话密码等敏感字节，置换或释放时就地清零
+/// Holds sensitive bytes such as the session password; zeroed in place when replaced or released
 final class SecureBytes {
 
     private var storage: [UInt8]
@@ -20,7 +20,7 @@ final class SecureBytes {
         self.storage = Array(string.utf8)
     }
 
-    /// 以 String 形式读取（调用方仅在需要传递给加密接口时使用）
+    /// Read as a String (callers should do this only when passing it to an encryption API)
     var string: String? {
         String(bytes: storage, encoding: .utf8)
     }
@@ -29,8 +29,8 @@ final class SecureBytes {
         storage.isEmpty
     }
 
-    /// 就地清零。storage 从不对外暴露，引用唯一，不会触发 COW；
-    /// 使用 memset_s 避免被编译器优化掉
+    /// Zero in place. storage is never exposed and has a single reference, so no COW copy is triggered;
+    /// memset_s keeps the compiler from optimizing the wipe away
     func wipe() {
         storage.withUnsafeMutableBufferPointer { buffer in
             guard let baseAddress = buffer.baseAddress, buffer.count > 0 else { return }
