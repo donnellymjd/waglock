@@ -1,3 +1,5 @@
+> **October25 build60:** forgotten-password help and explicit erase/start-over are verified by342 unit/security tests and the full actual-release simulator workflow. [Evidence and deliberate hardware test](../release/evidence/build-60/README.md). Signed candidate60 is ready; phone installation/UAT is pending connection. Nothing has been erased on the phone. Earlier build notes below are historical.
+
 # WagLock development build and phone testing
 
 Working brand: **WagLock** — *We Always Guard*. This is an early functional test build using the inherited storage format. Cryptomator compatibility, cold recovery, independent encrypted decoys and the security findings in [D2S-105](audits/D2S-105.md) remain outstanding. Use disposable sample media.

@@ -77,3 +77,8 @@ An authenticated protected biometric grant is authoritative for its own target. 
 ## Password AutoFill — D2S-175
 
 Prepared opt-in config/PasswordAutoFill.xcconfig and hosting/autofill are production-only. Default AppStore config and Dev identity stay unchanged until live HTTPS/association and real provider UAT pass. Use tools/check_autofill_association.py to verify exact public App ID/domain, redirect-free JSON and actual signed app/profile; source entitlements alone are insufficient. Deploy only a verified dedicated hosting target, never the company's default Firebase site. Never add a fake username, primary/secondary domain or provider entry labels that reveal a second vault. No runtime credential submission, vault API, account or analytics is authorized. Providers may show multiple saved entries; do not promise decoy secrecy there. See docs/release/evidence/autofill-build59/README.md for status.
+
+
+## Explicit forgotten-password erase — D2S-176
+
+The owner authorized1.0 help and a deliberate erase/start-over flow, not automatic destruction of their current phone vaults. Follow docs/portable-vault/forgotten-password-and-erasure.md. Only a validated device-only explicit erase intent can authorize deletion; never infer consent from preferences/absent credentials. Keep unlock/Face ID/setup blocked during partial cleanup, preserve the intent until all scoped roots/Keychain/preferences are cleared, and resume only previously confirmed work. Scope the public release factory and exact namespace grammar; preserve external backups/Photos/Files, Dev, upstream/foreign namespaces and unknown paths. No destructive launch arguments or phone automation. Native recovery keys remain future work. Keep all help/confirmation wording neutral about vault count.

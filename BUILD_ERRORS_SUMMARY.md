@@ -1,3 +1,7 @@
+# Build60 forgotten-password help and explicit erasure — October25,2026
+
+Full342 unit/security tests passed (214 XCTest,128 Swift Testing), zero failures/skips, including8 reset tests: `/private/tmp/waglock-build60-security-final.xcresult`. Initial compilation rejected the pure filesystem validator from a detached deletion task; making it nonisolated corrected actor isolation without weakening validation. The initial actual-release UI attempts stopped before erasure at help presentation. Launch-cover accessibility exposure and the help card hit target were corrected; final actual-release workflow passes1 UI test in156.584seconds, including cancellation, background confirmation clearing, both old-passcode failures and fresh-library relaunch. The exported public age backup survives byte-for-byte. Evidence is maintained in [build60](docs/release/evidence/build-60/README.md). Destructive automation is confined to its dedicated disposable simulator; no phone library is erased by installation or tooling. Native recovery keys remain deferred.
+
 # Portable export / nested-vault implementation experiment — 2026-10-22
 
 - Implemented `WagLockPortableExportFixture` in the isolated Cryptomator package: generated format-8 outer vault, separate inner-password vault, encrypted name/content and completeness manifests. Does not read the phone library/Keychain or add an app dependency.

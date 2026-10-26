@@ -445,6 +445,89 @@ final class EncryptedReleaseUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts[guestTitle].exists)
     }
 
+    @MainActor func testExplicitEraseCancelsSafelyThenStartsAnIndependentFreshLibrary() throws {
+        guard ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"]?.hasPrefix("WagLock Encrypted Release QA Reset") == true else {
+            throw XCTSkip("Destructive UI test requires its dedicated disposable reset simulator")
+        }
+        let app = try launch()
+        let secondary = "PUBLIC-release-secondary-password"
+        let fresh = "PUBLIC-after-erase-password"
+        func note(_ title: String) {
+            app.buttons["Notes"].firstMatch.tap(); app.navigationBars.buttons["New"].tap()
+            replace(app.textFields["note.title"], with: title)
+            replace(app.textViews["note.content"], with: "PUBLIC disposable erase sample")
+            app.navigationBars.buttons["Done"].tap()
+            XCTAssertTrue(app.staticTexts[title].firstMatch.waitForExistence(timeout: 8))
+        }
+        func openErase() {
+            let help = app.buttons["password.help"]
+            XCTAssertTrue(help.waitForExistence(timeout: 10)); reveal(app, help); help.tap()
+            XCTAssertTrue(app.navigationBars["Can't unlock?"].waitForExistence(timeout: 5), app.debugDescription)
+            let instructions = app.descendants(matching: .any).matching(identifier: "recovery.instructions").firstMatch
+            reveal(app, instructions); XCTAssertTrue(instructions.exists)
+            XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "secondary vault")).firstMatch.exists)
+            let erase = app.buttons["recovery.erase.open"]; reveal(app, erase); erase.tap()
+            XCTAssertTrue(app.textFields["recovery.erase.confirmation"].waitForExistence(timeout: 5))
+        }
+        note("PUBLIC primary before erase")
+        app.buttons["Settings"].firstMatch.tap(); app.buttons["settings.security"].tap()
+        let configure = app.buttons["settings.guest.configure"]; reveal(app, configure); configure.tap()
+        replace(app.secureTextFields["guest.password"], with: secondary)
+        replace(app.secureTextFields["guest.password.confirm"], with: secondary)
+        app.buttons["guest.password.save"].tap()
+        XCTAssertTrue(app.staticTexts["Alternative passcode configured"].waitForExistence(timeout: 10))
+        app.terminate(); app.launch(); unlock(app, password: secondary)
+        XCTAssertTrue(app.buttons["photos.albums"].waitForExistence(timeout: 15))
+        note("PUBLIC separate before erase")
+        app.terminate(); app.launch(); openErase()
+        let field = app.textFields["recovery.erase.confirmation"]
+        let acknowledge = app.switches["recovery.erase.acknowledge"]
+        let erase = app.buttons["recovery.erase.confirm"]
+        XCTAssertFalse(erase.isEnabled)
+        replace(field, with: "ERASE"); XCTAssertFalse(erase.isEnabled)
+        acknowledge.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+        XCTAssertEqual(acknowledge.value as? String, "1"); XCTAssertTrue(erase.isEnabled)
+        XCUIDevice.shared.press(.home); app.activate()
+        XCTAssertTrue(field.waitForExistence(timeout: 8))
+        XCTAssertFalse(erase.isEnabled)
+        XCTAssertEqual(acknowledge.value as? String, "0")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["Done"].tap()
+        unlock(app, password: owner)
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["PUBLIC primary before erase"].waitForExistence(timeout: 8))
+        app.terminate(); app.launch(); unlock(app, password: secondary)
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["PUBLIC separate before erase"].waitForExistence(timeout: 8))
+        app.terminate(); app.launch(); openErase()
+        replace(field, with: "ERASE")
+        acknowledge.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+        XCTAssertEqual(acknowledge.value as? String, "1")
+        reveal(app, erase); erase.tap()
+        let setup = app.secureTextFields["setup.password"]
+        XCTAssertTrue(setup.waitForExistence(timeout: 30), app.debugDescription)
+        replace(setup, with: fresh)
+        replace(app.secureTextFields["setup.confirmPassword"], with: fresh + "\n")
+        XCTAssertTrue(app.buttons["photos.albums"].waitForExistence(timeout: 20), app.debugDescription)
+        app.buttons["Notes"].firstMatch.tap()
+        XCTAssertFalse(app.staticTexts["PUBLIC primary before erase"].exists)
+        XCTAssertFalse(app.staticTexts["PUBLIC separate before erase"].exists)
+        note("PUBLIC after erase")
+        app.buttons["Settings"].firstMatch.tap(); app.buttons["settings.security"].tap()
+        XCTAssertTrue(app.buttons["settings.guest.configure"].exists)
+        XCTAssertFalse(app.staticTexts["Alternative passcode configured"].exists)
+        app.terminate(); app.launch()
+        XCTAssertFalse(app.buttons["vault.faceID.unlock"].exists)
+        for old in [owner, secondary] {
+            unlock(app, password: old)
+            XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "password.error").firstMatch.waitForExistence(timeout: 8))
+            XCTAssertFalse(app.buttons["photos.albums"].exists)
+        }
+        unlock(app, password: fresh)
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["PUBLIC after erase"].waitForExistence(timeout: 8))
+    }
+
     @MainActor func testReleasePasswordChangePreservesLibrary() throws {
         let app = try launch()
         app.buttons["Notes"].firstMatch.tap(); app.navigationBars.buttons["New"].tap()

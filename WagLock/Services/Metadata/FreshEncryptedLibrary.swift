@@ -146,7 +146,7 @@ enum FreshEncryptedLibrary {
     private static func exists(_ url: URL) -> Bool {
         var value = stat(); return lstat(url.path, &value) == 0
     }
-    static func safe(_ url: URL) throws {
+    nonisolated static func safe(_ url: URL) throws {
         guard url.isFileURL else { throw Failure.unsafePath }
         // Foundation can abbreviate an already-resolved /private/var URL back to
         // /var. Expand only verified OS aliases, as the ciphertext index does;

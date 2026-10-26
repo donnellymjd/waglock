@@ -55,6 +55,8 @@ struct WagLockApp: App {
                         .padding(32).frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(ColorTheme.primaryBackground)
                         .accessibilityIdentifier("privacy.screenCapture")
+                    } else if authViewModel.requiresEraseCompletion {
+                        EraseCompletionView().environmentObject(authViewModel)
                     } else if authViewModel.isAuthenticated
                         && guestModeManager.currentMode != .unauthenticated
                     {
@@ -83,6 +85,7 @@ struct WagLockApp: App {
                         }
                     }
                 }
+                .accessibilityHidden(showLaunchScreen)
                 .onAppear {
                     // 应用启动时检查密码状态
                     authViewModel.checkPasswordStatus()

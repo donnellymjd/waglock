@@ -1,0 +1,8 @@
+{
+  "publicFixture": "tools/fixtures/encrypted-library-backup/public-fixture.tar.age",
+  "sha256": "31791d4dd81cffd831e73b8607fa350597c07ba5856ec59d895de7accb57a81f",
+  "backupOutsideVaultPreserved": true,
+  "freshPrimaryMetadataExists": true,
+  "previousSecondaryMetadataRootRemoved": true,
+  "ownerPhoneErased": false
+}

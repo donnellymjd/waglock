@@ -81,6 +81,12 @@ final class AuthenticationViewModel: ObservableObject {
 
     private let maxAttempts = 5  // 最多尝试5次
 
+    @Published private(set) var requiresEraseCompletion = false
+    @Published private(set) var isErasing = false
+    @Published private(set) var eraseError: String?
+    private let resetService: VaultResetService?
+    var canEraseLocalData: Bool { resetService != nil }
+
     // MARK: - Services
 
     typealias DataPasswordLoader = @MainActor (String) async throws -> String
@@ -108,7 +114,9 @@ final class AuthenticationViewModel: ObservableObject {
          dataPasswordLoader: DataPasswordLoader? = nil, exportService: ExportService? = nil,
          documentPreviewService: DocumentPreviewService? = nil, attemptLimiter: PasswordAttemptLimiter? = nil,
          independentVaultsEnabled: Bool = LibraryStoragePolicy.encryptedMetadata,
-         contextFactory: ContextFactory? = nil, biometrics: (any BiometricSecretStoring)? = nil) {
+         contextFactory: ContextFactory? = nil, biometrics: (any BiometricSecretStoring)? = nil,
+         resetService: VaultResetService? = nil) {
+        self.resetService = resetService ?? (manageInstallationState ? VaultResetService.live() : nil)
         self.independentVaultsEnabled = independentVaultsEnabled
         self.contextFactory = contextFactory
         self.biometrics = biometrics ?? BiometricSecretStore.shared
@@ -144,12 +152,20 @@ final class AuthenticationViewModel: ObservableObject {
 
     /// 检查密码设置状态
     func checkPasswordStatus() {
+        if let resetService {
+            do { requiresEraseCompletion = try resetService.hasPendingErase() }
+            catch {
+                requiresEraseCompletion = true
+                eraseError = "Unable to check erasure status. Unlock your device and retry."
+            }
+        }
+        guard !requiresEraseCompletion else { return }
         isPasswordSet = keychainService.isPasswordSet()
     }
 
     /// 设置密码（首次）
     func setupPassword() {
-        guard !isProcessing else { return }
+        guard !isProcessing, !requiresEraseCompletion, !isErasing else { return }
 
         // 清除之前的错误
         errorMessage = nil
@@ -202,7 +218,7 @@ final class AuthenticationViewModel: ObservableObject {
     /// 登录验证
     @discardableResult
     func login() -> Task<Void, Never>? {
-        guard !isProcessing else { return nil }
+        guard !isProcessing, !requiresEraseCompletion, !isErasing else { return nil }
 
         // 取消之前的登录任务
         loginTask?.cancel()
@@ -400,7 +416,7 @@ final class AuthenticationViewModel: ObservableObject {
     }
 
     func loginWithBiometrics() async {
-        guard !isProcessing, !isAuthenticated, isPasswordSet, isBiometricUnlockEnabled else { return }
+        guard !isProcessing, !requiresEraseCompletion, !isErasing, !isAuthenticated, isPasswordSet, isBiometricUnlockEnabled else { return }
         isProcessing = true
         errorMessage = nil
         let token = authenticationGeneration
@@ -564,16 +580,48 @@ final class AuthenticationViewModel: ObservableObject {
         return LibraryMountCoordinator()
     }
 
+    /// The UI supplies the exact typed confirmation; merely opening help never erases.
+    func eraseLocalData(confirmation: String) async {
+        guard confirmation == "ERASE", !isAuthenticated, !isProcessing, !isErasing,
+              !requiresEraseCompletion, let resetService else { return }
+        logout()
+        isErasing = true; requiresEraseCompletion = true; eraseError = nil
+        defer { isErasing = false }
+        do {
+            try resetService.begin()
+            _ = try await resetService.resume()
+            finishErasureState()
+        } catch { eraseError = "Erasure could not finish. Unlock your device and retry. WagLock stays locked until cleanup completes." }
+    }
+
+    func resumePendingErase() async {
+        guard !isErasing, let resetService else { return }
+        logout()
+        isErasing = true; eraseError = nil
+        defer { isErasing = false }
+        do {
+            _ = try await resetService.resume()
+            finishErasureState()
+        } catch { eraseError = "Erasure could not finish. Unlock your device and retry. WagLock stays locked until cleanup completes." }
+    }
+
+    private func finishErasureState() {
+        requiresEraseCompletion = false
+        isBiometricUnlockEnabled = UserDefaults.standard.bool(forKey: "vaultito.faceID.enabled")
+        failedAttempts = 0; lockoutUntil = nil
+        clearFields(); checkPasswordStatus()
+    }
+
     // MARK: - Computed Properties
 
     /// 设置密码按钮是否可用
     var isSetupButtonEnabled: Bool {
-        !password.isEmpty && !confirmPassword.isEmpty && !isProcessing
+        !password.isEmpty && !confirmPassword.isEmpty && !isProcessing && !requiresEraseCompletion && !isErasing
     }
 
     /// 登录按钮是否可用
     var isLoginButtonEnabled: Bool {
-        !password.isEmpty && !isProcessing
+        !password.isEmpty && !isProcessing && !requiresEraseCompletion && !isErasing
     }
 }
 

@@ -41,3 +41,5 @@ WagLock is an independent fork of [SealedPocket / ZeroNet Space](https://github.
 Start with these docs and the root [AGENTS.md](../../AGENTS.md). Historical upstream docs remain for provenance and must not be read as audited WagLock promises. The working name is WagLock; the original Linear project is titled Portable Vault. The `docs/portable-vault/` path and source snapshot are retained for continuity. The development build has separate WagLock branding and app/Keychain identity. Build 23 extends the inherited stream format for new writes while retaining legacy readers; it performs no automatic conversion.
 
 - [Fresh encrypted release library: bootstrap, persistence, recovery and limits](fresh-encrypted-library.md)
+
+- [Forgotten-password help and deliberate erasure](forgotten-password-and-erasure.md) — D2S-176; no password bypass or native recovery key.

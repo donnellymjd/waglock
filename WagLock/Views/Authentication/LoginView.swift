@@ -34,13 +34,14 @@ struct LoginView: View {
                         .frame(maxWidth: .infinity)
                     Button { showPasswordHelp = true } label: {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Need help unlocking?").font(.body).foregroundStyle(ColorTheme.accent)
-                            Text("There is no password reset. Keep your password and independent originals.")
+                            Text("Can’t unlock?").font(.body).foregroundStyle(ColorTheme.accent)
+                            Text(viewModel.canEraseLocalData ? "Try saved access, recover a backup, or learn how to start over." : "Try saved access or recover an exported backup.")
                                 .font(.footnote).foregroundStyle(ColorTheme.secondaryText)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading).padding(16)
                         .background(ColorTheme.tertiaryBackground, in: RoundedRectangle(cornerRadius: 16))
-                    }.buttonStyle(.plain)
+                        .contentShape(Rectangle())
+                    }.buttonStyle(.plain).accessibilityIdentifier("password.help")
                 }
                 .foregroundStyle(ColorTheme.primaryText)
                 .padding(.horizontal, 24).padding(.top, 24).padding(.bottom, 20)
@@ -50,10 +51,8 @@ struct LoginView: View {
             .scrollDismissesKeyboard(.interactively)
             .background(ColorTheme.primaryBackground.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
-            .alert("Password help", isPresented: $showPasswordHelp) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("There is no password reset. Face ID may help only if you previously enabled it. Keep independent originals; reinstalling will not recover a forgotten password.")
+            .sheet(isPresented: $showPasswordHelp) {
+                UnlockHelpView().environmentObject(viewModel)
             }
         }
         .loadingOverlay(isShowing: viewModel.isProcessing, message: String(localized: "login.verifying"))
