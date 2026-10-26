@@ -187,13 +187,26 @@ final class SecondaryVaultAuthenticationTests: XCTestCase {
     }
 
     func testSecondaryPasswordCollisionNeverSelectsOrChangesThePrimaryVault() async throws {
+        let previous = UserDefaults.standard.object(forKey: "vaultito.faceID.enabled")
+        defer { UserDefaults.standard.set(previous, forKey: "vaultito.faceID.enabled") }
         let (auth, keychain, _, _) = try fixture()
         defer { auth.logout() }
         try await login(auth, "PUBLIC-primary-password")
         try auth.provisionSecondaryVault(password: "PUBLIC-secondary-password")
+        let primarySecret = try XCTUnwrap(auth.sessionPassword)
+        let primaryStorage = try XCTUnwrap(auth.vaultContext).storage
+        let primaryPlaintext = Data("PUBLIC primary collision recovery sample".utf8)
+        let primaryFile = try primaryStorage.saveEncrypted(data: EncryptionService.shared.encrypt(
+            data: primaryPlaintext, password: primarySecret))
+        try await auth.enableBiometricUnlock(password: "PUBLIC-primary-password")
         auth.logout()
         try await login(auth, "PUBLIC-secondary-password")
-        let id = auth.secondaryVaultID, secret = auth.sessionPassword
+        let id = try XCTUnwrap(auth.secondaryVaultID)
+        let secret = try XCTUnwrap(auth.sessionPassword)
+        let secondaryStorage = try XCTUnwrap(auth.vaultContext).storage
+        let secondaryPlaintext = Data("PUBLIC secondary collision recovery sample".utf8)
+        let secondaryFile = try secondaryStorage.saveEncrypted(data: EncryptionService.shared.encrypt(
+            data: secondaryPlaintext, password: secret))
         try auth.updatePassword(oldPassword: "PUBLIC-secondary-password", newPassword: "PUBLIC-primary-password")
         XCTAssertTrue(keychain.verifyPassword("PUBLIC-primary-password"))
         auth.logout()
@@ -201,11 +214,41 @@ final class SecondaryVaultAuthenticationTests: XCTestCase {
         XCTAssertEqual(auth.secondaryVaultID, id)
         XCTAssertEqual(auth.sessionPassword, secret)
         XCTAssertFalse(auth.isPrimaryVault)
-        // Changing it back restores ordinary primary-password routing without changing either data key.
+        // A password collision does not retarget the existing primary biometric grant.
+        auth.logout()
+        await auth.loginWithBiometrics()
+        XCTAssertTrue(auth.isAuthenticated)
+        XCTAssertTrue(auth.isPrimaryVault)
+        XCTAssertEqual(auth.sessionPassword, primarySecret)
+        auth.disableBiometricUnlock()
+        XCTAssertFalse(auth.isBiometricUnlockEnabled)
+        auth.logout()
+        await auth.loginWithBiometrics()
+        XCTAssertFalse(auth.isAuthenticated)
+        try await login(auth, "PUBLIC-primary-password")
+        XCTAssertEqual(auth.secondaryVaultID, id)
+        // Recovery must work without Face ID: move only the selected secondary password.
         try auth.updatePassword(oldPassword: "PUBLIC-primary-password", newPassword: "PUBLIC-secondary-new-password")
+        XCTAssertEqual(auth.secondaryVaultID, id)
+        XCTAssertEqual(auth.sessionPassword, secret)
         auth.logout()
         try await login(auth, "PUBLIC-primary-password")
         XCTAssertTrue(auth.isPrimaryVault)
+        XCTAssertEqual(auth.sessionPassword, primarySecret)
+        XCTAssertEqual(try XCTUnwrap(auth.vaultContext).storage.getStorageDirectory().path,
+            primaryStorage.getStorageDirectory().path)
+        let primaryCiphertext = try Data(contentsOf: primaryStorage.getFileURL(for: primaryFile))
+        XCTAssertEqual(try EncryptionService.shared.decrypt(encryptedData: primaryCiphertext,
+            password: try XCTUnwrap(auth.sessionPassword)), primaryPlaintext)
+        auth.logout()
+        try await login(auth, "PUBLIC-secondary-new-password")
+        XCTAssertEqual(auth.secondaryVaultID, id)
+        XCTAssertEqual(auth.sessionPassword, secret)
+        XCTAssertEqual(try XCTUnwrap(auth.vaultContext).storage.getStorageDirectory().path,
+            secondaryStorage.getStorageDirectory().path)
+        let secondaryCiphertext = try Data(contentsOf: secondaryStorage.getFileURL(for: secondaryFile))
+        XCTAssertEqual(try EncryptionService.shared.decrypt(encryptedData: secondaryCiphertext,
+            password: try XCTUnwrap(auth.sessionPassword)), secondaryPlaintext)
     }
 
     func testSettingsPasswordGuessingBudgetPersistsAndCannotChangeCredentialsOrEnroll() async throws {

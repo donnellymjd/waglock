@@ -1,3 +1,5 @@
+> **Submission hold — October26, D2S-178:** main-password login can be shadowed by a matching secondary password after a secondary password change. [Incident and non-destructive recovery](../../portable-vault/password-collision-incident.md). Preserve both vaults. Phone recovery and the collision/recoverability design remain open; earlier passing tests do not clear this hold.
+
 > **October26 current candidate: build62.** [Vault-password backup option and private reminders](../evidence/build-62/README.md) passes349 unit/security tests, actual-release UI and independent public-fixture age/helper recovery. Installed over61 with Dev44 retained; owner UAT and account-side distribution gates remain. Older checkpoints below are historical. No upload/submission.
 
 > **October26 current candidate: build61.** [Explicit confirmation after password-manager fill](../evidence/build-61/README.md) passes the actual-release UI workflow and signed package/live association checks. Installed over60 with Dev44 retained; owner1Password UAT is pending. Older checkpoints below are historical. No upload/submission.

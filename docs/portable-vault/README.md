@@ -4,6 +4,7 @@
 
 WagLock is an independent fork of [SealedPocket / ZeroNet Space](https://github.com/materialofair/zeroNet_Space). This project is based on ZeroNet Space but is not the official version.
 
+- [Password collision incident and recovery](password-collision-incident.md): D2S-178 release hold, non-destructive recovery and unresolved collision UX.
 - [Encrypted backup and independent recovery](backup-recovery.md): build40 readable filenames/albums, editable export filename, password/recovery-key choices, separate protected child archives and native Files/cloud destinations.
 - [Age backup architecture](age-backup-design.md): format, source/license inventory, lifecycle and remaining gates.
 - [Complete-library snapshot groundwork](portable-export-snapshot.md): read-only owner capture, complete current-model inventory and nested domains used by the backup writer.

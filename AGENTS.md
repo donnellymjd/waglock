@@ -90,3 +90,8 @@ D2S-175 owner reports1Password fills only the first new-password field on setup/
 ## Backup convenience and reminders — D2S-177/build62
 
 Follow docs/portable-vault/backup-password-and-reminders.md. Current-vault-password reuse requires explicit risk consent and selected-vault fresh verification through the durable settings budget; never recover an unlock password from a data key/Face ID grant or lower independent new-backup password requirements. Preserve all separate album factors and origin/session guards. Default monthly reminders are device-only, per-vault and unlocked-only; do not add lock-screen notifications, automatic backups/uploads or cross-vault UI disclosure. Record saved dates only from successful Files callbacks in the original active context; preparation/cancellation/stale callbacks do not count, and provider acceptance is not cloud completion. Preserve checked Keychain errors and the exact erase namespace coverage.
+
+
+## D2S-178 password collision incident — October26
+
+Build62 owner reports main access shadowed after changing the secondary password to match the primary and disabling Face ID. Submission is on hold. Follow [incident recovery and constraints](docs/portable-vault/password-collision-incident.md). Preserve both libraries and keys; changing only the currently accessible secondary password to a distinct value is the existing non-destructive recovery path, pending actual phone confirmation. Do not reset/uninstall or reintroduce the D2S-165 primary-password oracle or primary-first ordinary collision login. Automated recovery evidence does not resolve the remaining collision/recoverability product-design gate.
