@@ -1,14 +1,14 @@
-# WagLock1.0 submission package — build64 preparation
+# WagLock1.0 submission package — build64 verified local candidate
 
-Build63 is the owner-accepted security/provider baseline. Build64 adds an editable date/time-stamped backup default and uses the accepted dedicated password-manager association in the standard release configuration. Do not submit until build64 verification and the external gates below pass. [Current pre-launch ledger](../prelaunch-status.md) is authoritative; old build50/53 handoffs and screenshots are historical.
+Build63 is the owner-accepted security/provider baseline. Build64 adds an editable date/time-stamped backup default and uses the accepted dedicated password-manager association in the standard release configuration. Build64 local engineering checks pass; a short phone filename check and the external gates below remain. [Current pre-launch ledger](../prelaunch-status.md) is authoritative; old build50/53 handoffs and screenshots are historical.
 
 ## Exact package
 
 - App/bundle: WagLock1.0, `com.d2sci.waglock`, build64. Keep WagLock Dev separate.
-- Archive being verified: `/private/tmp/WagLock-1.0-build64-prelaunch.xcarchive`.
-- Intended source freeze: `candidate-1.0-build64`; create only after verification, with its source/archive receipt in build64 evidence. Never retag accepted63.
+- Verified signed development archive: `/private/tmp/WagLock-1.0-build64-prelaunch.xcarchive`.
+- Frozen source: `candidate-1.0-build64` (`e0240c2`), with source/archive digest in build64 evidence. Never retag accepted candidates.
 - Copy-ready fields: [metadata](metadata.json), [description](description.txt), [review walkthrough](review-notes.txt), [release notes](release-notes.txt), [encryption facts](encryption-brief.md).
-- Current screenshots target: [build64](../screenshots/build64/README.md), once captured and visually checked; never label older captures as64.
+- Verified native screenshots: [build64](../screenshots/build64/README.md), eight visually inspected public iPhone/iPad captures. Never label older captures as64.
 - Price: Free. Release: Manual. Worldwide where permitted, subject to the encryption/territory determination.
 
 ## Remaining account/approval gates
