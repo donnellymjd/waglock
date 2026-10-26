@@ -1,0 +1,13 @@
+{
+  "bundleIdentifier": "com.d2sci.waglock",
+  "version": "1.0",
+  "build": "61",
+  "previousBuild": "60",
+  "installationSucceeded": true,
+  "installedVersionVerified": true,
+  "separateDevBuildRetained": "44",
+  "uninstalled": false,
+  "phoneErased": false,
+  "privateContentRead": false,
+  "onePasswordUAT": "pending"
+}

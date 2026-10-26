@@ -103,6 +103,9 @@ struct GuestModeSetupView: View {
                     }
                     .padding(.vertical, 4)
 
+                    PasswordConfirmationButton(password: guestPassword,
+                        confirmation: $confirmPassword, identifier: "guest.password.confirmEntered")
+
                     PasswordStrengthView(password: guestPassword)
                 } header: {
                     Text(String(localized: "guestMode.password.label"))

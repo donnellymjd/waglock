@@ -43,6 +43,29 @@ struct PasswordStrengthView: View {
     }
 }
 
+/// Explicit confirmation for providers that fill only the focused password field.
+/// No typing/paste heuristic, clipboard access, automatic mirroring or submission.
+struct PasswordConfirmationButton: View {
+    let password: String
+    @Binding var confirmation: String
+    let identifier: String
+
+    var body: some View {
+        Button {
+            confirmation = password
+            hideKeyboard()
+        } label: {
+            Label("Use entered password", systemImage: "checkmark")
+                .frame(minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.borderless)
+        .accessibilityIdentifier(identifier)
+        .accessibilityHint("Fill confirmation with the password above. This does not save it.")
+        .disabled(password.isEmpty || password.utf8.elementsEqual(confirmation.utf8))
+    }
+}
+
 /// Reloads the live keyboard without recreating the field, filtering text or losing its selection.
 struct SwitchablePasswordField: UIViewRepresentable {
     let title: String

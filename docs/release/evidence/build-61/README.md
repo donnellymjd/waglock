@@ -1,0 +1,19 @@
+# Build61 — explicit confirmation after password-manager fill
+
+D2S-175 follow-up, October26,2026. Owner uses1Password and reports only the first new-password field fills during both initial setup and changes. Existing main/new/confirmation content types already follow [Apple’s text-input AutoFill guidance](https://developer.apple.com/documentation/security/enabling-password-autofill-on-a-text-input-view). [1Password’s native AutoFill instructions](https://support.1password.com/ios-autofill/) explain provider setup/fill and associated domains. Correct hints and a live association are not proof that the actual provider fills both fields in every form. Do not claim this change repairs automatic pairing.
+
+Initial setup, password changes and alternative-passcode setup now offer **Use entered password** beside confirmation. It copies the entered new password directly into that form’s confirmation only after an explicit tap, dismisses the keyboard and never submits. The action is disabled for an empty password or an exact byte-matching confirmation and during submission. Manual confirmation/mismatch validation and all existing newPassword hints remain. No clipboard, AutoFill/typing heuristic, continuous mirroring, password normalization, storage, credential, KDF or associated-domain changes. Existing password-input clearing on background/disappearance is retained.
+
+Signed1.0(61) archive `/private/tmp/WagLock-1.0-build61-confirmation.xcarchive` and actual Release simulator build pass. Package and live signed-app/domain/profile association checks pass (receipts here). The targeted release UI test uses a fresh named disposable simulator and public fixture strings; it is not an actual1Password extension test. Prior342 security/unit passes belong to build60; this UI-only change does not claim a repeated full suite.
+
+Final UI results, source tag and phone installation/UAT will be recorded below. No vault erase or private-content inspection is authorized by this work. Default AppStore config remains unchanged pending provider UAT; this candidate retains installed60’s opt-in association. No App Store upload/submission.
+
+Early UI attempts corrected harness assumptions about setup submit-time rejection, keyboard-obscured scrolling and native keyboard submission. These required only test changes; authentication/validation code is unchanged. Failure results remain in local `/private/tmp/waglock-build61-confirmation-ui*` bundles.
+
+## Final release UI verification
+
+Actual separately installed Release workflow passes1 test, zero failures/skips,88.821seconds (`/private/tmp/waglock-build61-confirmation-ui-submit.xcresult`, iPhone16/iOS18.4). It checks empty-action disabling, no typing mirroring, manual mismatch rejection, explicit confirmation followed by fresh setup; creates a note; checks change-form mismatches, explicit confirmation without submission and field clearing on background; changes the password, rejects the former one and reopens the same note after relaunch. Alternative-passcode setup uses the same explicit action and opens its independent library, where the primary note is absent. Only public fixture passwords/content were used. This proves our explicit fallback, not actual1Password multi-field AutoFill.
+
+Source tag: `candidate-1.0-build61`. Hardware/provider acceptance and installation receipt follow. No reset, uninstall or migration is part of this update.
+
+Build61 installed successfully over60 on the owner’s connected iPhone. Installed inventory confirms WagLock1.0(61) and retained WagLock Dev1.3.8(44). Both vaults were preserved; no phone reset, destructive tap, private-content read or migration. Owner1Password UAT remains pending: fill the new password with1Password, tap Use entered password, save separately and verify relaunch with the new password and retained disposable sample. Do not send passwords or private content.

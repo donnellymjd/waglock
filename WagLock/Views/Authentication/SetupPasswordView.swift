@@ -199,6 +199,10 @@ struct SetupPasswordView: View {
                 .background(ColorTheme.secondaryBackground)
                 .cornerRadius(12)
 
+                PasswordConfirmationButton(password: viewModel.password,
+                    confirmation: $viewModel.confirmPassword, identifier: "setup.confirmEntered")
+                    .disabled(viewModel.isProcessing)
+
                 // Password match indicator
                 if !viewModel.confirmPassword.isEmpty {
                     HStack {
@@ -282,6 +286,7 @@ struct SetupPasswordView: View {
         }
         .buttonStyle(WagLockPrimaryButtonStyle())
         .disabled(!viewModel.isSetupButtonEnabled)
+        .accessibilityIdentifier("setup.save")
     }
 
     /// Password hints

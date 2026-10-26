@@ -528,6 +528,97 @@ final class EncryptedReleaseUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["PUBLIC after erase"].waitForExistence(timeout: 8))
     }
 
+    @MainActor func testExplicitPasswordConfirmationKeepsManualMismatchChecksAndPreservesLibrary() throws {
+        guard ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"]?.hasPrefix("WagLock Encrypted Release QA Confirmation") == true else {
+            throw XCTSkip("Requires a fresh disposable confirmation-form simulator")
+        }
+        continueAfterFailure = false
+        let app = XCUIApplication(bundleIdentifier: "com.d2sci.waglock")
+        app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-waglock.passwordKeyboard", "fullKeyboard"]
+        app.launch()
+        func reach(_ element: XCUIElement) {
+            let scroll = app.scrollViews.firstMatch
+            for _ in 0..<8 {
+                if element.exists && element.isHittable { return }
+                if element.exists && element.frame.minY < scroll.frame.minY { scroll.swipeDown() }
+                else { scroll.swipeUp() }
+            }
+            XCTAssertTrue(element.isHittable, app.debugDescription)
+        }
+        let original = "PUBLIC-confirmation*._-setup"
+        let replacement = "PUBLIC-confirmation*._-changed"
+        let first = app.secureTextFields["setup.password"]
+        let confirmation = app.secureTextFields["setup.confirmPassword"]
+        let use = app.buttons["setup.confirmEntered"], save = app.buttons["setup.save"]
+        XCTAssertTrue(first.waitForExistence(timeout: 15))
+        reach(use); XCTAssertFalse(use.isEnabled)
+        replace(first, with: original)
+        XCTAssertEqual(confirmation.value as? String, confirmation.placeholderValue)
+        replace(confirmation, with: "PUBLIC manual mismatch" + "\n")
+        XCTAssertTrue(first.exists, "A mismatch must not create a library")
+        XCTAssertTrue(app.staticTexts["Passwords do not match"].firstMatch.exists)
+        reach(use); use.tap()
+        XCTAssertTrue(save.isEnabled)
+        replace(first, with: original + "x")
+        confirmation.tap(); confirmation.typeText("\n")
+        XCTAssertTrue(first.exists, "Editing must not silently mirror into confirmation")
+        XCTAssertTrue(app.staticTexts["Passwords do not match"].firstMatch.exists)
+        replace(first, with: original)
+        confirmation.tap(); confirmation.typeText("\n")
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 20))
+        app.buttons["Notes"].firstMatch.tap(); app.navigationBars.buttons["New"].tap()
+        replace(app.textFields["note.title"], with: "PUBLIC confirmation sample")
+        replace(app.textViews["note.content"], with: "PUBLIC note survives the explicit confirmation password change")
+        app.navigationBars.buttons["Done"].tap()
+        func openChange() {
+            app.buttons["Settings"].firstMatch.tap(); app.buttons["settings.security"].tap()
+            app.buttons["settings.changePassword"].tap()
+            XCTAssertTrue(app.secureTextFields["passwordChange.current"].waitForExistence(timeout: 8))
+        }
+        func fillChange() {
+            replace(app.secureTextFields["passwordChange.current"], with: original)
+            replace(app.secureTextFields["passwordChange.new"], with: replacement)
+            let confirm = app.secureTextFields["passwordChange.confirm"]
+            XCTAssertEqual(confirm.value as? String, confirm.placeholderValue)
+            replace(confirm, with: "PUBLIC another manual mismatch")
+            XCTAssertFalse(app.buttons["passwordChange.save"].isEnabled)
+            let button = app.buttons["passwordChange.confirmEntered"]
+            reach(button); button.tap()
+            XCTAssertTrue(app.buttons["passwordChange.save"].isEnabled)
+            XCTAssertTrue(app.secureTextFields["passwordChange.current"].exists, "Confirmation must not submit")
+        }
+        openChange(); fillChange()
+        replace(app.secureTextFields["passwordChange.new"], with: replacement + "x")
+        XCTAssertFalse(app.buttons["passwordChange.save"].isEnabled)
+        XCUIDevice.shared.press(.home); app.activate(); unlock(app, password: original)
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15))
+        openChange()
+        for id in ["passwordChange.current", "passwordChange.new", "passwordChange.confirm"] {
+            let field = app.secureTextFields[id]
+            XCTAssertEqual(field.value as? String, field.placeholderValue)
+        }
+        fillChange()
+        let change = app.buttons["passwordChange.save"]; reach(change); change.tap()
+        XCTAssertTrue(app.buttons["Photos"].firstMatch.waitForExistence(timeout: 20))
+        app.terminate(); app.launch(); unlock(app, password: original)
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "password.error").firstMatch.waitForExistence(timeout: 8))
+        unlock(app, password: replacement)
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["PUBLIC confirmation sample"].waitForExistence(timeout: 8))
+        app.buttons["Settings"].firstMatch.tap(); app.buttons["settings.security"].tap()
+        let configure = app.buttons["settings.guest.configure"]; reach(configure); configure.tap()
+        let secondary = "PUBLIC-confirmation*._-alternative"
+        replace(app.secureTextFields["guest.password"], with: secondary)
+        XCTAssertFalse(app.buttons["guest.password.save"].isEnabled)
+        let guestUse = app.buttons["guest.password.confirmEntered"]; reach(guestUse); guestUse.tap()
+        XCTAssertTrue(app.buttons["guest.password.save"].isEnabled)
+        app.buttons["guest.password.save"].tap()
+        XCTAssertTrue(app.staticTexts["Alternative passcode configured"].waitForExistence(timeout: 10))
+        app.terminate(); app.launch(); unlock(app, password: secondary)
+        XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
+        XCTAssertFalse(app.staticTexts["PUBLIC confirmation sample"].exists)
+    }
+
     @MainActor func testReleasePasswordChangePreservesLibrary() throws {
         let app = try launch()
         app.buttons["Notes"].firstMatch.tap(); app.navigationBars.buttons["New"].tap()

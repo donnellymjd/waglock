@@ -82,3 +82,7 @@ Prepared opt-in config/PasswordAutoFill.xcconfig and hosting/autofill are produc
 ## Explicit forgotten-password erase — D2S-176
 
 The owner authorized1.0 help and a deliberate erase/start-over flow, not automatic destruction of their current phone vaults. Follow docs/portable-vault/forgotten-password-and-erasure.md. Only a validated device-only explicit erase intent can authorize deletion; never infer consent from preferences/absent credentials. Keep unlock/Face ID/setup blocked during partial cleanup, preserve the intent until all scoped roots/Keychain/preferences are cleared, and resume only previously confirmed work. Scope the public release factory and exact namespace grammar; preserve external backups/Photos/Files, Dev, upstream/foreign namespaces and unknown paths. No destructive launch arguments or phone automation. Native recovery keys remain future work. Keep all help/confirmation wording neutral about vault count.
+
+## Explicit password confirmation — build61
+
+D2S-175 owner reports1Password fills only the first new-password field on setup/change. The explicit Use entered password action is a fallback, not verified provider pairing. Preserve newPassword hints, independent manual mismatch validation, exact text and background clearing. Never guess AutoFill from input length/paste, mirror typing automatically, use clipboard access or submit from this action. See docs/release/evidence/build-61/README.md.

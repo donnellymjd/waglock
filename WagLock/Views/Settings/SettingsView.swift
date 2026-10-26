@@ -412,6 +412,9 @@ struct ChangePasswordView: View {
                     .keyboardType(keyboard.keyboardType)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    PasswordConfirmationButton(password: newPassword,
+                        confirmation: $confirmPassword, identifier: "passwordChange.confirmEntered")
+                        .disabled(isChanging)
                     PasswordStrengthView(password: newPassword)
                 } header: {
                     Text(String(localized: "settings.changePassword"))
