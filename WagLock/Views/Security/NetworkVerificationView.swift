@@ -18,7 +18,7 @@ struct NetworkVerificationView: View {
                 if LibraryStoragePolicy.encryptedMetadata {
                     WagLockInfoCard(title: "Keep a recoverable backup", detail: "Use Encrypted backup and keep its recovery credentials. Do not rely on reinstalling the app, Face ID or an iOS device backup to restore device-only keys.")
                 } else {
-                    WagLockInfoCard(title: "Early test build", detail: "Portable recovery, protected metadata and independent alternative vaults are still in development. Keep independent originals.")
+                    WagLockInfoCard(title: "Early test build", detail: "Portable recovery and protected metadata are still in development. Keep independent originals.")
                 }
             }.padding(24)
         }.background(ColorTheme.primaryBackground.ignoresSafeArea()).navigationTitle("Offline & privacy")

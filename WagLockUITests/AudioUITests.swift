@@ -32,18 +32,18 @@ final class AudioUITests: XCTestCase {
             app.buttons["password.unlock"].tap()
         }
         let tabs = app.tabBars.firstMatch
-        XCTAssertTrue(tabs.buttons["Media"].waitForExistence(timeout: 10))
-        XCTAssertEqual(tabs.buttons.allElementsBoundByIndex.map(\.label), ["Photos", "Media", "Files", "Notes", "Settings"])
-        tabs.buttons["Media"].tap()
-        let audioSegment = app.segmentedControls.buttons["Audio"]
+        XCTAssertTrue(tabs.buttons["Library"].waitForExistence(timeout: 10))
+        XCTAssertEqual(tabs.buttons.allElementsBoundByIndex.map(\.label), ["Library", "Albums", "Files", "Notes", "Settings"])
+        tabs.buttons["Library"].tap()
+        let audioSegment = app.buttons["library.filter.audio"]
         if audioSegment.waitForExistence(timeout: 3) {
             audioSegment.tap()
         }
         XCTAssertTrue(app.buttons["audio.import"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.buttons["audio.record"].waitForExistence(timeout: 3))
         tabs.buttons["Settings"].tap()
-        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 3))
-        tabs.buttons["Media"].tap()
+        XCTAssertTrue(app.buttons["settings.security"].waitForExistence(timeout: 3))
+        tabs.buttons["Library"].tap()
         if audioSegment.waitForExistence(timeout: 3) {
             audioSegment.tap()
         }

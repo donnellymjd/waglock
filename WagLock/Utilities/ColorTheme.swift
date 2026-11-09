@@ -8,76 +8,73 @@
 
 import SwiftUI
 
+/// Graphite tokens (dark only). Names match the handover spec board; the older
+/// ColorTheme names below map onto them so every existing screen re-skins at once.
+enum Graphite {
+    static let base = Color(hex: 0x1A1E29)          // bg/base
+    static let scrim = Color(hex: 0x0E1118)         // bg/scrim
+    static let media = Color(hex: 0x0A0C11)         // bg/media
+    static let bar = Color(hex: 0x242936)           // surface/bar
+    static let surface1 = Color(hex: 0x262B38)      // surface/1
+    static let input = Color(hex: 0x2C3140)         // surface/input
+    static let surface2 = Color(hex: 0x2F3544)      // surface/2
+    static let line = Color(hex: 0x3A4152)          // line
+    static let textPrimary = Color(hex: 0xF3F5F9)   // text/primary
+    static let textSecondary = Color(hex: 0xC1C7D3) // text/secondary
+    static let textMuted = Color(hex: 0xA7AEBD)     // text/muted
+    static let accentText = Color(hex: 0x8DBEFF)    // accent/text
+    static let accentLight = Color(hex: 0xA9CEFF)   // accent/light
+    static let accentStrong = Color(hex: 0x4C8DFF)  // accent/strong
+    static let onAccent = Color(hex: 0x0A1530)      // on-accent
+    static let warn = Color(hex: 0xFFC46B)          // warn
+    static let danger = Color(hex: 0xFF9C9C)        // danger
+    static let dangerLine = Color(hex: 0xFF8A8A)    // danger/line
+    static let accentTint = Color(hex: 0x4C8DFF).opacity(0.14)
+    static let warnTint = Color(hex: 0xFFC46B).opacity(0.14)
+    static let dangerTint = Color(hex: 0xFF8A8A).opacity(0.12)
+    static let accentGradient = LinearGradient(colors: [accentLight, accentStrong],
+                                               startPoint: .leading, endPoint: .trailing)
+}
+
 /// App color theme
 struct ColorTheme {
-
-    // Shared Figma tokens. Native SF Pro, SF Symbols and system presentations are retained.
-    static let primaryBackground = Color("WagLockBackground")
-    static let secondaryBackground = Color("WagLockSurface")
-    static let tertiaryBackground = Color("WagLockSoft")
+    static let primaryBackground = Graphite.base
+    static let secondaryBackground = Graphite.surface1
+    static let tertiaryBackground = Graphite.surface2
     static let groupedBackground = primaryBackground
-    static let primaryText = Color("WagLockInk")
-    static let secondaryText = Color("WagLockSecondary")
-    static let tertiaryText = secondaryText.opacity(0.8)
-    static let placeholderText = secondaryText
-    static let accent = Color("AccentColor")
-    static let onAccent = Color("WagLockOnAccent")
+    static let primaryText = Graphite.textPrimary
+    static let secondaryText = Graphite.textMuted
+    static let tertiaryText = Graphite.textMuted
+    static let placeholderText = Graphite.textMuted
+    static let accent = Graphite.accentText
+    static let onAccent = Graphite.onAccent
     static let brandBackgroundStart = primaryBackground
     static let brandBackgroundEnd = primaryBackground
-
-    /// Destructive action color
-    static let destructive = Color.red
-
-    /// Success color
-    static let success = Color.green
-
-    /// Warning color
-    static let warning = Color.orange
-
-    // MARK: - Border & Separator
-
-    /// Border color
-    static let border = Color("WagLockBorder")
-
-    /// Separator color
-    static let separator = Color(light: Color(white: 0.9), dark: Color(white: 0.15))
-
-    // MARK: - Special Components
-
-    /// Calculator button background
+    static let destructive = Graphite.danger
+    static let success = Color(hex: 0x7FD8A4)
+    static let warning = Graphite.warn
+    static let border = Graphite.line
+    static let separator = Graphite.line
     static let calculatorButtonBackground = secondaryBackground
-
-    /// Calculator operator button background
     static let calculatorOperatorBackground = accent
-
-    /// Card shadow color
-    static let cardShadow = Color(light: Color.black.opacity(0.1), dark: Color.white.opacity(0.05))
-
-    /// Grid item background
-    static let gridItemBackground = Color(light: Color(white: 0.95), dark: Color(white: 0.15))
-
-    /// Encryption indicator background
-    static let encryptionIndicator = Color.green.opacity(0.2)
-
-    // MARK: - Status Colors
-
-    /// Selected background
-    static let selectedBackground = Color.blue.opacity(0.15)
-
-    /// Hover background
-    static let hoverBackground = Color(
-        light: Color.black.opacity(0.05), dark: Color.white.opacity(0.1))
-
-    /// Disabled background
-    static let disabledBackground = Color(light: Color(white: 0.95), dark: Color(white: 0.1))
-
-    /// Disabled text color
-    static let disabledText = Color(light: Color(white: 0.7), dark: Color(white: 0.3))
+    static let cardShadow = Color.black.opacity(0.35)
+    static let gridItemBackground = Graphite.surface2
+    static let encryptionIndicator = Color(hex: 0x7FD8A4).opacity(0.2)
+    static let selectedBackground = Graphite.accentTint
+    static let hoverBackground = Color.white.opacity(0.08)
+    static let disabledBackground = Graphite.surface2
+    static let disabledText = Graphite.textMuted
 }
 
 // MARK: - Color Extension
 
 extension Color {
+    /// sRGB color from 0xRRGGBB.
+    init(hex: UInt32) {
+        self.init(.sRGB, red: Double((hex >> 16) & 0xff) / 255, green: Double((hex >> 8) & 0xff) / 255,
+                  blue: Double(hex & 0xff) / 255, opacity: 1)
+    }
+
     /// Returns a different color for light and dark mode
     init(light: Color, dark: Color) {
         self.init(

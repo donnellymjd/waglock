@@ -254,7 +254,7 @@ private struct AlbumLibraryMoveView: View {
         NavigationStack {
             List {
                 Section {
-                    Text("The destination is encrypted and verified before the original is removed from the main library. Existing database journals may retain old metadata until later cleanup.")
+                    Text("The destination is encrypted and verified before the original is removed from the Library tab. Existing database journals may retain old metadata until later cleanup.")
                         .font(.footnote)
                 }
                 if busy { ProgressView("Moving…") }
@@ -271,7 +271,7 @@ private struct AlbumLibraryMoveView: View {
                         }
                     } label: { Label(item.fullFileName, systemImage: item.type.iconName) }
                 }
-                if media.isEmpty { Text("No media in the main library.") }
+                if media.isEmpty { Text("No media outside albums.") }
             }
             .wagLockList()
             .disabled(busy)

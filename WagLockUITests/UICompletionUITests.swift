@@ -57,7 +57,8 @@ final class UICompletionUITests: XCTestCase {
         app.launch()
         let field = app.secureTextFields["Enter password"]
         XCTAssertTrue(field.waitForExistence(timeout: 15)); field.tap(); field.typeText("album-ui-test-password\n")
-        XCTAssertTrue(app.tabBars.buttons["Media"].waitForExistence(timeout: 15)); app.tabBars.buttons["Media"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Library"].waitForExistence(timeout: 15)); app.tabBars.buttons["Library"].tap()
+        app.buttons["library.filter.videos"].tap()
         app.buttons["videos.import"].tap(); app.buttons["import.photos"].tap()
         let video = app.images.matching(NSPredicate(format: "label BEGINSWITH %@", "Video,")).firstMatch
         XCTAssertTrue(video.waitForExistence(timeout: 10), "Seed the generated video with simctl addmedia before this QA test")
@@ -76,7 +77,7 @@ final class UICompletionUITests: XCTestCase {
         XCTAssertTrue(transport.waitForExistence(timeout: 5), "Native playback controls must be accessible")
         let capture = XCTAttachment(screenshot: app.screenshot()); capture.name = "Native full-screen video player"; capture.lifetime = .keepAlways; add(capture)
         app.buttons["video.close"].tap()
-        XCTAssertTrue(app.tabBars.buttons["Media"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.tabBars.buttons["Library"].waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -91,7 +92,7 @@ final class UICompletionUITests: XCTestCase {
         let field = app.secureTextFields["Enter password"]
         XCTAssertTrue(field.waitForExistence(timeout: 15))
         field.tap(); field.typeText("album-ui-test-password\n")
-        XCTAssertTrue(app.buttons["photos.albums"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.tabBars.buttons["Albums"].waitForExistence(timeout: 15))
         func shot(_ label: String) {
             let capture = XCTAttachment(screenshot: app.screenshot())
             capture.name = label; capture.lifetime = .keepAlways; add(capture)
@@ -104,15 +105,11 @@ final class UICompletionUITests: XCTestCase {
             }
             XCTAssertTrue(element.isHittable)
         }
-        for appearance in ["Light", "Dark"] {
+        for appearance in ["Dark"] {
             app.tabBars.buttons["Settings"].tap()
-            app.buttons["settings.appearance"].tap()
-            let picker = app.segmentedControls["settings.appearance.picker"]
-            XCTAssertTrue(picker.waitForExistence(timeout: 5))
-            picker.buttons[appearance].tap()
             app.buttons["settings.layout"].tap()
             shot("\(appearance) - library layout")
-            back(); back()
+            back()
             app.buttons["settings.security"].tap()
             shot("\(appearance) - security")
             app.buttons["settings.autoLock"].tap()
@@ -161,8 +158,8 @@ final class UICompletionUITests: XCTestCase {
             app.navigationBars.buttons["Done"].tap()
             XCTAssertTrue(app.staticTexts[name].firstMatch.waitForExistence(timeout: 5))
             shot("\(appearance) - note cards")
-            app.tabBars.buttons["Media"].tap()
-            app.segmentedControls.buttons["Audio"].tap()
+            app.tabBars.buttons["Library"].tap()
+            app.buttons["library.filter.audio"].tap()
             let audioRow = app.descendants(matching: .any).matching(identifier: "audio.row").firstMatch
             shot("\(appearance) - audio library")
             if audioRow.exists {
@@ -171,7 +168,7 @@ final class UICompletionUITests: XCTestCase {
                 shot("\(appearance) - audio player")
                 app.buttons["audio.player.close"].tap()
             }
-            app.tabBars.buttons["Photos"].tap()
+            app.tabBars.buttons["Library"].tap()
             shot("\(appearance) - grouped photos")
             let preview = app.descendants(matching: .any).matching(identifier: "photos.preview").firstMatch
             if preview.waitForExistence(timeout: 5) {

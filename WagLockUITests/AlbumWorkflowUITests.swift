@@ -17,8 +17,8 @@ final class AlbumWorkflowUITests: XCTestCase {
             app.secureTextFields["Enter password"].tap()
             app.secureTextFields["Enter password"].typeText(vaultPassword + "\n")
         }
-        XCTAssertTrue(app.buttons["photos.albums"].waitForExistence(timeout: 15))
-        app.buttons["photos.albums"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Albums"].waitForExistence(timeout: 15))
+        app.tabBars.buttons["Albums"].tap()
         let suffix = UUID().uuidString.prefix(6)
         let parent = "Parent \(suffix)"
         let child = "Child \(suffix)"

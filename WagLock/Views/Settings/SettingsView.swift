@@ -22,7 +22,6 @@ struct SettingsView: View {
     // MARK: - State
 
     @EnvironmentObject private var guestModeManager: GuestModeManager
-    @AppStorage(WagLockAppearance.preferenceKey) private var appearance = WagLockAppearance.system.rawValue
     @StateObject private var iconService = AppIconService()
     @State private var showLogoutConfirmation = false
     @State private var showChangePasswordSheet = false
@@ -39,56 +38,51 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    Text("Make WagLock yours").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
-                    VStack(alignment: .leading, spacing: 8) {
-                        settingsHeading("SECURITY")
-                        NavigationLink {
-                            List { securitySection }.wagLockList().navigationTitle("Security & access")
-                                .navigationBarTitleDisplayMode(.inline)
-                        } label: {
-                            settingsCard("lock.shield", "Security & access", LibraryStoragePolicy.encryptedMetadata ? (authViewModel.canManageBiometricUnlock ? "Face ID and auto-lock" : "Auto-lock") : "Face ID, password and Guest Mode")
-                        }.accessibilityIdentifier("settings.security")
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(alignment: .firstTextBaseline) {
+                        WagLockTitle(text: String(localized: "settings.title"))
+                        Spacer()
+                        Button("Lock now") { showLogoutConfirmation = true }
+                            .font(WagLockFonts.poppins(13, .semibold, relativeTo: .footnote))
+                            .foregroundStyle(Graphite.accentText).frame(minHeight: 44)
+                            .accessibilityIdentifier("settings.lockNow")
                     }
-                    VStack(alignment: .leading, spacing: 8) {
-                        settingsHeading("APPEARANCE")
-                        NavigationLink { appearanceScreen } label: {
-                            settingsCard("circle.lefthalf.filled", "Appearance", "Follow device · Light · Dark")
-                        }.accessibilityIdentifier("settings.appearance")
+                    if guestModeManager.isOwnerMode { backupCard }
+                    VStack(spacing: 10) {
+                        NavigationLink { securityDestination } label: {
+                            WagLockRow(symbol: "lock.shield", title: "Security & access", detail: securitySummary)
+                        }.buttonStyle(.plain).accessibilityIdentifier("settings.security")
                         if guestModeManager.isOwnerMode {
                             NavigationLink { AppIconSettingsView() } label: {
-                                settingsCard("app.badge", "App icon", currentIconTitle)
-                            }.accessibilityIdentifier("settings.appIcon")
+                                WagLockRow(symbol: "app.badge", title: "App icon", detail: currentIconTitle)
+                            }.buttonStyle(.plain).accessibilityIdentifier("settings.appIcon")
                         }
-                    }
-                    VStack(alignment: .leading, spacing: 8) {
-                        settingsHeading("ON THIS DEVICE")
-                        NavigationLink {
-                            storageScreen
-                        } label: {
-                            settingsCard("internaldrive", "Storage", storageInfo.map { "\($0.formattedTotalUsed) used on this device" } ?? "Calculating storage…")
-                        }
+                        NavigationLink { layoutScreen } label: {
+                            WagLockRow(symbol: "square.grid.3x3", title: "Library layout",
+                                       detail: "\(settings.gridColumns) columns · \(settings.sortOrder.displayName)")
+                        }.buttonStyle(.plain).accessibilityIdentifier("settings.layout")
+                        NavigationLink { storageScreen } label: {
+                            WagLockRow(symbol: "internaldrive", title: "Storage",
+                                       detail: storageInfo.map { "\($0.formattedTotalUsed) used by this library" } ?? "Calculating storage…")
+                        }.buttonStyle(.plain).accessibilityIdentifier("settings.storage")
                         if guestModeManager.isOwnerMode {
                             NavigationLink { PortableBackupView() } label: {
-                                settingsCard("externaldrive.badge.icloud", "Encrypted backup", "Export to Files, iCloud Drive or another provider")
-                            }.accessibilityIdentifier("settings.backup")
-                            NavigationLink { BackupReminderSettingsView() } label: {
-                                settingsCard("calendar", "Backup reminders", backupReminders.frequency.title)
-                            }.accessibilityIdentifier("settings.backupReminders")
+                                WagLockRow(symbol: "externaldrive.badge.icloud", title: "Encrypted backup",
+                                           detail: "Export to Files, iCloud Drive or another provider")
+                            }.buttonStyle(.plain).accessibilityIdentifier("settings.backup")
                         }
                         Button { showAboutSheet = true } label: {
-                            settingsCard("info.circle", "About WagLock", LibraryStoragePolicy.encryptedMetadata ? "Open source · On-device encryption" : "Open source · Early test build")
-                        }.accessibilityIdentifier("settings.about")
+                            WagLockRow(symbol: "info.circle", title: "About WagLock",
+                                       detail: LibraryStoragePolicy.encryptedMetadata ? "Open source · On-device encryption" : "Open source · Early test build")
+                        }.buttonStyle(.plain).accessibilityIdentifier("settings.about")
                     }
-                    Button { showLogoutConfirmation = true } label: {
-                        Label("Lock WagLock", systemImage: "lock")
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }.foregroundStyle(ColorTheme.accent).accessibilityIdentifier("settings.lock")
-                }.padding(24)
+                    Button { showLogoutConfirmation = true } label: { Text("Lock WagLock") }
+                        .buttonStyle(WagLockDestructiveButtonStyle()).accessibilityIdentifier("settings.lock")
+                }
+                .padding(.horizontal, 22).padding(.vertical, 12)
             }
-            .background(ColorTheme.primaryBackground)
-            .navigationTitle(String(localized: "settings.title"))
-            .navigationBarTitleDisplayMode(.inline)
+            .background(Graphite.base)
+            .toolbar(.hidden, for: .navigationBar)
             .onAppear { iconService.refresh() }
         }
         .confirmationDialog(
@@ -165,35 +159,63 @@ struct SettingsView: View {
         }.background(ColorTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 14))
     }
 
-    private var appearanceScreen: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                Text("Comfortable in any light").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
-                Picker("Appearance", selection: $appearance) {
-                    ForEach(WagLockAppearance.allCases) { option in
-                        Text(option.title).tag(option.rawValue)
-                    }
-                }.pickerStyle(.segmented).accessibilityIdentifier("settings.appearance.picker")
-                WagLockInfoCard(title: "Follow your device", detail: "System matches the appearance chosen in iOS. You can choose Light or Dark for WagLock instead.")
-                settingsHeading("LIBRARY LAYOUT")
-                NavigationLink {
-                    Form {
-                        Section("Grid columns") {
-                            Stepper("Columns: \(settings.gridColumns)", value: $settings.gridColumns, in: 2...5)
-                        }
-                        Section("Sort order") {
-                            Picker("Sort order", selection: $settings.sortOrder) {
-                                ForEach(MediaItem.SortOrder.allCases) { order in Text(order.displayName).tag(order) }
-                            }.pickerStyle(.inline)
-                        }
-                    }.wagLockList().navigationTitle("Library layout")
-                } label: {
-                    settingsCard("square.grid.3x3", "Library layout", "\(settings.gridColumns) columns · \(settings.sortOrder.displayName)")
-                }.accessibilityIdentifier("settings.layout")
-                Text("Your appearance preference applies throughout WagLock.")
-                    .font(.footnote).foregroundStyle(ColorTheme.secondaryText)
-            }.padding(24)
-        }.background(ColorTheme.primaryBackground).navigationTitle("Appearance")
+    private var layoutScreen: some View {
+        Form {
+            Section("Grid columns") {
+                Stepper("Columns: \(settings.gridColumns)", value: $settings.gridColumns, in: 2...5)
+            }
+            Section("Sort order") {
+                Picker("Sort order", selection: $settings.sortOrder) {
+                    ForEach(MediaItem.SortOrder.allCases) { order in Text(order.displayName).tag(order) }
+                }.pickerStyle(.inline)
+            }
+        }.wagLockList().navigationTitle("Library layout")
+    }
+
+    /// Identical in every library with library slots; the inherited list otherwise.
+    @ViewBuilder private var securityDestination: some View {
+        if authViewModel.usesLibrarySlots {
+            SecurityAccessView()
+        } else {
+            List { securitySection }.wagLockList().navigationTitle("Security & access")
+                .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private var securitySummary: String {
+        if authViewModel.usesLibrarySlots {
+            return (authViewModel.isBiometricAssignedHere ? "Face ID on" : "Face ID off") + " · Locks immediately"
+        }
+        return LibraryStoragePolicy.encryptedMetadata ? (authViewModel.canManageBiometricUnlock ? "Face ID and auto-lock" : "Auto-lock") : "Face ID, password and Guest Mode"
+    }
+
+    private var backupCard: some View {
+        let last = backupReminders.lastSaved
+        let due = backupReminders.nextReminder.map { $0 <= Date() } ?? (last == nil)
+        return VStack(alignment: .leading, spacing: 12) {
+            if due {
+                Text("BACKUP DUE").font(WagLockFonts.poppins(11, .semibold, relativeTo: .caption)).tracking(1.5)
+                    .foregroundStyle(Graphite.warn).padding(.horizontal, 10).padding(.vertical, 4)
+                    .background(Graphite.warnTint, in: Capsule())
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Last backup").font(.wlMeta).foregroundStyle(Graphite.textMuted)
+                Text(last.map { $0.formatted(.relative(presentation: .named)) } ?? "Not yet")
+                    .font(WagLockFonts.poppins(22, .extraBold, relativeTo: .title2)).foregroundStyle(Graphite.textPrimary)
+            }
+            Text("There’s no passcode reset, so an encrypted backup is your way back.")
+                .font(.wlMeta).foregroundStyle(Graphite.textSecondary).fixedSize(horizontal: false, vertical: true)
+            NavigationLink { PortableBackupView() } label: { Text("Back up now") }
+                .buttonStyle(WagLockPrimaryButtonStyle()).accessibilityIdentifier("settings.backupNow")
+            HStack(spacing: 4) {
+                Text("Reminders: \(backupReminders.frequency.title) ·").foregroundStyle(Graphite.textMuted)
+                NavigationLink("Change") { BackupReminderSettingsView() }
+                    .foregroundStyle(Graphite.accentText).accessibilityIdentifier("settings.backupReminders")
+            }.font(.wlMeta)
+        }
+        .padding(16)
+        .background(Graphite.surface1, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(due ? Graphite.warn.opacity(0.35) : .clear, lineWidth: 1))
     }
 
     // MARK: - Security Section

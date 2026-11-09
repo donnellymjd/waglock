@@ -47,6 +47,10 @@ struct PhotosView: View {
     @State private var batchPhotosToDelete: [MediaItem] = []
     @State private var showBatchDeleteConfirmation = false
 
+    /// False inside the Library tab, whose header already names the screen.
+    private let showsTitle: Bool
+    init(showsTitle: Bool = true) { self.showsTitle = showsTitle }
+
     // MARK: - Constants
 
     private var columns: [GridItem] {
@@ -59,19 +63,12 @@ struct PhotosView: View {
         NavigationStack {
             VStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("\(guestModeManager.isGuestMode ? 0 : photos.count) photos · On this device")
-                        .font(.footnote).foregroundStyle(ColorTheme.secondaryText)
-                    WagLockSearchField(title: "Search photos", text: $searchText)
-                    if guestModeManager.isOwnerMode {
-                        NavigationLink { AlbumBrowserView() } label: {
-                            HStack(spacing: 0) {
-                                WagLockNavigationRow(symbol: "rectangle.stack", title: "Albums", detail: "Organize with separate protection")
-                                Image(systemName: "chevron.right").font(.footnote)
-                                    .foregroundStyle(ColorTheme.secondaryText).padding(.trailing, 14)
-                            }.background(ColorTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 14))
-                        }.accessibilityIdentifier("photos.albums")
+                    if showsTitle {
+                        Text("\(guestModeManager.isGuestMode ? 0 : photos.count) photos · On this device")
+                            .font(.wlMeta).foregroundStyle(Graphite.textMuted)
                     }
-                }.padding(.horizontal, 24)
+                    WagLockSearchField(title: "Search photos", text: $searchText)
+                }.padding(.horizontal, 22)
                 ZStack {
                 // Always show the empty state in guest mode
                 if guestModeManager.isGuestMode || photos.isEmpty {
@@ -85,7 +82,7 @@ struct PhotosView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .background(ColorTheme.primaryBackground)
-            .navigationTitle(String(localized: "photos.title"))
+            .navigationTitle(showsTitle ? String(localized: "photos.title") : "")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

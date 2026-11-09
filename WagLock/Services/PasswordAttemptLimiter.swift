@@ -72,6 +72,24 @@ final class PasswordAttemptLimiter {
                         remaining: 0, checkpoint: elapsedTime(), epoch: epoch))
     }
 
+    /// Seconds a rejected passcode proposal (collision, weak or no free slot) must wait.
+    static let rejectionWait: Double = 30
+
+    /// Extend the persisted wait to at least `seconds` without changing the failure count.
+    /// Waits only ever grow here; nothing in this path can shorten an existing cooldown.
+    func imposeWait(seconds: Double = PasswordAttemptLimiter.rejectionWait) throws {
+        guard seconds.isFinite, (0...Self.rejectionWait).contains(seconds) else { throw Failure.unavailable }
+        let old = try read()
+        try write(State(version: 2, id: old.id, failures: old.failures, blockedUntil: nil,
+                        remaining: max(old.remaining ?? 0, seconds), checkpoint: elapsedTime(), epoch: epoch))
+    }
+
+    /// The failure count at which `reserve()` first imposes a cooldown.
+    static let freeAttempts = 5
+    static func cooldownMinutes(afterFailures failures: Int) -> Int {
+        Int(ceil(delay(max(failures, freeAttempts)) / 60))
+    }
+
     private static func delay(_ failures: Int) -> Double {
         failures < 5 ? 0 : min(3600, 300 * pow(2, Double(min(failures - 5, 4))))
     }
@@ -107,7 +125,7 @@ final class PasswordAttemptLimiter {
             } else {
                 guard value.version == 2, let saved = value.remaining, saved.isFinite, (0...3600).contains(saved),
                       let checkpoint = value.checkpoint, checkpoint.isFinite, checkpoint >= 0,
-                      value.epoch != nil, value.failures >= 5 || saved == 0 else { throw Failure.unavailable }
+                      value.epoch != nil, value.failures >= 5 || saved <= Self.rejectionWait else { throw Failure.unavailable }
                 if value.epoch == epoch {
                     guard elapsed >= checkpoint else { throw Failure.unavailable }
                     remaining = max(0, saved - (elapsed - checkpoint))

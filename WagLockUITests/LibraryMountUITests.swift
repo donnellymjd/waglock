@@ -13,7 +13,7 @@ final class LibraryMountUITests: XCTestCase {
             field.tap()
             field.typeText(password)
             app.buttons["password.unlock"].tap()
-            XCTAssertTrue(app.buttons["photos.albums"].waitForExistence(timeout: 15))
+            XCTAssertTrue(app.tabBars.buttons["Albums"].waitForExistence(timeout: 15))
         }
         app.launch()
         if app.secureTextFields["setup.confirmPassword"].waitForExistence(timeout: 5) {
@@ -22,8 +22,8 @@ final class LibraryMountUITests: XCTestCase {
             app.secureTextFields["setup.confirmPassword"].tap()
             app.secureTextFields["setup.confirmPassword"].typeText(password + "\n")
         } else { unlock() }
-        XCTAssertTrue(app.buttons["photos.albums"].waitForExistence(timeout: 15))
-        app.buttons["photos.albums"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Albums"].waitForExistence(timeout: 15))
+        app.tabBars.buttons["Albums"].tap()
         let name = "Retained session fixture \(UUID().uuidString.prefix(6))"
         for _ in 0..<10 {
             if app.buttons["album.create"].exists && app.buttons["album.create"].isHittable { break }
@@ -43,15 +43,15 @@ final class LibraryMountUITests: XCTestCase {
         app.launch()
         let field = app.secureTextFields["Enter password"]
         XCTAssertTrue(field.waitForExistence(timeout: 10))
-        XCTAssertFalse(app.buttons["photos.albums"].exists)
+        XCTAssertFalse(app.tabBars.buttons["Albums"].exists)
         XCTAssertFalse(app.staticTexts[name].exists)
         field.tap()
         field.typeText("wrong-disposable-passcode")
         app.buttons["password.unlock"].tap()
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "incorrect")).firstMatch.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["photos.albums"].exists)
+        XCTAssertFalse(app.tabBars.buttons["Albums"].exists)
         unlock()
-        app.buttons["photos.albums"].tap()
+        app.tabBars.buttons["Albums"].tap()
         for _ in 0..<10 {
             if app.staticTexts[name].firstMatch.exists { break }
             app.swipeUp()
@@ -69,9 +69,9 @@ final class LibraryMountUITests: XCTestCase {
         XCTAssertTrue(confirmation.waitForExistence(timeout: 5))
         confirmation.tap()
         XCTAssertTrue(app.secureTextFields["Enter password"].waitForExistence(timeout: 10))
-        XCTAssertFalse(app.buttons["photos.albums"].exists)
+        XCTAssertFalse(app.tabBars.buttons["Albums"].exists)
         unlock()
-        app.buttons["photos.albums"].tap()
+        app.tabBars.buttons["Albums"].tap()
         for _ in 0..<10 {
             if app.staticTexts[name].firstMatch.exists { break }
             app.swipeUp()

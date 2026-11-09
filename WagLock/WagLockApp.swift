@@ -12,6 +12,9 @@ import SwiftUI
 @main
 struct WagLockApp: App {
     init() {
+        WagLockChrome.apply()
+        // The retired Appearance preference must not linger in a fresh setting screen.
+        UserDefaults.standard.removeObject(forKey: "waglock.appearance")
         ProtectedTemporaryFiles.removeAbandonedJobs()
         ProtectedTemporaryFiles.removeAbandonedJobs(in: FileManager.default.temporaryDirectory
             .appendingPathComponent("WagLockSessions").appendingPathComponent("WagLockSessionJobs"))
@@ -27,7 +30,6 @@ struct WagLockApp: App {
 
     @StateObject private var authViewModel = AuthenticationViewModel()
     @StateObject private var guestModeManager = GuestModeManager.shared
-    @AppStorage(WagLockAppearance.preferenceKey) private var appearance = WagLockAppearance.system.rawValue
     @State private var showLaunchScreen = true
     @State private var screenCaptured = UIScreen.main.isCaptured
 
@@ -107,7 +109,8 @@ struct WagLockApp: App {
                         .zIndex(2)
                 }
             }
-            .preferredColorScheme((WagLockAppearance(rawValue: appearance) ?? .system).colorScheme)
+            // Graphite is dark only; the Appearance setting was removed in the redesign.
+            .preferredColorScheme(.dark)
             .tint(ColorTheme.accent)
             .environment(\.locale, AppConstants.presentationLocale)
             .task {

@@ -24,7 +24,14 @@ final class AuthenticationViewModel: ObservableObject {
 
     @Published private(set) var vaultContext: VaultSessionContext?
     @Published private(set) var secondaryVaultID: UUID?
+    /// The library the current session opened. With library slots every library is a peer.
+    @Published private(set) var currentLibrary: LibraryReference?
     var isPrimaryVault: Bool { secondaryVaultID == nil }
+    /// Shown once, in the first session after onboarding creates the first library.
+    @Published var showsFirstBackupSetup = false
+    /// Multi-library passcode model (docs/portable-vault/library-slots.md).
+    let usesLibrarySlots: Bool
+    let passcodes: LibraryPasscodeService
     var libraryScope: LibraryMountCoordinator.Scope {
         secondaryVaultID.map { .independentVault($0) } ?? .legacyOwner
     }
@@ -115,7 +122,9 @@ final class AuthenticationViewModel: ObservableObject {
          documentPreviewService: DocumentPreviewService? = nil, attemptLimiter: PasswordAttemptLimiter? = nil,
          independentVaultsEnabled: Bool = LibraryStoragePolicy.encryptedMetadata,
          contextFactory: ContextFactory? = nil, biometrics: (any BiometricSecretStoring)? = nil,
-         resetService: VaultResetService? = nil) {
+         resetService: VaultResetService? = nil, librarySlotsEnabled: Bool? = nil,
+         passcodeService: LibraryPasscodeService? = nil) {
+        self.usesLibrarySlots = librarySlotsEnabled ?? (manageInstallationState && independentVaultsEnabled)
         self.resetService = resetService ?? (manageInstallationState ? VaultResetService.live() : nil)
         self.independentVaultsEnabled = independentVaultsEnabled
         self.contextFactory = contextFactory
@@ -124,7 +133,9 @@ final class AuthenticationViewModel: ObservableObject {
         self.exports = exportService ?? .shared
         self.documentPreviews = documentPreviewService ?? .shared
         self.keychainService = keychainService
-        self.attemptLimiter = attemptLimiter ?? keychainService.passwordAttemptLimiter()
+        let limiter = attemptLimiter ?? keychainService.passwordAttemptLimiter()
+        self.attemptLimiter = limiter
+        self.passcodes = passcodeService ?? LibraryPasscodeService(keychain: keychainService, limiter: limiter)
         self.loadDataPassword = dataPasswordLoader ?? { password in
             try await Task.detached { try await keychainService.retrieveDataPassword(using: password) }.value
         }
@@ -188,6 +199,22 @@ final class AuthenticationViewModel: ObservableObject {
         let inputPassword = password
         let token = UUID()
         authenticationGeneration = token
+        if usesLibrarySlots {
+            savePasswordTask = Task {
+                defer { if token == authenticationGeneration { isProcessing = false } }
+                guard token == authenticationGeneration, !Task.isCancelled else { return }
+                do {
+                    let (library, secret) = try await passcodes.createFirstLibrary(passcode: inputPassword)
+                    guard token == authenticationGeneration, !Task.isCancelled else { return }
+                    openLibrary(library, secret: secret)
+                    isPasswordSet = true
+                    showsFirstBackupSetup = true
+                } catch {
+                    errorMessage = "WagLock couldn't create your library. Nothing was saved. Try again."
+                }
+            }
+            return
+        }
         // Do not provision credentials if this queued setup was invalidated by lock.
         savePasswordTask = Task {
             defer { if token == authenticationGeneration { isProcessing = false } }
@@ -230,6 +257,7 @@ final class AuthenticationViewModel: ObservableObject {
             errorMessage = AppConstants.ErrorMessages.passwordEmpty
             return nil
         }
+        if usesLibrarySlots { return slotLogin() }
         let reservation: PasswordAttemptLimiter.Reservation
         do {
             reservation = try attemptLimiter.reserve()
@@ -360,6 +388,8 @@ final class AuthenticationViewModel: ObservableObject {
         // 🔒 Securely clear password memory (zeroed in place in willSet)
         sessionPasswordData = nil
         secondaryVaultID = nil
+        currentLibrary = nil
+        showsFirstBackupSetup = false
 
         // Clear the decrypted image cache so plaintext pixels don't outlive the session
         MediaLoaderService.shared.clearCache()
@@ -376,7 +406,10 @@ final class AuthenticationViewModel: ObservableObject {
         guard try verifyCurrentPassword(password) else { throw VaultAccessError.invalidPassword }
         let token = authenticationGeneration
         let secret: String
-        if let id = secondaryVaultID {
+        if usesLibrarySlots {
+            guard let secretValue = sessionPassword else { throw VaultAccessError.locked }
+            secret = secretValue
+        } else if let id = secondaryVaultID {
             let credential = try keychainService.unlockIndependentGuest(password: password)
             guard credential.vaultID == id else { throw VaultAccessError.invalidPassword }
             secret = credential.dataPassword
@@ -391,7 +424,8 @@ final class AuthenticationViewModel: ObservableObject {
             // Do not delete a shared account that a newer authorized enrollment may own.
             throw CancellationError()
         }
-        try keychainService.setBiometricOwner(secondaryVaultID?.uuidString ?? "primary")
+        try keychainService.setBiometricOwner(currentLibrary?.biometricOwnerMarker
+                                              ?? secondaryVaultID?.uuidString ?? "primary")
         isBiometricUnlockEnabled = true
         UserDefaults.standard.set(true, forKey: "vaultito.faceID.enabled")
     }
@@ -399,6 +433,8 @@ final class AuthenticationViewModel: ObservableObject {
     /// Legacy enrollments without ownership metadata belong to the primary vault.
     var canManageBiometricUnlock: Bool {
         guard isAuthenticated, GuestModeManager.shared.isOwnerMode else { return false }
+        // Any library may assign Face ID to itself (moving it); only its holder may turn it off.
+        if usesLibrarySlots { return true }
         if isPrimaryVault { return true }
         do {
             if let owner = try keychainService.biometricOwner() { return owner == secondaryVaultID?.uuidString }
@@ -406,8 +442,19 @@ final class AuthenticationViewModel: ObservableObject {
         } catch { return false }
     }
 
+    /// Whether Face ID currently opens this library. Other libraries show "Off for this library".
+    var isBiometricAssignedHere: Bool {
+        guard isAuthenticated, isBiometricUnlockEnabled else { return false }
+        guard usesLibrarySlots, let currentLibrary else { return canManageBiometricUnlock }
+        do {
+            if let owner = try keychainService.biometricOwner() { return owner == currentLibrary.biometricOwnerMarker }
+            return currentLibrary == .legacyOwner
+        } catch { return false }
+    }
+
     func disableBiometricUnlock() {
         guard canManageBiometricUnlock else { return }
+        if usesLibrarySlots, !isBiometricAssignedHere { return }
         authenticationGeneration = UUID()
         biometrics.remove(account: BiometricSecretStore.vaultAccount)
         keychainService.clearBiometricOwner()
@@ -431,12 +478,12 @@ final class AuthenticationViewModel: ObservableObject {
                 guard let bytes = Data(base64Encoded: String(secret.dropFirst(6))) else { throw VaultAccessError.invalidData }
                 let grant = try JSONDecoder().decode(BiometricGrant.self, from: bytes)
                 guard grant.version == 1, !grant.secret.isEmpty else { throw VaultAccessError.invalidData }
-                if let id = grant.secondaryID {
+                if let id = grant.secondaryID, !usesLibrarySlots {
                     guard try keychainService.independentGuestVaultID() == id else { throw VaultAccessError.invalidData }
                 }
                 target = grant.secondaryID; dataPassword = grant.secret
             } else { target = nil; dataPassword = secret } // Existing enrollment remains primary-only.
-            if independentVaultsEnabled, target == nil, try keychainService.ownerWrappingRequiresUpgrade() {
+            if !usesLibrarySlots, independentVaultsEnabled, target == nil, try keychainService.ownerWrappingRequiresUpgrade() {
                 throw VaultAccessError.locked // One password unlock is required to upgrade an older wrapper.
             }
             // The successfully authenticated protected grant is authoritative. Older
@@ -447,13 +494,15 @@ final class AuthenticationViewModel: ObservableObject {
             }
             sessionPasswordData = SecureBytes(dataPassword)
             secondaryVaultID = target
+            currentLibrary = target.map { .independent($0) } ?? .legacyOwner
             isAuthenticated = true
             GuestModeManager.shared.setAuthenticationMode(target == nil ? .owner : .secondaryOwner)
             resumeAlbumAccess()
             clearFields()
         } catch {
             guard token == authenticationGeneration else { return }
-            errorMessage = "Biometric unlock was cancelled or unavailable. Use your vault password."
+            errorMessage = usesLibrarySlots ? "Face ID was cancelled or unavailable. Enter your passcode."
+                : "Biometric unlock was cancelled or unavailable. Use your vault password."
         }
     }
 
@@ -512,6 +561,113 @@ final class AuthenticationViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Library slots
+
+    /// Publishes a session for exactly the library the slot named.
+    private func openLibrary(_ library: LibraryReference, secret: String) {
+        sessionPasswordData = SecureBytes(secret)
+        secondaryVaultID = library.independentID
+        currentLibrary = library
+        isAuthenticated = true
+        GuestModeManager.shared.setAuthenticationMode(library == .legacyOwner ? .owner : .secondaryOwner)
+        resumeAlbumAccess()
+        failedAttempts = 0; lockoutUntil = nil
+        clearFields()
+    }
+
+    /// One message for every wrong, time-locked or unknown passcode, whichever library it targeted.
+    static func wrongPasscodeMessage(failures: Int) -> String {
+        let left = PasswordAttemptLimiter.freeAttempts - failures
+        let minutes = PasswordAttemptLimiter.cooldownMinutes(afterFailures: failures + max(left, 0))
+        if left <= 0 { return "Wrong passcode. Wait \(minutes) minute\(minutes == 1 ? "" : "s") before trying again." }
+        return "Wrong passcode. \(left) tr\(left == 1 ? "y" : "ies") left before a \(minutes)-minute wait."
+    }
+
+    static func waitMessage(seconds: Int) -> String {
+        seconds >= 90 ? "Too many attempts. Try again in \(Int(ceil(Double(seconds) / 60))) minutes."
+            : "Too many attempts. Try again in \(seconds) seconds."
+    }
+
+    private func slotLogin() -> Task<Void, Never> {
+        isProcessing = true
+        let inputPassword = password
+        let token = UUID()
+        authenticationGeneration = token
+        loginTask = Task(priority: .userInitiated) {
+            defer { if token == authenticationGeneration { isProcessing = false } }
+            let outcome = await passcodes.unlock(inputPassword)
+            guard token == authenticationGeneration, !Task.isCancelled else { return }
+            switch outcome {
+            case .opened(let library, let secret):
+                openLibrary(library, secret: secret)
+            case .wrong(let failures):
+                failedAttempts = failures
+                password = ""
+                errorMessage = Self.wrongPasscodeMessage(failures: failures)
+            case .blocked(let seconds):
+                errorMessage = Self.waitMessage(seconds: seconds)
+            case .unavailable:
+                errorMessage = "Unable to check your passcode. Unlock your iPhone and try again."
+            }
+        }
+        return loginTask!
+    }
+
+    static func message(for error: Error) -> String {
+        switch error as? LibraryPasscodeService.Failure {
+        case .wrongPasscode(let failures): return wrongPasscodeMessage(failures: failures)
+        case .rejected: return "That passcode can't be used. Choose a different one and try again in 30 seconds."
+        case .blocked(let seconds): return waitMessage(seconds: seconds)
+        default: return "WagLock couldn't confirm the change. Nothing was reset. Lock and try again."
+        }
+    }
+
+    private func requireSlotSession() throws -> LibraryReference {
+        guard usesLibrarySlots, isAuthenticated, GuestModeManager.shared.isOwnerMode,
+              vaultContext?.isActive == true, let currentLibrary else { throw VaultAccessError.locked }
+        return currentLibrary
+    }
+
+    /// Verifies only this library's passcode; keys, data and Face ID assignment are unchanged.
+    func changeLibraryPasscode(current: String, new: String) async throws {
+        let library = try requireSlotSession()
+        let session = librarySessionID
+        try await passcodes.change(current: current, to: new, library: library)
+        guard session == librarySessionID else { return }
+    }
+
+    /// Creates another library. It opens the next time WagLock is unlocked with that passcode.
+    func addLibraryPasscode(_ passcode: String) async throws {
+        _ = try requireSlotSession()
+        try await passcodes.addLibrary(passcode: passcode)
+    }
+
+    /// This passcode stops working until `until`; WagLock locks immediately afterwards.
+    func timeLockLibrary(passcode: String, until: Date) async throws {
+        let library = try requireSlotSession()
+        try await passcodes.timeLock(passcode: passcode, library: library, until: until)
+        if isBiometricAssignedHere { removeBiometricGrant() }
+        logout()
+    }
+
+    /// Destroys this library's slot, then its now-unreadable files. Backups and Photos are untouched.
+    func deleteLibrary(passcode: String) async throws {
+        let library = try requireSlotSession()
+        let assigned = isBiometricAssignedHere
+        try await passcodes.destroy(passcode: passcode, library: library)
+        if assigned { removeBiometricGrant() }
+        logout()
+        LibraryContentRemover.remove(library, namespace: keychainService.contextNamespace)
+    }
+
+    private func removeBiometricGrant() {
+        authenticationGeneration = UUID()
+        biometrics.remove(account: BiometricSecretStore.vaultAccount)
+        keychainService.clearBiometricOwner()
+        isBiometricUnlockEnabled = false
+        UserDefaults.standard.set(false, forKey: "vaultito.faceID.enabled")
+    }
+
     /// Toggle password visibility
     func togglePasswordVisibility() {
         showPassword.toggle()
@@ -532,6 +688,14 @@ final class AuthenticationViewModel: ObservableObject {
     /// Selected-vault security operations share a durable budget, even after biometric entry.
     private func verifyCurrentPassword(_ password: String) throws -> Bool {
         guard isAuthenticated, GuestModeManager.shared.isOwnerMode else { throw VaultAccessError.locked }
+        if usesLibrarySlots {
+            // Same shared counter as the lock screen; only this library's passcode counts.
+            guard let currentLibrary else { throw VaultAccessError.locked }
+            let reservation = try attemptLimiter.reserve()
+            let valid = (try? passcodes.table.evaluate(passcode: password))?.payload.library == currentLibrary
+            if valid { try attemptLimiter.recordSuccess(reservation) }
+            return valid
+        }
         let limiter = keychainService.passwordAttemptLimiter(scope: "settings:" + (secondaryVaultID?.uuidString ?? "primary"))
         let reservation = try limiter.reserve()
         let valid: Bool
@@ -546,7 +710,8 @@ final class AuthenticationViewModel: ObservableObject {
     }
 
     var canChangeVaultPasswords: Bool {
-        isAuthenticated && GuestModeManager.shared.isOwnerMode && isPrimaryVault
+        if usesLibrarySlots { return false } // Slot mode uses changeLibraryPasscode in every library.
+        return isAuthenticated && GuestModeManager.shared.isOwnerMode && isPrimaryVault
             && (!independentVaultsEnabled || vaultContext?.isActive == true)
     }
 
@@ -578,6 +743,7 @@ final class AuthenticationViewModel: ObservableObject {
         _ = try keychainService.provisionIndependentGuest(password: password)
     }
     var hasSecondaryVault: Bool {
+        if usesLibrarySlots { return false } // Never derived or shown with library slots.
         do { return try keychainService.independentGuestVaultID() != nil } catch { return true }
     }
     func makeSelectedLibraryMount() -> LibraryMountCoordinator {

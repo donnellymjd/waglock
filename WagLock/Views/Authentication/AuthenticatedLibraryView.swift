@@ -31,20 +31,42 @@ struct AuthenticatedLibraryView: View {
                     .modelContainer(mounted.container)
                     .id(mounted.id)
             } else if library.failed {
-                VStack(spacing: 20) {
-                    Text("Unable to open this library.").font(.headline)
-                    Text("Lock and try again. Your library and credentials have not been reset.")
-                        .multilineTextAlignment(.center)
-                    if let reference = library.failureReference {
-                        Text("Reference: " + reference).font(.caption).accessibilityIdentifier("library.mount.reference")
+                VStack(spacing: 14) {
+                    Spacer()
+                    Image(systemName: "exclamationmark.circle").font(.system(size: 40)).foregroundStyle(Graphite.warn)
+                        .frame(width: 88, height: 88)
+                        .background(Graphite.surface1, in: RoundedRectangle(cornerRadius: 26))
+                        .overlay(RoundedRectangle(cornerRadius: 26).stroke(Graphite.line, lineWidth: 1))
+                        .accessibilityHidden(true)
+                    VStack(spacing: 6) {
+                        Text("Unable to open this library.").font(.wlSheetTitle).foregroundStyle(Graphite.textPrimary)
+                            .multilineTextAlignment(.center).wlCappedDisplay()
+                        Text("Lock and try again. Your library and passcodes haven’t been reset.")
+                            .font(WagLockFonts.poppins(13, .regular, relativeTo: .footnote))
+                            .foregroundStyle(Graphite.textMuted).multilineTextAlignment(.center)
                     }
-                    Button("Retry") { retry = UUID() }
-                    Button("Lock") { authentication.logout() }
+                    if let reference = library.failureReference {
+                        Text("REFERENCE " + reference.uppercased())
+                            .font(.wlLabel).tracking(1).foregroundStyle(Graphite.textMuted)
+                            .padding(.horizontal, 12).padding(.vertical, 6)
+                            .background(Graphite.surface1, in: RoundedRectangle(cornerRadius: 10))
+                            .accessibilityLabel("Reference: " + reference)
+                            .accessibilityIdentifier("library.mount.reference")
+                    }
+                    Spacer()
+                    Button("Retry") { retry = UUID() }.buttonStyle(WagLockPrimaryButtonStyle())
+                    Button("Lock WagLock") { authentication.logout() }
+                        .font(WagLockFonts.poppins(14, .semibold, relativeTo: .body))
+                        .foregroundStyle(Color(hex: 0xC9CFDB)).frame(minHeight: 44)
                 }
-                .padding()
+                .padding(.horizontal, 22).padding(.vertical, 30)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Graphite.base)
                 .accessibilityIdentifier("library.mount.error")
             } else {
-                ProgressView("Opening library…")
+                ProgressView("Opening library…").tint(Graphite.accentText)
+                    .font(.wlBody).foregroundStyle(Graphite.textMuted)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity).background(Graphite.base)
                     .accessibilityIdentifier("library.mount.loading")
             }
         }
