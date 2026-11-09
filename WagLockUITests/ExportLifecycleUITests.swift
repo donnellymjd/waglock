@@ -15,7 +15,7 @@ final class ExportLifecycleUITests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 15))
         field.tap()
         field.typeText("album-ui-test-password\n")
-        let openImport = app.buttons["photos.import"]
+        let openImport = app.buttons["library.add"]
         XCTAssertTrue(openImport.waitForExistence(timeout: 15))
         openImport.tap()
         app.buttons["import.photos"].tap()
@@ -25,6 +25,8 @@ final class ExportLifecycleUITests: XCTestCase {
         app.buttons["Add"].tap()
         let imported = app.alerts.buttons["OK"]
         if imported.waitForExistence(timeout: 20) { imported.tap() }
+        if app.buttons["import.complete.done"].waitForExistence(timeout: 20) { app.buttons["import.complete.done"].tap() }
+        if app.buttons["library.filter.photos"].waitForExistence(timeout: 5) { app.buttons["library.filter.photos"].tap() }
         let preview = app.descendants(matching: .any).matching(identifier: "photos.preview").firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 15))
         preview.tap()

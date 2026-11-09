@@ -1,6 +1,6 @@
 # Graphite redesign (handover 2026-11-08)
 
-Status: first implementation pass on 2026-11-09. It has not been compiled, run, screenshotted or checked on a device. Sources: the "WagLock Redesign — Handover & Privacy Spec" document and the "WagLock Redesign" canvas (39 screens and the "Spec · tokens & components" board). Where they disagree, the canvas wins for layout and the document wins for behavior. The privacy and passcode half is in [library-slots.md](library-slots.md).
+Status: implemented on 2026-11-09 in two passes (core screens, then the remaining canvas screens). It has not been compiled, run, screenshotted or checked on a device. Sources: the "WagLock Redesign — Handover & Privacy Spec" document and the "WagLock Redesign" canvas (39 screens and the "Spec · tokens & components" board). Where they disagree, the canvas wins for layout and the document wins for behavior. The privacy and passcode half is in [library-slots.md](library-slots.md).
 
 ## Design system
 
@@ -25,27 +25,31 @@ Status: first implementation pass on 2026-11-09. It has not been compiled, run, 
 | Canvas frame | Implementation |
 |---|---|
 | Unlock, Unlock · wrong passcode | `LoginView`: hero, "Welcome home!", field with error state, global "Use number pad / full keyboard" link, UNLOCK and Face ID buttons, "Can't unlock? Get help" |
-| Library | `LibraryView`: title, "N items · On this device" (this library only), Photos / Videos / Audio chips over the existing audited screens |
-| Albums | `AlbumsTabView`: own tab around the unchanged `AlbumBrowserView` |
 | Settings (home with backup card) | `SettingsView`: Lock now, backup card (BACKUP DUE, last backup, BACK UP NOW, reminder frequency), Security & access, App icon, Library layout, Storage, Encrypted backup, About, LOCK WAGLOCK |
 | Security & access, Passcodes, Add a passcode (+ rejected), Time lock, Delete this library, Face ID setup | `PasscodeSettingsViews.swift` (slot mode); identical in every library |
 | Onboarding 1 and 3, Backups (4) | `OnboardingViews.swift`: Welcome → Create passcode (with the no-reset acknowledgment) → "Your way back", shown once after the first library opens, with "Not now" |
 | Unable to open library | `AuthenticatedLibraryView` failure state with its reference code |
 | Can't unlock? | Copy updated in `UnlockHelpView`; layout still a list |
+| Library, Empty library, Selection | `LibraryView`: All / Photos / Videos / Audio chips (All is a day-grouped grid of this library's photos, videos and audio), add button, backup-health banner and empty-library hero. The Photos selection bar is a floating Move to album / Export / Delete toolbar. |
+| Add to WagLock, Import progress, Import complete | `ImportButtonsView`: source rows; progress as "N of M" with the stop-on-lock caution; completion with count, the originals-still-in-Photos warning, Keep or **Remove from Photos…** (only when every selected item committed; iOS shows its own confirmation and items go to Recently Deleted), and Back up now. |
+| Photo viewer, Photo information, landscape | `PhotoDetailView`: full-bleed media, top bar (close, date, time, position, more), Info / Album / Export / Delete toolbar that becomes a trailing side rail in landscape, and tap to hide chrome. `PhotoInfoSheet` shows created, dimensions, size/format and duration. |
+| Video viewer, landscape | `VideoPlayerView`: the same chrome around the native AVKit player, whose transport controls are kept on purpose (accessibility, scrubbing and speed). AirPlay stays off. |
+| Albums, Album, Album unlock, New album | `AlbumBrowserView`: two-column album cards with OPEN/LOCKED and the protection, album header with item counts and protection chips, 4-column grid, ADD TO ALBUM menu, the unlock screen, and the protection radio list. |
+| Notes, Note editor | Title, count, search and an autosave note on the list. The editor has a large title field, a saved/encrypted status and a formatting bar (Heading, List and Checklist each start a new line with a marker; notes stay plain text). Bold is omitted because iOS 17 `TextEditor` exposes no selection to wrap. |
+| Files | Title, count, search, All / PDFs / Documents / Other chips, icon-tile rows and the open-here note. |
+| Audio player | Waveform card (decorative), title and metadata, scrubber, gradient play/pause, ±15 s, export, privacy note. |
+| Backup failed, Backup recovery key | `BackupFailedCard` replaces the inline error after a failed preparation. **Generate a recovery key** creates a standard age X25519 identity, shows it once in groups of four with Print and Save to Files, has no copy button, and fills in the public recipient. The Bech32 encoder was checked against rage (pyrage) and has a unit test vector. |
+| Settings › Storage | This library's size and per-type counts, Standard mode with its disclosure, free space on the iPhone and Clear cache. |
 
-Tabs are now Library · Albums · Files · Notes · Settings. Accessibility identifiers used by UI tests are kept where screens survived, and UI tests were updated for the new tabs, the Library chips, the keyboard link and the removed Appearance setting.
+Tabs are now Library · Albums · Files · Notes · Settings. Accessibility identifiers used by UI tests are kept where screens survived. UI tests were updated for the new tabs, chips, add button, import-complete screen, viewer close buttons, album cards (matched by identifier), album unlock buttons and the removed Appearance setting.
 
-## Not yet implemented
+## Not built, and why
 
-These need follow-up work. Most reuse the components above.
-
-- Onboarding 2 (storage privacy) and the whole fixed-size storage feature, including Settings › Storage mode, Reserved space full and Switching storage.
-- An "All" chip that mixes photos, videos and audio in one grid. The current chips switch between the existing screens.
-- Empty library hero, Import progress, the Import complete sheet (keep or remove originals in Photos, back up now), Selection, Backup failed and Backup recovery key.
-- Photo viewer, Photo information and Video viewer restyles and their landscape side rail. Portrait-only for every other screen is not enforced; viewer rotation is unchanged.
-- An album unlock that lasts until WagLock locks (existing behavior unchanged), and the album and New album protection restyles.
-- Notes, Note editor (formatting bar), Files (filter chips) and Audio player restyles beyond the tokens.
-- Recreating the canvas hero artwork (only the app icon is used) and the dial animation.
+- **Onboarding 2 (storage privacy), Reserved space full, Switching storage, and the fixed-size half of Settings › Storage.** These control a fixed-size storage container that does not exist. Showing them would ship controls that do nothing. They wait on the storage design in [library-slots.md](library-slots.md).
+- **Password plus recovery key in one backup.** The Onboarding 4 and Recovery key frames imply both on one file. The age format allows a password (scrypt) recipient only on its own, so a backup uses either a password or a generated recovery key.
+- **Import pause and resume.** The canvas says leaving WagLock pauses an import and resumes it after unlock. Imports still stop on lock, nothing partial is kept, and the progress screen says so.
+- The unlock dial animation and the canvas hero artwork; only the app icon ships.
+- Portrait lock for non-viewer screens; rotation behavior is unchanged.
 
 ## Verification status
 

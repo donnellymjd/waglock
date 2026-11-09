@@ -39,6 +39,21 @@ struct FilesView: View {
     }
     @State private var selectedPreview: PreviewSelection?
     @State private var searchText = ""
+    @State private var kind: FileKind = .all
+    enum FileKind: String, CaseIterable, Identifiable {
+        case all = "All", pdfs = "PDFs", documents = "Documents", other = "Other"
+        var id: String { rawValue }
+        func matches(_ ext: String) -> Bool {
+            let ext = ext.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
+            let documents: Set<String> = ["doc", "docx", "txt", "md", "rtf", "pages", "odt", "xls", "xlsx", "csv", "numbers", "ppt", "pptx", "key"]
+            switch self {
+            case .all: return true
+            case .pdfs: return ext == "pdf"
+            case .documents: return documents.contains(ext)
+            case .other: return ext != "pdf" && !documents.contains(ext)
+            }
+        }
+    }
     @State private var fileToDelete: MediaItem?
     @State private var deleteErrorMessage: String?
 
@@ -47,11 +62,22 @@ struct FilesView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("\(guestModeManager.isGuestMode ? 0 : files.count) files · On this device")
-                        .font(.footnote).foregroundStyle(ColorTheme.secondaryText)
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        WagLockTitle(text: String(localized: "files.title"))
+                        Text("\(guestModeManager.isGuestMode ? 0 : files.count) file\(files.count == 1 ? "" : "s") · On this device")
+                            .font(WagLockFonts.poppins(13, .regular, relativeTo: .footnote)).foregroundStyle(Graphite.textMuted)
+                    }
                     WagLockSearchField(title: "Search files", text: $searchText)
-                }.padding(.horizontal, 24).padding(.bottom, 12)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(FileKind.allCases) { option in
+                                WagLockChip(title: option.rawValue, selected: kind == option) { kind = option }
+                                    .accessibilityIdentifier("files.filter." + option.rawValue.lowercased())
+                            }
+                        }
+                    }
+                }.padding(.horizontal, 22).padding(.bottom, 8)
                 ZStack {
                 // Always show the empty state in guest mode
                 if guestModeManager.isGuestMode || files.isEmpty {
@@ -61,20 +87,17 @@ struct FilesView: View {
                 }
             }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }.background(ColorTheme.primaryBackground)
-            .navigationTitle(String(localized: "files.title"))
+            }.background(Graphite.base)
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     // Hide the import button in guest mode
                     if guestModeManager.isOwnerMode {
-                        Button {
+                        WagLockRoundButton(symbol: "plus", label: "Add files", prominent: true) {
                             showImportView = true
-                        } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.title3)
-                                .symbolRenderingMode(.hierarchical)
                         }
+                        .accessibilityIdentifier("files.import")
                     }
                 }
             }
@@ -143,7 +166,7 @@ struct FilesView: View {
 
     private var fileListView: some View {
         List {
-            Section("RECENTLY ADDED") {
+            Section {
             ForEach(filteredFiles) { file in
                 FileRowView(file: file)
                     .wagLockCardRow()
@@ -160,9 +183,9 @@ struct FilesView: View {
                         }
                     }
             }
-            }
+            } header: { WagLockSectionLabel("Recently added") }
             Section {
-                WagLockInfoCard(title: "Your files, kept close", detail: "Open documents here. Choose Export when you want a copy outside WagLock.")
+                WagLockNote(kind: .info, text: "Files open right here. Choose Export when you want a copy outside WagLock.")
                     .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
             }
         }
@@ -172,11 +195,9 @@ struct FilesView: View {
     // MARK: - Computed Properties
 
     private var filteredFiles: [MediaItem] {
-        if searchText.isEmpty {
-            return files
-        }
-        return files.filter { file in
-            file.fileName.localizedCaseInsensitiveContains(searchText)
+        files.filter { file in
+            kind.matches(file.fileExtension)
+                && (searchText.isEmpty || file.fileName.localizedCaseInsensitiveContains(searchText))
         }
     }
 
@@ -212,17 +233,18 @@ struct FileRowView: View {
     let file: MediaItem
 
     var body: some View {
-        HStack(spacing: 12) {
-            fileIcon.font(.system(size: 22)).foregroundStyle(ColorTheme.accent).frame(width: 22)
+        HStack(spacing: 14) {
+            fileIcon.font(.system(size: 18)).foregroundStyle(Graphite.accentText)
+                .frame(width: 40, height: 40).background(Graphite.surface2, in: RoundedRectangle(cornerRadius: 11))
                 .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(file.fullFileName).font(.body.weight(.semibold)).foregroundStyle(ColorTheme.primaryText).lineLimit(2)
-                Text("\(file.fileExtension.trimmingCharacters(in: CharacterSet(charactersIn: ".")).uppercased()) · \(file.formattedFileSize)")
-                    .font(.footnote).foregroundStyle(ColorTheme.secondaryText)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(file.fullFileName).font(.wlBodyStrong).foregroundStyle(Graphite.textPrimary).lineLimit(2)
+                Text("\(file.fileExtension.trimmingCharacters(in: CharacterSet(charactersIn: ".")).uppercased()) · \(file.formattedFileSize) · \(file.createdAt.formatted(.dateTime.month(.abbreviated).day()))")
+                    .font(.wlMeta).foregroundStyle(Graphite.textMuted)
             }
             Spacer(minLength: 4)
-            Image(systemName: "chevron.right").font(.footnote).foregroundStyle(ColorTheme.secondaryText).accessibilityHidden(true)
-        }.frame(minHeight: 38)
+            Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(Color(hex: 0x7D8597)).accessibilityHidden(true)
+        }.frame(minHeight: 40)
     }
 
     private var fileIcon: Image {

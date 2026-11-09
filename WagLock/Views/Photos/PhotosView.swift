@@ -46,6 +46,7 @@ struct PhotosView: View {
     @State private var selectedPhotoIDs: Set<UUID> = []
     @State private var batchPhotosToDelete: [MediaItem] = []
     @State private var showBatchDeleteConfirmation = false
+    @State private var showMoveToAlbum = false
 
     /// False inside the Library tab, whose header already names the screen.
     private let showsTitle: Bool
@@ -131,6 +132,12 @@ struct PhotosView: View {
                 .environment(\.modelContext, modelContext)
                 .environmentObject(authViewModel)
             }
+            .sheet(isPresented: $showMoveToAlbum) {
+                MoveToAlbumSheet(items: filteredPhotos.filter { selectedPhotoIDs.contains($0.id) }) {
+                    isSelectionMode = false
+                    selectedPhotoIDs.removeAll()
+                }
+            }
             .sheet(isPresented: $showExportView) {
                 BatchExportView(initialSelection: isSelectionMode ? selectedPhotoIDs : [])
                     .environment(\.modelContext, modelContext)
@@ -199,7 +206,10 @@ struct PhotosView: View {
                 WagLockEmptyState(symbol: "photo", title: "Make room for your memories.", detail: "Add a few photos to get started. Your originals stay in your photo library.")
                 if guestModeManager.isOwnerMode {
                     Button("Add photos") { showImportView = true }
-                        .buttonStyle(WagLockPrimaryButtonStyle()).padding(.horizontal, 24)
+                        .buttonStyle(WagLockPrimaryButtonStyle()).padding(.horizontal, 22)
+                    Button("Import files or audio instead") { showImportView = true }
+                        .font(WagLockFonts.poppins(14, .semibold, relativeTo: .body))
+                        .foregroundStyle(Graphite.accentText).frame(minHeight: 44)
                 }
             }.padding(.vertical, 48)
         }
@@ -211,11 +221,11 @@ struct PhotosView: View {
         VStack(spacing: 16) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 50))
-                .foregroundColor(.secondary)
+                .foregroundStyle(Graphite.textMuted)
 
             Text(String(localized: "photos.search.noResults"))
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+                .font(.wlBody)
+                .foregroundStyle(Graphite.textMuted)
         }
     }
 
@@ -246,14 +256,14 @@ struct PhotosView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 18) {
                 ForEach(photoDays) { day in
-                    Text(day.title).font(.footnote).foregroundStyle(ColorTheme.secondaryText)
+                    WagLockSectionLabel(day.title)
                     LazyVGrid(columns: columns, spacing: 6) {
                         ForEach(day.items) { photo in
                             photoTile(photo)
                         }
                     }
                 }
-            }.padding(.horizontal, 24).padding(.vertical, 8)
+            }.padding(.horizontal, 22).padding(.vertical, 8)
         }
     }
 
@@ -277,6 +287,7 @@ struct PhotosView: View {
                         // Normal mode: tap to preview
                         GridItemView(mediaItem: photo, showsMetadata: false)
                             .aspectRatio(1, contentMode: .fill)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                             .onTapGesture {
                                 selectedPhoto = PhotoSelection(view: PhotoDetailView(photo: photo, allPhotos: filteredPhotos, sessionID: authViewModel.librarySessionID))
                             }
@@ -333,37 +344,23 @@ struct PhotosView: View {
     // MARK: - Batch Actions Toolbar
 
     private var batchActionsToolbar: some View {
-        VStack(spacing: 0) {
-            Divider()
-
-            HStack(spacing: 20) {
-                Text(
-                    String(
-                        format: String(localized: "gallery.selectedCount"),
-                        selectedPhotoIDs.count)
-                )
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-                Spacer()
-
-                Button { showExportView = true } label: {
-                    Label("Export", systemImage: "square.and.arrow.up")
-                }.accessibilityIdentifier("photos.exportSelection")
-
-                Button(role: .destructive) {
-                    batchPhotosToDelete = filteredPhotos.filter {
-                        selectedPhotoIDs.contains($0.id)
-                    }
+        VStack(spacing: 8) {
+            Text("\(selectedPhotoIDs.count) selected")
+                .font(.wlBodyStrong).foregroundStyle(Graphite.textPrimary)
+            WagLockActionBar(actions: [
+                WagLockAction(id: "photos.moveSelection", symbol: "rectangle.stack.badge.plus", title: "Move to album") {
+                    showMoveToAlbum = true
+                },
+                WagLockAction(id: "photos.exportSelection", symbol: "square.and.arrow.up", title: "Export") {
+                    showExportView = true
+                },
+                WagLockAction(id: "photos.deleteSelection", symbol: "trash", title: String(localized: "common.delete"), destructive: true) {
+                    batchPhotosToDelete = filteredPhotos.filter { selectedPhotoIDs.contains($0.id) }
                     showBatchDeleteConfirmation = true
-                } label: {
-                    Label(String(localized: "common.delete"), systemImage: "trash")
-                        .font(.subheadline)
-                }
-            }
-            .padding()
-            .background(.ultraThinMaterial)
+                },
+            ])
         }
+        .padding(.horizontal, 22).padding(.bottom, 8)
     }
 
     // MARK: - Computed Properties

@@ -35,16 +35,16 @@ final class LibraryMountUITests: XCTestCase {
         app.textFields["album.name"].typeText(name)
         app.buttons["album.save"].tap()
         for _ in 0..<10 {
-            if app.staticTexts[name].firstMatch.exists { break }
+            if app.descendants(matching: .any).matching(identifier: name).firstMatch.exists { break }
             app.swipeUp()
         }
-        XCTAssertTrue(app.staticTexts[name].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: name).firstMatch.waitForExistence(timeout: 10))
         app.terminate()
         app.launch()
         let field = app.secureTextFields["Enter password"]
         XCTAssertTrue(field.waitForExistence(timeout: 10))
         XCTAssertFalse(app.tabBars.buttons["Albums"].exists)
-        XCTAssertFalse(app.staticTexts[name].exists)
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: name).firstMatch.exists)
         field.tap()
         field.typeText("wrong-disposable-passcode")
         app.buttons["password.unlock"].tap()
@@ -53,10 +53,10 @@ final class LibraryMountUITests: XCTestCase {
         unlock()
         app.tabBars.buttons["Albums"].tap()
         for _ in 0..<10 {
-            if app.staticTexts[name].firstMatch.exists { break }
+            if app.descendants(matching: .any).matching(identifier: name).firstMatch.exists { break }
             app.swipeUp()
         }
-        XCTAssertTrue(app.staticTexts[name].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: name).firstMatch.waitForExistence(timeout: 10))
         app.tabBars.buttons["Settings"].tap()
         let logout = app.buttons["Lock WagLock"]
         for _ in 0..<8 {
@@ -73,10 +73,10 @@ final class LibraryMountUITests: XCTestCase {
         unlock()
         app.tabBars.buttons["Albums"].tap()
         for _ in 0..<10 {
-            if app.staticTexts[name].firstMatch.exists { break }
+            if app.descendants(matching: .any).matching(identifier: name).firstMatch.exists { break }
             app.swipeUp()
         }
-        XCTAssertTrue(app.staticTexts[name].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: name).firstMatch.waitForExistence(timeout: 10))
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "Retained owner library after authenticated remount"
         screenshot.lifetime = .keepAlways

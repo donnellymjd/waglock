@@ -32,6 +32,7 @@ struct SettingsView: View {
     @State private var storageInfo: StorageInfo?
     @State private var isLoadingStorage = false
     @State private var showClearCacheConfirmation = false
+    @State private var counts = (photos: 0, videos: 0, audio: 0, files: 0)
 
     // MARK: - Body
 
@@ -304,19 +305,42 @@ struct SettingsView: View {
 
     private var storageScreen: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                Text("Everything stays on this device").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
+            VStack(alignment: .leading, spacing: 14) {
+                WagLockTitle(text: "Storage")
+                WagLockSectionLabel("This library")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(storageInfo?.formattedTotalUsed ?? "Calculating…")
+                        .font(WagLockFonts.poppins(28, .extraBold, relativeTo: .title)).foregroundStyle(Graphite.textPrimary)
+                    Text(itemCounts).font(.wlMeta).foregroundStyle(Graphite.textMuted)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading).padding(16)
+                .background(Graphite.surface1, in: RoundedRectangle(cornerRadius: 16))
+                .accessibilityElement(children: .combine)
+                WagLockSectionLabel("Storage mode · All of WagLock")
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Standard").font(.wlHeading).foregroundStyle(Graphite.textPrimary)
+                    Text("Grows as you add things and uses only the space you need.")
+                        .font(.wlMeta).foregroundStyle(Graphite.textSecondary)
+                    Label("Your iPhone’s storage settings show how much WagLock holds.", systemImage: "info.circle")
+                        .font(.wlMeta).foregroundStyle(Graphite.textMuted)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading).padding(16)
+                .background(Graphite.surface1, in: RoundedRectangle(cornerRadius: 16))
                 if let info = storageInfo {
-                    WagLockProgressCard(title: "\(info.formattedTotalUsed) used by WagLock", detail: "Vault media compared with currently available device space", progress: Double(info.totalUsed) / max(Double(info.totalUsed) + Double(info.availableSpace), 1))
-                    Text("DEVICE STORAGE").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
-                    WagLockNavigationRow(symbol: "internaldrive", title: "Available on device", detail: info.formattedAvailableSpace)
-                    WagLockNavigationRow(symbol: "photo", title: "Cached previews", detail: "\(info.formattedCacheSize) · Can be rebuilt")
-                } else { ProgressView("Calculating storage…") }
-                WagLockInfoCard(title: "Clear cache, keep originals", detail: "Only temporary previews are cleared. Encrypted originals remain in WagLock.")
-                Button("Clear preview cache") { showClearCacheConfirmation = true }
-                    .frame(maxWidth: .infinity, minHeight: 44).accessibilityIdentifier("settings.clearCache")
-            }.padding(24)
-        }.background(ColorTheme.primaryBackground).navigationTitle("Storage").navigationBarTitleDisplayMode(.inline)
+                    Text("\(info.formattedAvailableSpace) free on this iPhone").font(.wlMeta).foregroundStyle(Graphite.textMuted)
+                }
+                Button { showClearCacheConfirmation = true } label: {
+                    WagLockRow(symbol: "photo.stack", title: "Clear cache", detail: "Previews rebuild when needed")
+                }.buttonStyle(.plain).accessibilityIdentifier("settings.clearCache")
+            }
+            .padding(.horizontal, 22).padding(.vertical, 12)
+        }.background(Graphite.base).navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var itemCounts: String {
+        func plural(_ count: Int, _ word: String) -> String { "\(count) \(word)\(count == 1 ? "" : "s")" }
+        return [plural(counts.photos, "photo"), plural(counts.videos, "video"), "\(counts.audio) audio", plural(counts.files, "file")]
+            .joined(separator: " · ")
     }
 
     // MARK: - Methods
@@ -326,6 +350,11 @@ struct SettingsView: View {
         defer { isLoadingStorage = false }
 
         storageInfo = await StorageService.shared.getStorageInfo(modelContext: modelContext, storage: vaultServices.storage)
+        // This library's own records only; nothing here reads another library.
+        func count(_ type: String) -> Int {
+            (try? modelContext.fetchCount(FetchDescriptor<MediaItem>(predicate: #Predicate { $0.typeRawValue == type }))) ?? 0
+        }
+        counts = (count("photo"), count("video"), count("audio"), count("document"))
     }
 
     private func clearCache() {

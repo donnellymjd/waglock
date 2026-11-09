@@ -129,16 +129,19 @@ final class EncryptedReleaseUITests: XCTestCase {
         XCTAssertEqual(body.value as? String, "An encrypted draft that survives relaunch.")
         app.navigationBars.buttons.element(boundBy: 0).tap()
         app.tabBars.buttons["Library"].tap()
-        app.buttons["photos.import"].tap(); app.buttons["import.photos"].tap()
+        app.buttons["library.add"].tap(); app.buttons["import.photos"].tap()
         let image = app.images.matching(NSPredicate(format: "label BEGINSWITH %@", "Photo,")).firstMatch
         XCTAssertTrue(image.waitForExistence(timeout: 10)); image.tap(); app.buttons["Add"].tap()
         if app.alerts.buttons["OK"].waitForExistence(timeout: 20) { app.alerts.buttons["OK"].tap() }
+        if app.buttons["import.complete.done"].waitForExistence(timeout: 5) { app.buttons["import.complete.done"].tap() }
+        if app.buttons["library.filter.photos"].waitForExistence(timeout: 5) { app.buttons["library.filter.photos"].tap() }
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "photos.preview").firstMatch.waitForExistence(timeout: 10))
         capture(app, "Store - Photos")
         app.tabBars.buttons["Library"].tap(); app.buttons["library.filter.videos"].tap(); app.buttons["videos.import"].tap(); app.buttons["import.photos"].tap()
         let video = app.images.matching(NSPredicate(format: "label BEGINSWITH %@", "Video,")).firstMatch
         XCTAssertTrue(video.waitForExistence(timeout: 10)); video.tap(); app.buttons["Add"].tap()
         if app.alerts.buttons["OK"].waitForExistence(timeout: 20) { app.alerts.buttons["OK"].tap() }
+        if app.buttons["import.complete.done"].waitForExistence(timeout: 5) { app.buttons["import.complete.done"].tap() }
         let preview = app.descendants(matching: .any).matching(identifier: "videos.preview").firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 10)); capture(app, "Store - Media"); preview.tap()
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "video.player").firstMatch.waitForExistence(timeout: 15))
@@ -173,28 +176,28 @@ final class EncryptedReleaseUITests: XCTestCase {
         app.navigationBars.buttons.element(boundBy: 0).tap()
         app.tabBars.buttons["Library"].tap(); app.tabBars.buttons["Albums"].tap()
         func album(_ name: String) {
-            if !app.staticTexts[name].firstMatch.exists {
+            if !app.descendants(matching: .any).matching(identifier: name).firstMatch.exists {
                 app.buttons["album.create"].tap(); app.textFields["album.name"].tap(); app.textFields["album.name"].typeText(name)
                 app.buttons["album.save"].tap()
             }
-            XCTAssertTrue(app.staticTexts[name].firstMatch.waitForExistence(timeout: 10)); app.staticTexts[name].firstMatch.tap()
-            if app.buttons["Open Album"].waitForExistence(timeout: 1) { app.buttons["Open Album"].tap() }
+            XCTAssertTrue(app.descendants(matching: .any).matching(identifier: name).firstMatch.waitForExistence(timeout: 10)); app.descendants(matching: .any).matching(identifier: name).firstMatch.tap()
+            if app.buttons["album.unlock.inherited"].waitForExistence(timeout: 1) { app.buttons["album.unlock.inherited"].tap() }
             let locked = app.secureTextFields["album.unlock.password"]
             if locked.exists {
                 replace(locked, with: "PUBLIC-album-password")
-                app.buttons["Unlock with Password"].tap()
+                app.buttons["album.unlock.submit"].tap()
             }
         }
         album("Trips"); album("Weekend")
         app.buttons["album.actions"].tap(); app.buttons["Album Security"].tap()
-        app.buttons["album.protection"].coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5)).tap(); app.buttons["Album password"].tap()
+        app.buttons["Album password"].tap()
         app.secureTextFields["album.password"].tap(); app.secureTextFields["album.password"].typeText("PUBLIC-album-password")
         app.secureTextFields["album.password.confirm"].tap(); app.secureTextFields["album.password.confirm"].typeText("PUBLIC-album-password")
         app.buttons["album.save"].tap()
         XCTAssertTrue(app.secureTextFields["album.unlock.password"].waitForExistence(timeout: 10))
         capture(app, "Store - Protected album")
         app.secureTextFields["album.unlock.password"].tap(); app.secureTextFields["album.unlock.password"].typeText("PUBLIC-album-password")
-        app.buttons["Unlock with Password"].tap(); XCTAssertTrue(app.buttons["album.create"].waitForExistence(timeout: 10))
+        app.buttons["album.unlock.submit"].tap(); XCTAssertTrue(app.buttons["album.create"].waitForExistence(timeout: 10))
         app.terminate(); app.launch(); unlock(app, password: owner)
         XCTAssertTrue(app.buttons["Notes"].firstMatch.waitForExistence(timeout: 15)); app.buttons["Notes"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Travel plans"].firstMatch.waitForExistence(timeout: 10))
@@ -401,10 +404,10 @@ final class EncryptedReleaseUITests: XCTestCase {
         app.tabBars.buttons["Library"].tap(); app.buttons["library.filter.photos"].tap(); capture(app, "Store - Photos")
         app.buttons["library.filter.videos"].tap(); capture(app, "Store - Media")
         app.tabBars.buttons["Albums"].tap()
-        app.staticTexts["Trips"].firstMatch.tap()
-        if app.buttons["Open Album"].waitForExistence(timeout: 2) { app.buttons["Open Album"].tap() }
-        XCTAssertTrue(app.staticTexts["Weekend"].firstMatch.waitForExistence(timeout: 10))
-        app.staticTexts["Weekend"].firstMatch.tap()
+        app.descendants(matching: .any).matching(identifier: "Trips").firstMatch.tap()
+        if app.buttons["album.unlock.inherited"].waitForExistence(timeout: 2) { app.buttons["album.unlock.inherited"].tap() }
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "Weekend").firstMatch.waitForExistence(timeout: 10))
+        app.descendants(matching: .any).matching(identifier: "Weekend").firstMatch.tap()
         XCTAssertTrue(app.secureTextFields["album.unlock.password"].waitForExistence(timeout: 10))
         capture(app, "Store - Protected album")
     }

@@ -20,23 +20,34 @@ struct SecretSpaceView: View {
     @State private var draft: SecretNoteDraft?
     private struct NewNotePresentation: Hashable { let id = UUID() }
     @State private var newNote: NewNotePresentation?
+    @State private var searchText = ""
 
     private var draftManager: SecretNoteDraftManager { LibraryWriteCoordinator.draftManager(in: modelContext) }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                WagLockSubtitle(text: "A little room to think")
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    WagLockTitle(text: String(localized: "secretSpace.title"))
+                    Text("\(guestModeManager.isGuestMode ? 0 : notes.count) note\(notes.count == 1 ? "" : "s") · On this device")
+                        .font(WagLockFonts.poppins(13, .regular, relativeTo: .footnote)).foregroundStyle(Graphite.textMuted)
+                }
+                .padding(.horizontal, 22)
+                if !notes.isEmpty {
+                    WagLockSearchField(title: "Search notes", text: $searchText).padding(.horizontal, 22)
+                }
                 notesContent.onAppear(perform: refreshDraft)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .background(ColorTheme.primaryBackground.ignoresSafeArea())
-            .navigationTitle(String(localized: "secretSpace.title"))
+            .background(Graphite.base.ignoresSafeArea())
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if guestModeManager.isOwnerMode {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("New") { newNote = NewNotePresentation() }
+                            .accessibilityLabel("New note")
+                            .accessibilityIdentifier("New")
                     }
                 }
             }
@@ -95,6 +106,10 @@ struct SecretSpaceView: View {
                     }
                     .onDelete { delete(indices: $0, from: regularNotes) }
                 }
+                Section {
+                    WagLockNote(kind: .info, text: "Drafts are saved automatically and encrypted like everything else.")
+                        .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
+                }
             }
             .wagLockList()
             .accessibilityIdentifier("notes.list")
@@ -102,12 +117,18 @@ struct SecretSpaceView: View {
         }
     }
 
+    private var searchedNotes: [SecretNote] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return notes }
+        return notes.filter { $0.title.localizedCaseInsensitiveContains(query) || $0.content.localizedCaseInsensitiveContains(query) }
+    }
+
     private var pinnedNotes: [SecretNote] {
-        notes.filter { $0.isFavorite }
+        searchedNotes.filter { $0.isFavorite }
     }
 
     private var regularNotes: [SecretNote] {
-        notes.filter { !$0.isFavorite }
+        searchedNotes.filter { !$0.isFavorite }
     }
 
     // MARK: - Empty State
@@ -238,29 +259,22 @@ private struct NoteRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(note.title)
-                    .font(.headline)
+                    .font(.wlHeading).foregroundStyle(Graphite.textPrimary)
                     .lineLimit(1)
                 if note.isFavorite {
                     Image(systemName: "pin.fill")
                         .font(.caption)
-                        .foregroundColor(.orange)
+                        .foregroundStyle(Graphite.warn)
                 }
             }
 
             Text(note.preview)
-                .font(.body)
-                .foregroundStyle(ColorTheme.secondaryText)
+                .font(.wlBody)
+                .foregroundStyle(Graphite.textSecondary)
                 .lineLimit(2)
 
-            HStack {
-                Text("Updated \(note.formattedModifiedDate) · On this device")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text(String(format: String(localized: "note.wordCount"), note.wordCount))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            Text("Updated \(note.formattedModifiedDate) · " + String(format: String(localized: "note.wordCount"), note.wordCount))
+                .font(.wlMeta).foregroundStyle(Graphite.textMuted)
         }
         .padding(.vertical, 0)
         .swipeActions(edge: .leading, allowsFullSwipe: false) {
@@ -279,7 +293,7 @@ private struct NoteRow: View {
                     systemImage: note.isFavorite ? "pin.slash" : "pin"
                 )
             }
-            .tint(.orange)
+            .tint(Graphite.warn)
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {

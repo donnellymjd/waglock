@@ -42,38 +42,40 @@ struct NoteEditorView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                Text(isNewNote ? "Drafts are saved automatically" : "Changes are saved automatically").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
-                Text("Title").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
+            VStack(alignment: .leading, spacing: 12) {
+                Label(autosave.lastSavedAt == nil ? (isNewNote ? "Drafts save automatically" : "Changes save automatically") : "Saved · encrypted",
+                      systemImage: autosave.lastSavedAt == nil ? "lock" : "checkmark.circle")
+                    .font(.wlMeta).foregroundStyle(autosave.lastSavedAt == nil ? Graphite.textMuted : Color(hex: 0x7FD8A4))
                 TextField(String(localized: "note.title.placeholder"), text: Binding(get: { title }, set: { value in
                     guard value != title else { return }
                     title = value; scheduleAutoSave(title: value, content: content)
                 }))
-                    .font(.body).textInputAutocapitalization(.sentences)
-                    .focused($focusedField, equals: .title).padding(16)
-                    .background(ColorTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 14))
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(ColorTheme.border))
+                    .font(.wlSheetTitle).foregroundStyle(Graphite.textPrimary)
+                    .textInputAutocapitalization(.sentences)
+                    .focused($focusedField, equals: .title)
                     .accessibilityIdentifier("note.title")
+                Text(Date().formatted(.dateTime.weekday(.wide).hour().minute()))
+                    .font(.wlMeta).foregroundStyle(Graphite.textMuted)
                 TextEditor(text: Binding(get: { content }, set: { value in
                     guard value != content else { return }
                     content = value; scheduleAutoSave(title: title, content: value)
                 }))
-                    .font(.body).lineSpacing(6).focused($focusedField, equals: .content)
-                    .scrollContentBackground(.hidden).padding(12).frame(minHeight: 320)
-                    .background(ColorTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 16))
+                    .font(WagLockFonts.poppins(16, .regular, relativeTo: .body)).foregroundStyle(Graphite.textPrimary)
+                    .lineSpacing(6).focused($focusedField, equals: .content)
+                    .scrollContentBackground(.hidden).frame(minHeight: 320)
                     .accessibilityIdentifier("note.content")
-                bottomToolbar
                 if let error = autosave.error {
-                    Text(error).font(.footnote).foregroundStyle(ColorTheme.destructive)
+                    WagLockNote(kind: .error, text: error)
                         .accessibilityIdentifier("note.save.error")
                 }
                 Button("Save note", action: saveAndDismiss)
                     .buttonStyle(WagLockPrimaryButtonStyle()).disabled(isEmpty)
                     .accessibilityIdentifier("note.save")
-            }.padding(24)
+            }.padding(.horizontal, 22).padding(.vertical, 12)
         }
+        .safeAreaInset(edge: .bottom) { formatBar }
         .scrollDismissesKeyboard(.interactively)
-        .background(ColorTheme.primaryBackground.ignoresSafeArea())
+        .background(Graphite.base.ignoresSafeArea())
         .navigationTitle(isNewNote ? "New note" : "Edit note")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -99,38 +101,32 @@ struct NoteEditorView: View {
         title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// Bottom toolbar
-    private var bottomToolbar: some View {
-        HStack {
-            // Word count
-            HStack(spacing: 4) {
-                Image(systemName: "doc.text")
-                    .font(.caption2)
-                Text(String(format: String(localized: "note.wordCount"), content.count))
-                    .font(.caption)
-            }
-            .foregroundColor(.secondary)
-
+    /// Formatting bar. Notes are plain text: each tool starts a new line with its marker.
+    private var formatBar: some View {
+        HStack(spacing: 4) {
+            formatButton("textformat.size", "Heading", "# ")
+            formatButton("list.bullet", "List", "• ")
+            formatButton("checklist", "Checklist", "☐ ")
             Spacer()
-
-            // Autosave status
-            if let lastSaved = autosave.lastSavedAt {
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.caption2)
-                        .foregroundColor(.green)
-                    Text(
-                        String(
-                            format: String(localized: "note.lastSaved"),
-                            formatted(date: lastSaved))
-                    )
-                    .font(.caption2)
-                }
-                .foregroundColor(.secondary)
-            }
+            Text("\(content.count) characters").font(.wlMeta).foregroundStyle(Graphite.textMuted)
+                .padding(.trailing, 10)
         }
-        .padding(.vertical, 4)
+        .padding(6)
+        .background(Graphite.bar, in: RoundedRectangle(cornerRadius: 24))
+        .padding(.horizontal, 16).padding(.bottom, 6)
+    }
 
+    private func formatButton(_ symbol: String, _ label: String, _ marker: String) -> some View {
+        Button {
+            let prefix = content.isEmpty || content.hasSuffix("\n") ? "" : "\n"
+            content += prefix + marker
+            scheduleAutoSave(title: title, content: content)
+            focusedField = .content
+        } label: {
+            Image(systemName: symbol).font(.system(size: 17)).foregroundStyle(Graphite.textPrimary)
+                .frame(width: 44, height: 44)
+        }
+        .accessibilityLabel(label)
     }
 
     private func scheduleAutoSave(title: String, content: String) {

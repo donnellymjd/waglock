@@ -2,10 +2,10 @@
 //  ImportButtonsView.swift
 //  WagLock
 //
-//  Import buttons view
-//  Offers photo and file import options
+//  Add to WagLock: source choice, import progress and import complete
 //
 
+import Photos
 import PhotosUI
 import SwiftData
 import SwiftUI
@@ -35,30 +35,24 @@ private struct ScopedImportButtonsView: View {
 
     let onImportComplete: ([MediaItem]) -> Void
 
-    @State private var showImportSuccess = false
-    @State private var importSuccessCount = 0
+    @State private var completedCount: Int?
+    @State private var completedAssetIDs: [String] = []
 
     // MARK: - Body
 
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background
-                ColorTheme.primaryBackground
-                    .ignoresSafeArea()
-
-                if viewModel.isImporting { importProgressView } else { importOptionsView }
-            }
-            .navigationTitle(viewModel.isImporting ? "Adding to WagLock" : "Add to WagLock")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(viewModel.isImporting ? "Stop" : "Cancel") {
-                        if viewModel.isImporting { viewModel.cancelImport() }
-                        dismiss()
-                    }
+                Graphite.base.ignoresSafeArea()
+                if let completedCount {
+                    ImportCompleteView(count: completedCount, photoAssetIDs: completedAssetIDs) { dismiss() }
+                } else if viewModel.isImporting {
+                    importProgressView
+                } else {
+                    importOptionsView
                 }
             }
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $viewModel.showPhotoPicker) {
                 PhotoPickerRepresentable(
                     isPresented: $viewModel.showPhotoPicker,
@@ -115,171 +109,176 @@ private struct ScopedImportButtonsView: View {
                     Text(errorMessage)
                 }
             }
-            .alert(
-                String(localized: "import.success.title"),
-                isPresented: $showImportSuccess
-            ) {
-                Button(String(localized: "common.ok")) {
-                    showImportSuccess = false
-                    dismiss()
-                }
-            } message: {
-                Text(
-                    String(
-                        format: String(localized: "import.success.count"),
-                        importSuccessCount))
-            }
             .onAppear {
-
                 viewModel.modelContext = modelContext
                 viewModel.authViewModel = authViewModel
                 viewModel.onImportComplete = { items in
                     onImportComplete(items)
-
                     if items.isEmpty {
                         dismiss()
                     } else {
-                        // Show a success message; close after the user confirms
-                        importSuccessCount = items.count
-                        showImportSuccess = true
+                        completedAssetIDs = viewModel.removablePhotoAssetIDs
+                        completedCount = items.count
                     }
                 }
-
             }
         }
+        .interactiveDismissDisabled(viewModel.isImporting)
     }
+
+    // MARK: - Import progress
 
     private var importProgressView: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                Text("Keep this screen open").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
-                WagLockProgressCard(title: "Encrypting your selection", detail: viewModel.progressText, progress: viewModel.importProgress?.percentage)
-                WagLockNavigationRow(symbol: "folder", title: "Destination", detail: "Main library")
-                WagLockInfoCard(title: "Your originals stay where they are", detail: "WagLock copies and encrypts selected items. Photos edit history and Live Photo motion are not imported. Keep independent originals.")
-            }.padding(24)
+        VStack(alignment: .leading, spacing: 16) {
+            Spacer()
+            WagLockSectionLabel("Adding to Library")
+            if let progress = viewModel.importProgress {
+                Text("\(progress.current) of \(progress.total)")
+                    .font(.wlDisplay).foregroundStyle(Graphite.textPrimary).wlCappedDisplay()
+                    .accessibilityLabel("\(progress.current) of \(progress.total) items added")
+            } else {
+                Text("Preparing…").font(.wlTitle).foregroundStyle(Graphite.textPrimary)
+            }
+            WagLockProgressCard(title: "Encrypting as we go",
+                                detail: "Each item is encrypted the moment it’s copied in. Your originals stay where they are.",
+                                progress: viewModel.importProgress?.percentage)
+            WagLockNote(kind: .caution, text: "Leaving WagLock locks it right away and stops this import. Nothing partial is kept; add the rest after you unlock.")
+            Spacer()
+            Button("Cancel import") { viewModel.cancelImport(); dismiss() }
+                .buttonStyle(WagLockSecondaryButtonStyle())
+                .accessibilityIdentifier("import.cancel")
         }
+        .padding(.horizontal, 22).padding(.vertical, 24)
     }
 
-    // MARK: - Import Options View
+    // MARK: - Source choice
 
     private var importOptionsView: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                Text("Choose where to import from").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
-                WagLockInfoCard(title: "Keep what matters close", detail: "Selected items are copied into the vault. Your originals stay where they are.")
-                ImportOptionButton(icon: "photo", title: "Photos & videos", subtitle: "Choose from your photo library", color: ColorTheme.accent) {
-                    viewModel.selectPhotos()
-                }.accessibilityIdentifier("import.photos")
-                ImportOptionButton(icon: "folder", title: "Files", subtitle: "Documents, archives and other files", color: ColorTheme.accent) {
-                    viewModel.selectFiles()
-                }.accessibilityIdentifier("import.files")
-                ImportOptionButton(icon: "waveform", title: "Audio", subtitle: "Import recordings and audio files", color: ColorTheme.accent) {
-                    viewModel.selectAudio()
-                }.accessibilityIdentifier("import.audio")
-                WagLockInfoCard(title: "Choosing a cloud file?", detail: "The iOS picker may download it first. That transfer is handled by iOS.")
-                Text(LibraryStoragePolicy.encryptedMetadata ? "Keep independent originals and verify your encrypted backups." : "Use sample media in this early test build. Keep independent originals.")
-                    .font(.footnote).foregroundStyle(ColorTheme.secondaryText)
-                if viewModel.isImporting {
-                    Button(role: .destructive) { viewModel.cancelImport(); dismiss() } label: {
-                        Label("Stop import", systemImage: "stop.circle").frame(maxWidth: .infinity, minHeight: 44)
-                    }
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                WagLockRoundButton(symbol: "xmark", label: "Close") { dismiss() }
+                    .accessibilityIdentifier("import.close")
+                Spacer()
+            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    WagLockTitle(text: "Add to WagLock", size: .sheet)
+                    Text("Selected items are copied into this library. Your originals stay where they are.")
+                        .font(.wlBody).foregroundStyle(Graphite.textMuted)
+                    Button { viewModel.selectPhotos() } label: {
+                        WagLockRow(symbol: "photo.on.rectangle", title: "Photos & videos", detail: "Choose from your photo library")
+                    }.buttonStyle(.plain).accessibilityIdentifier("import.photos")
+                    Button { viewModel.selectFiles() } label: {
+                        WagLockRow(symbol: "folder", title: "Files", detail: "Documents, archives and other files")
+                    }.buttonStyle(.plain).accessibilityIdentifier("import.files")
+                    Button { viewModel.selectAudio() } label: {
+                        WagLockRow(symbol: "waveform", title: "Audio", detail: "Import recordings and audio files")
+                    }.buttonStyle(.plain).accessibilityIdentifier("import.audio")
+                    WagLockNote(kind: .info, title: "Choosing a cloud file?",
+                                text: "The iOS picker may download it first. That transfer is handled by iOS.")
+                    Text(LibraryStoragePolicy.encryptedMetadata ? "Keep independent originals and verify your encrypted backups." : "Use sample media in this early test build. Keep independent originals.")
+                        .font(.wlMeta).foregroundStyle(Graphite.textMuted)
                 }
-            }.padding(24)
+            }
+            // Retained so existing tests and VoiceOver users find the familiar control.
+            Button("Cancel") { dismiss() }
+                .font(WagLockFonts.poppins(14, .semibold, relativeTo: .body))
+                .foregroundStyle(Graphite.textSecondary).frame(maxWidth: .infinity, minHeight: 44)
         }
+        .padding(.horizontal, 22).padding(.vertical, 16)
     }
-
-    // MARK: - Importing View
-
-    private var importingView: some View {
-        VStack(spacing: 30) {
-            Spacer()
-
-            // Animated icon
-            ZStack {
-                Circle()
-                    .stroke(Color.blue.opacity(0.2), lineWidth: 4)
-                    .frame(width: 100, height: 100)
-
-                Circle()
-                    .trim(from: 0, to: viewModel.progressPercentage)
-                    .stroke(Color.blue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                    .frame(width: 100, height: 100)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.linear, value: viewModel.progressPercentage)
-
-                Image(systemName: "arrow.down.circle.fill")
-                    .font(.system(size: 40))
-                    .foregroundColor(.blue)
-            }
-
-            // Progress info
-            VStack(spacing: 12) {
-                Text(viewModel.progressText)
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-
-                if let progress = viewModel.importProgress {
-                    Text("\(Int(progress.percentage * 100))%")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                        .foregroundColor(.blue)
-                }
-            }
-
-            Spacer()
-
-            // Success message
-            if viewModel.importedCount > 0 && !viewModel.isImporting {
-                VStack(spacing: 12) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(.green)
-
-                    Text(String(localized: "import.success.title"))
-                        .font(.title2)
-                        .fontWeight(.semibold)
-
-                    Text(
-                        String(
-                            format: String(localized: "import.success.count"),
-                            viewModel.importedCount)
-                    )
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                }
-                .transition(.scale.combined(with: .opacity))
-            }
-        }
-        .padding()
-    }
-
 }
 
-// MARK: - Import Option Button
-
-struct ImportOptionButton: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-    let color: Color
-    let action: () -> Void
+/// Import complete: count, the originals-in-Photos warning with an explicit, iOS-confirmed
+/// "Remove from Photos…", and a path to back up. Nothing is removed without that tap.
+private struct ImportCompleteView: View {
+    let count: Int
+    let photoAssetIDs: [String]
+    let done: () -> Void
+    @EnvironmentObject private var reminders: BackupReminderStore
+    @State private var removal: Removal = .idle
+    @State private var showBackup = false
+    enum Removal: Equatable { case idle, kept, removing, removed, failed(String) }
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 0) {
-                WagLockNavigationRow(symbol: icon, title: title, detail: subtitle)
-                Image(systemName: "chevron.right").font(.footnote)
-                    .foregroundStyle(ColorTheme.secondaryText).padding(.trailing, 14)
-            }.background(ColorTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 14))
+        VStack(alignment: .leading, spacing: 14) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    Image(systemName: "checkmark.seal").font(.system(size: 34)).foregroundStyle(Graphite.accentText)
+                        .frame(width: 64, height: 64).background(Graphite.accentTint, in: Circle())
+                        .accessibilityHidden(true).padding(.top, 24)
+                    WagLockTitle(text: "\(count) item\(count == 1 ? "" : "s") added", size: .sheet)
+                    Text("Encrypted and saved in your Library").font(.wlBody).foregroundStyle(Graphite.textMuted)
+                    if !photoAssetIDs.isEmpty { originalsCard }
+                    Button { showBackup = true } label: {
+                        WagLockRow(symbol: "icloud.and.arrow.up", title: "Back up now",
+                                   detail: reminders.lastSaved.map { "Last encrypted backup " + $0.formatted(.relative(presentation: .named)) }
+                                       ?? "No encrypted backup yet")
+                    }.buttonStyle(.plain).accessibilityIdentifier("import.complete.backup")
+                }
+            }
+            Button("Done", action: done).buttonStyle(WagLockPrimaryButtonStyle())
+                .disabled(removal == .removing)
+                .accessibilityIdentifier("import.complete.done")
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding(.horizontal, 22).padding(.bottom, 24)
+        .sheet(isPresented: $showBackup) {
+            NavigationStack {
+                PortableBackupView()
+                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { showBackup = false } } }
+            }
+        }
     }
-}
 
-// MARK: - Preview
-
-#Preview {
-    ImportButtonsView { items in
+    private var originalsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            switch removal {
+            case .removed:
+                WagLockNote(kind: .info, title: "Removed from Photos",
+                            text: "They’re in Recently Deleted in Photos until iOS clears it. Recently Deleted shows that something was imported.")
+            case .kept:
+                WagLockNote(kind: .info, title: "Originals kept in Photos",
+                            text: "They stay an independent copy outside WagLock.")
+            default:
+                WagLockNote(kind: .caution, title: "Originals are still in Photos",
+                            text: "Anyone who opens your Photos app can still see them. Keep them as an independent copy, or remove them now.")
+                HStack(spacing: 10) {
+                    Button("Keep") { removal = .kept }.buttonStyle(WagLockSecondaryButtonStyle())
+                        .accessibilityIdentifier("import.complete.keep")
+                    Button("Remove from Photos…", action: removeOriginals).buttonStyle(WagLockSecondaryButtonStyle())
+                        .accessibilityIdentifier("import.complete.remove")
+                }
+                .disabled(removal == .removing)
+                Text("iOS asks you to confirm. Removed items go to Recently Deleted in Photos.")
+                    .font(.wlMeta).foregroundStyle(Graphite.textMuted)
+                if case .failed(let message) = removal { WagLockNote(kind: .error, text: message) }
+            }
+        }
     }
-    .modelContainer(for: [MediaItem.self])
+
+    /// iOS shows its own deletion confirmation; cancelling it leaves everything in Photos.
+    private func removeOriginals() {
+        let identifiers = photoAssetIDs
+        removal = .removing
+        Task {
+            let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+            guard status == .authorized || status == .limited else {
+                removal = .failed("WagLock needs Photos access to remove them. Your originals are unchanged; you can delete them in Photos.")
+                return
+            }
+            let assets = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
+            guard assets.count > 0 else {
+                removal = .failed("WagLock couldn’t find these originals in Photos. Nothing was removed.")
+                return
+            }
+            do {
+                try await PHPhotoLibrary.shared().performChanges {
+                    PHAssetChangeRequest.deleteAssets(assets)
+                }
+                removal = .removed
+            } catch {
+                removal = .idle // Cancelled at the iOS prompt, or iOS refused: nothing removed.
+            }
+        }
+    }
 }

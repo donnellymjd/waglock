@@ -64,6 +64,7 @@ final class UICompletionUITests: XCTestCase {
         XCTAssertTrue(video.waitForExistence(timeout: 10), "Seed the generated video with simctl addmedia before this QA test")
         video.tap(); app.buttons["Add"].tap()
         if app.alerts.buttons["OK"].waitForExistence(timeout: 20) { app.alerts.buttons["OK"].tap() }
+        if app.buttons["import.complete.done"].waitForExistence(timeout: 5) { app.buttons["import.complete.done"].tap() }
         let preview = app.descendants(matching: .any).matching(identifier: "videos.preview").firstMatch
         XCTAssertTrue(preview.waitForExistence(timeout: 10)); preview.tap()
         XCTAssertTrue(app.buttons["video.close"].waitForExistence(timeout: 10))
@@ -170,13 +171,14 @@ final class UICompletionUITests: XCTestCase {
             }
             app.tabBars.buttons["Library"].tap()
             shot("\(appearance) - grouped photos")
+            if app.buttons["library.filter.photos"].waitForExistence(timeout: 5) { app.buttons["library.filter.photos"].tap() }
             let preview = app.descendants(matching: .any).matching(identifier: "photos.preview").firstMatch
             if preview.waitForExistence(timeout: 5) {
                 preview.tap()
                 XCTAssertTrue(app.buttons["photo.info"].waitForExistence(timeout: 5))
                 shot("\(appearance) - photo viewer")
                 app.buttons["photo.info"].tap()
-                XCTAssertTrue(app.navigationBars["Photo information"].waitForExistence(timeout: 5))
+                XCTAssertTrue(app.buttons["photo.info.close"].waitForExistence(timeout: 5))
                 shot("\(appearance) - photo information")
                 app.buttons["photo.info.close"].tap()
                 app.buttons["photo.close"].tap()

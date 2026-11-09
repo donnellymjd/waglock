@@ -38,6 +38,11 @@ class ImportViewModel: ObservableObject {
     /// Number of items imported successfully
     @Published var importedCount: Int = 0
 
+    /// Photos asset identifiers of the last import, set only when every selected item was
+    /// committed. Used solely for the user-initiated "Remove from Photos…" on Import complete.
+    @Published private(set) var removablePhotoAssetIDs: [String] = []
+    private var pendingPhotoAssetIDs: [String] = []
+
     /// Whether to show the encrypted-file password prompt
     @Published var showEncryptedPasswordInput: Bool = false
 
@@ -78,6 +83,9 @@ class ImportViewModel: ObservableObject {
         errorMessage = nil
         isImporting = true
         importedCount = 0
+        removablePhotoAssetIDs = []
+        let identifiers = results.compactMap(\.assetIdentifier)
+        pendingPhotoAssetIDs = identifiers.count == results.count ? identifiers : []
 
         startImportTask { password, progress in
             try await self.importService.importMedia(from: results, password: password, progress: progress)
@@ -112,6 +120,8 @@ class ImportViewModel: ObservableObject {
         }
 
         // Import non-encrypted files normally
+        pendingPhotoAssetIDs = []
+        removablePhotoAssetIDs = []
         errorMessage = nil
         isImporting = true
         importedCount = 0
@@ -145,6 +155,7 @@ class ImportViewModel: ObservableObject {
         importProgress = nil
         errorMessage = nil
         importedCount = 0
+        pendingPhotoAssetIDs = []
         pendingEncryptedFile = nil
         showEncryptedPasswordInput = false
     }
@@ -218,6 +229,8 @@ class ImportViewModel: ObservableObject {
             catch { context.rollback(); throw error }
             committed = true
             importedCount = items.count
+            removablePhotoAssetIDs = items.count >= pendingPhotoAssetIDs.count ? pendingPhotoAssetIDs : []
+            pendingPhotoAssetIDs = []
             isImporting = false
             importProgress = nil
             onImportComplete?(items)

@@ -24,7 +24,7 @@ final class DesignAppearanceUITests: XCTestCase {
         capture("Graphite - unlock")
         unlock()
         capture("Graphite - photos")
-        app.buttons["photos.import"].tap()
+        app.buttons["library.add"].tap()
         XCTAssertTrue(app.buttons["import.photos"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["import.files"].exists)
         XCTAssertTrue(app.buttons["import.audio"].exists)
