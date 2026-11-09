@@ -9,6 +9,8 @@ final class EncryptedReleaseUITests: XCTestCase {
     @MainActor private func beginOnboarding(_ app: XCUIApplication) {
         let start = app.buttons["onboarding.start"]
         if start.waitForExistence(timeout: 8) { start.tap() }
+        let storage = app.buttons["onboarding.storage.continue"]
+        if storage.waitForExistence(timeout: 3) { storage.tap() } // Standard is the default.
     }
     @MainActor private func acknowledgeNoReset(_ app: XCUIApplication) {
         let toggle = app.switches["setup.acknowledge"]

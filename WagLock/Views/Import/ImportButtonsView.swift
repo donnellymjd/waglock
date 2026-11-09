@@ -71,6 +71,7 @@ private struct ScopedImportButtonsView: View {
                     viewModel.importFromFiles(urls: urls)
                 }
             }
+            .sheet(isPresented: $viewModel.reservedSpaceFull) { StorageFullView() }
             .sheet(isPresented: $viewModel.showAudioPicker) {
                 DocumentPickerRepresentable(
                     isPresented: $viewModel.showAudioPicker,

@@ -209,6 +209,7 @@ final class AuthenticationViewModel: ObservableObject {
                     openLibrary(library, secret: secret)
                     isPasswordSet = true
                     showsFirstBackupSetup = true
+                    StorageReserveCoordinator.shared.applyPendingChoice()
                 } catch {
                     errorMessage = "WagLock couldn't create your library. Nothing was saved. Try again."
                 }
@@ -761,6 +762,7 @@ final class AuthenticationViewModel: ObservableObject {
         guard confirmation == "ERASE", !isAuthenticated, !isProcessing, !isErasing,
               !requiresEraseCompletion, let resetService else { return }
         logout()
+        StorageReserveCoordinator.shared.pause() // The reserve is removed with everything else.
         isErasing = true; requiresEraseCompletion = true; eraseError = nil
         defer { isErasing = false }
         do {
@@ -782,6 +784,7 @@ final class AuthenticationViewModel: ObservableObject {
     }
 
     private func finishErasureState() {
+        StorageReserveCoordinator.shared.refresh() // Standard after erase.
         requiresEraseCompletion = false
         isBiometricUnlockEnabled = UserDefaults.standard.bool(forKey: "vaultito.faceID.enabled")
         failedAttempts = 0; lockoutUntil = nil

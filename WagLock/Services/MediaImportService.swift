@@ -114,12 +114,16 @@ class MediaImportService {
         }
     }
 
+    /// True when the last batch stopped early because reserved space was full.
+    private(set) var lastBatchStoppedForReservedSpace = false
+
     /// Owns fresh outputs until the complete batch is handed to its caller.
     /// Cancellation discards the batch; ordinary per-item failures retain successes.
     func importBatch<Input>(_ inputs: [Input],
                             operation: (Input) async throws -> MediaItem?) async throws -> [MediaItem] {
         var imported: [MediaItem] = []
         var handedOff = false
+        lastBatchStoppedForReservedSpace = false
         defer {
             if !handedOff {
                 for item in imported { try? storageService.deleteFile(path: item.encryptedPath) }
@@ -131,6 +135,11 @@ class MediaImportService {
                 if let item = try await operation(input) { imported.append(item) }
             } catch is CancellationError {
                 throw CancellationError()
+            } catch FileStorageError.reservedSpaceFull {
+                // Fixed-size storage has no room: later items would fail the same way.
+                lastBatchStoppedForReservedSpace = true
+                if imported.isEmpty { throw FileStorageError.reservedSpaceFull }
+                break
             } catch {
                 // A failed item must not erase successfully imported siblings.
             }

@@ -1,17 +1,23 @@
 import SwiftUI
 
-/// First run for the multi-library model: Welcome → Create passcode → (after the library
-/// opens) Backups. The storage-mode step is not shown: only Standard storage exists in
-/// this build (see docs/portable-vault/library-slots.md, "Not implemented").
+/// First run for the multi-library model: Welcome → Storage privacy → Create passcode →
+/// (after the library opens) Backups. A Fixed-size choice is applied once the first
+/// library has opened (docs/portable-vault/fixed-size-storage.md).
 struct OnboardingFlowView: View {
     @EnvironmentObject private var viewModel: AuthenticationViewModel
     @State private var step: Step = .welcome
-    enum Step { case welcome, passcode }
+    @State private var fixedGigabytes: Int?
+    enum Step { case welcome, storage, passcode }
 
     var body: some View {
         Group {
             switch step {
-            case .welcome: OnboardingWelcomeView { step = .passcode }
+            case .welcome: OnboardingWelcomeView { step = .storage }
+            case .storage:
+                OnboardingStorageView(fixedGigabytes: $fixedGigabytes) {
+                    StorageReserveCoordinator.shared.pendingFixedGigabytes = fixedGigabytes
+                    step = .passcode
+                }
             case .passcode: OnboardingPasscodeView()
             }
         }

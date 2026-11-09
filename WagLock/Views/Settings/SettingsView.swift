@@ -316,19 +316,7 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, alignment: .leading).padding(16)
                 .background(Graphite.surface1, in: RoundedRectangle(cornerRadius: 16))
                 .accessibilityElement(children: .combine)
-                WagLockSectionLabel("Storage mode · All of WagLock")
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Standard").font(.wlHeading).foregroundStyle(Graphite.textPrimary)
-                    Text("Grows as you add things and uses only the space you need.")
-                        .font(.wlMeta).foregroundStyle(Graphite.textSecondary)
-                    Label("Your iPhone’s storage settings show how much WagLock holds.", systemImage: "info.circle")
-                        .font(.wlMeta).foregroundStyle(Graphite.textMuted)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading).padding(16)
-                .background(Graphite.surface1, in: RoundedRectangle(cornerRadius: 16))
-                if let info = storageInfo {
-                    Text("\(info.formattedAvailableSpace) free on this iPhone").font(.wlMeta).foregroundStyle(Graphite.textMuted)
-                }
+                StorageModeSection()
                 Button { showClearCacheConfirmation = true } label: {
                     WagLockRow(symbol: "photo.stack", title: "Clear cache", detail: "Previews rebuild when needed")
                 }.buttonStyle(.plain).accessibilityIdentifier("settings.clearCache")

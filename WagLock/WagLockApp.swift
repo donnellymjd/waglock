@@ -30,6 +30,8 @@ struct WagLockApp: App {
 
     @StateObject private var authViewModel = AuthenticationViewModel()
     @StateObject private var guestModeManager = GuestModeManager.shared
+    /// App-wide fixed-size storage; the same in every library.
+    @StateObject private var storage = StorageReserveCoordinator.shared
     @State private var showLaunchScreen = true
     @State private var screenCaptured = UIScreen.main.isCaptured
 
@@ -111,6 +113,11 @@ struct WagLockApp: App {
             }
             // Graphite is dark only; the Appearance setting was removed in the redesign.
             .preferredColorScheme(.dark)
+            .environmentObject(storage)
+            .fullScreenCover(isPresented: Binding(get: { storage.showsSwitching && !showLaunchScreen && !screenCaptured },
+                                                  set: { if !$0 { storage.dismissSwitching() } })) {
+                StorageSwitchingView().environmentObject(storage)
+            }
             .tint(ColorTheme.accent)
             .environment(\.locale, AppConstants.presentationLocale)
             .task {
@@ -127,6 +134,7 @@ struct WagLockApp: App {
             .onChange(of: scenePhase) { _, newPhase in
                 switch newPhase {
                 case .background:
+                    storage.pause()
                     lastBackgroundedAt = Date()
                     // Fresh 1.0 libraries always drop their session keys on background.
                     // New recording is disabled there; preserve the legacy Dev recording policy.
@@ -140,6 +148,7 @@ struct WagLockApp: App {
                     autoLockIfNeeded()
                     if returnedFromBackground { authViewModel.resumeAlbumAccess() }
                     authViewModel.vaultContext?.audio.tick()
+                    storage.resume()
                 default:
                     break
                 }

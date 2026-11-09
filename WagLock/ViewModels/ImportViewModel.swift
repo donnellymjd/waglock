@@ -38,6 +38,9 @@ class ImportViewModel: ObservableObject {
     /// Number of items imported successfully
     @Published var importedCount: Int = 0
 
+    /// Fixed-size storage had no room for (some of) the selection; shows Reserved space full.
+    @Published var reservedSpaceFull = false
+
     /// Photos asset identifiers of the last import, set only when every selected item was
     /// committed. Used solely for the user-initiated "Remove from Photos…" on Import complete.
     @Published private(set) var removablePhotoAssetIDs: [String] = []
@@ -230,12 +233,15 @@ class ImportViewModel: ObservableObject {
             committed = true
             importedCount = items.count
             removablePhotoAssetIDs = items.count >= pendingPhotoAssetIDs.count ? pendingPhotoAssetIDs : []
+            if importService.lastBatchStoppedForReservedSpace { removablePhotoAssetIDs = []; reservedSpaceFull = true }
             pendingPhotoAssetIDs = []
             isImporting = false
             importProgress = nil
             onImportComplete?(items)
         } catch is CancellationError {
             if token == importGeneration { errorMessage = nil }
+        } catch FileStorageError.reservedSpaceFull {
+            if token == importGeneration { errorMessage = nil; reservedSpaceFull = true }
         } catch {
             if token == importGeneration {
                 if encryptedInput, error is EncryptionError {

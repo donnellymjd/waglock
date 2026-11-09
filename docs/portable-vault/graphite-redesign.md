@@ -39,13 +39,13 @@ Status: implemented on 2026-11-09 in two passes (core screens, then the remainin
 | Files | Title, count, search, All / PDFs / Documents / Other chips, icon-tile rows and the open-here note. |
 | Audio player | Waveform card (decorative), title and metadata, scrubber, gradient play/pause, ±15 s, export, privacy note. |
 | Backup failed, Backup recovery key | `BackupFailedCard` replaces the inline error after a failed preparation. **Generate a recovery key** creates a standard age X25519 identity, shows it once in groups of four with Print and Save to Files, has no copy button, and fills in the public recipient. The Bech32 encoder was checked against rage (pyrage) and has a unit test vector. |
-| Settings › Storage | This library's size and per-type counts, Standard mode with its disclosure, free space on the iPhone and Clear cache. |
+| Settings › Storage | This library's size and per-type counts, the storage-mode card (Standard or Fixed size, Change size…, Switch to Standard / fixed size…) and Clear cache. |
+| Onboarding 2, Switching storage, Reserved space full | `StorageViews.swift`, backed by the reserve in [fixed-size storage](fixed-size-storage.md). Switching storage shows a percentage and time left, and Pause/Resume. Reserved space full appears when an import has no room. |
 
 Tabs are now Library · Albums · Files · Notes · Settings. Accessibility identifiers used by UI tests are kept where screens survived. UI tests were updated for the new tabs, chips, add button, import-complete screen, viewer close buttons, album cards (matched by identifier), album unlock buttons and the removed Appearance setting.
 
 ## Not built, and why
 
-- **Onboarding 2 (storage privacy), Reserved space full, Switching storage, and the fixed-size half of Settings › Storage.** These control a fixed-size storage container that does not exist. Showing them would ship controls that do nothing. They wait on the storage design in [library-slots.md](library-slots.md).
 - **Password plus recovery key in one backup.** The Onboarding 4 and Recovery key frames imply both on one file. The age format allows a password (scrypt) recipient only on its own, so a backup uses either a password or a generated recovery key.
 - **Import pause and resume.** The canvas says leaving WagLock pauses an import and resumes it after unlock. Imports still stop on lock, nothing partial is kept, and the progress screen says so.
 - The unlock dial animation and the canvas hero artwork; only the app icon ships.

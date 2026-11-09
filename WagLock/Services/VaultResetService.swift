@@ -67,7 +67,10 @@ final class VaultResetService {
         let roots = [documents.appendingPathComponent("EncryptedMedia"),
             documents.appendingPathComponent("WagLockSecondaryMedia"),
             support.appendingPathComponent("WagLockVault"), support.appendingPathComponent("WagLockVault.creating"),
-            support.appendingPathComponent("WagLockSecondaryLibraries")]
+            support.appendingPathComponent("WagLockSecondaryLibraries"),
+            // Fixed-size storage: the reserve and the app-wide mode (Standard after erase).
+            support.appendingPathComponent("WagLockReserve.bin"),
+            support.appendingPathComponent("WagLockStorageMode.json")]
             + ["WagLockSessions", "WagLockPlaintextJobs", "WagLockExport", "ZeroNetExport", "AudioMemos", "WagLockBackupJobs"]
                 .map { temporary.appendingPathComponent($0) }
         return VaultResetService(namespace: namespace,
