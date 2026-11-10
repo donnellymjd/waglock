@@ -22,3 +22,7 @@ Build64 is held after D2S-151 reproduced four integration defects. Corrected65 f
 4. Once all gates are cleared and the upload is authorized, perform App Store server validation/upload, select exactly1.0(65), matching assets/walkthrough, and manual release. Local distribution export alone is not App Store validation. No upload, legal agreement acceptance, submission or release has occurred.
 
 Preserve existing phone vaults. No reset, native-format conversion or development-library migration is required by this candidate.
+
+## Redesign build
+
+App Review asked for more information under Guideline 2.1 on 2026-10-31. Draft answers and a recording script for the Graphite redesign build are in [App Review information (redesign)](app-review-information-redesign.md). They don't change this build-65 package.
