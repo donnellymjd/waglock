@@ -12,14 +12,9 @@ enum PasswordKeyboard: String, CaseIterable, Identifiable {
 struct PasswordKeyboardPicker: View {
     @Binding var selection: PasswordKeyboard
     var body: some View {
-        Picker("Password keyboard", selection: $selection) {
-            Text("Number pad").tag(PasswordKeyboard.numberPad)
-                .accessibilityIdentifier("password.keyboard.number")
-            Text("Full keyboard").tag(PasswordKeyboard.fullKeyboard)
-                .accessibilityIdentifier("password.keyboard.full")
-        }
-        .pickerStyle(.segmented)
-        .accessibilityIdentifier("password.keyboard.picker")
+        WagLockKeyboardPicker(numberPad: Binding(get: { selection == .numberPad },
+                                                 set: { selection = $0 ? .numberPad : .fullKeyboard }))
+            .accessibilityIdentifier("password.keyboard.picker")
     }
 }
 
@@ -91,7 +86,12 @@ struct SwitchablePasswordField: UIViewRepresentable {
         field.smartDashesType = .no
         field.clearsOnBeginEditing = false
         field.returnKeyType = .go
-        field.font = UIFont.preferredFont(forTextStyle: .body)
+        field.font = UIFontMetrics(forTextStyle: .body).scaledFont(
+            for: UIFont(name: "Poppins-Medium", size: 16) ?? .preferredFont(forTextStyle: .body))
+        field.textColor = UIColor(Graphite.textPrimary)
+        field.tintColor = UIColor(Graphite.accentText)
+        field.attributedPlaceholder = NSAttributedString(string: title,
+            attributes: [.foregroundColor: UIColor(Graphite.textMuted)])
         field.adjustsFontForContentSizeCategory = true
         field.setContentHuggingPriority(.defaultLow, for: .horizontal)
         field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)

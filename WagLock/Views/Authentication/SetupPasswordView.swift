@@ -27,6 +27,15 @@ struct SetupPasswordView: View {
     // MARK: - Body
 
     var body: some View {
+        if viewModel.usesLibrarySlots {
+            OnboardingFlowView()
+        } else {
+            legacySetup
+        }
+    }
+
+    /// Dev identity and pre-slot builds keep the inherited single-form setup.
+    private var legacySetup: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {

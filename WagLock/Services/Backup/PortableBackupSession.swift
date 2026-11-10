@@ -76,9 +76,9 @@ final class PortableBackupSession: ObservableObject {
                 if case .password(let password) = rootCredential {
                     guard password.utf8.count <= 16384 else { throw Failure.credentials }
                     if passwordSource == .currentVault {
-                        guard acknowledgedReuse, !password.isEmpty, auth.verifyPassword(password) else { throw Failure.vaultPassword }
+                        guard acknowledgedReuse, !password.isEmpty, await auth.verifyPasswordForSecurityOperation(password) else { throw Failure.vaultPassword }
                         try check()
-                    } else { guard password.count >= 12 else { throw Failure.credentials } }
+                    } else { guard password.count >= PasscodePolicy.backupPasswordMinimum else { throw Failure.credentials } }
                 } else if case .recipient(let recipient) = rootCredential {
                     guard passwordSource == .independent else { throw Failure.credentials }
                     _ = try AgeFileWriter.decodeRecipient(recipient)
@@ -97,7 +97,7 @@ final class PortableBackupSession: ObservableObject {
                         try check()
                         guard let album = records.first(where: { $0.id == row.id }) else { throw Failure.changed }
                         if row.policy == .faceIDOnly {
-                            guard consent.contains(row.id), let password = passwords[row.id], password.count >= 12 else { throw Failure.credentials }
+                            guard consent.contains(row.id), let password = passwords[row.id], password.count >= PasscodePolicy.backupPasswordMinimum else { throw Failure.credentials }
                             try await self.albums.unlock(album, useBiometrics: true, albums: records)
                         } else {
                             guard row.policy == .inherited || !(passwords[row.id] ?? "").isEmpty else { throw Failure.credentials }

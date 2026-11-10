@@ -35,6 +35,44 @@ struct VideoPlayerView: View {
     @State private var showShareSheet = false
     @State private var shareError: String?
     @State private var showShareAlert = false
+    @State private var showMoveToAlbum = false
+
+    private var topBar: some View {
+        HStack(spacing: 12) {
+            WagLockRoundButton(symbol: "xmark", label: "Close", onMedia: true) { dismiss() }
+                .accessibilityIdentifier("video.close")
+            Spacer()
+            VStack(spacing: 0) {
+                Text(video.createdAt.formatted(.dateTime.month(.abbreviated).day().year()))
+                    .font(.wlBodyStrong).foregroundStyle(.white)
+                Text((["Video"] + [video.formattedDuration, video.formattedFileSize].compactMap { $0 }).joined(separator: " · "))
+                    .font(.wlMeta).foregroundStyle(Color.white.opacity(0.75))
+            }
+            .accessibilityElement(children: .combine)
+            Spacer()
+            Menu {
+                Button("Info", systemImage: "info.circle") { showInfo = true }
+                Button("Move to album", systemImage: "rectangle.stack.badge.plus") { showMoveToAlbum = true }
+                Button("Export", systemImage: "square.and.arrow.up") { shareVideo() }
+                Button("Delete video", systemImage: "trash", role: .destructive) { showDeleteConfirmation = true }
+            } label: {
+                Image(systemName: "ellipsis").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
+                    .frame(width: 44, height: 44).background(Color.black.opacity(0.45), in: Circle())
+            }
+            .accessibilityLabel("Video actions")
+            .disabled(!isCurrentSession)
+        }
+        .padding(.horizontal, 22).padding(.top, 8)
+    }
+
+    private var actions: [WagLockAction] {
+        [
+            WagLockAction(id: "video.info", symbol: "info.circle", title: "Info", enabled: isCurrentSession) { showInfo = true },
+            WagLockAction(id: "video.album", symbol: "rectangle.stack.badge.plus", title: "Album", enabled: isCurrentSession) { showMoveToAlbum = true },
+            WagLockAction(id: "video.share", symbol: "square.and.arrow.up", title: "Export", enabled: isCurrentSession && !isSharing) { shareVideo() },
+            WagLockAction(id: "video.delete", symbol: "trash", title: "Delete", destructive: true, enabled: isCurrentSession) { showDeleteConfirmation = true },
+        ]
+    }
 
     private var isCurrentSession: Bool {
         authViewModel.isAuthenticated
@@ -42,47 +80,33 @@ struct VideoPlayerView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.black.ignoresSafeArea()
-                if isCurrentSession {
-                    if let player {
-                        NativeVideoPlayer(player: player)
-                            .ignoresSafeArea(edges: .bottom)
-                    } else if let errorMessage {
-                        ContentUnavailableView {
-                            Label("Could not open this video", systemImage: "exclamationmark.triangle")
-                        } description: {
-                            Text(errorMessage)
-                        } actions: {
-                            Button("Retry") { setupPlayer() }
+        GeometryReader { geometry in
+            let landscape = geometry.size.width > geometry.size.height
+            ZStack(alignment: .top) {
+                Graphite.media.ignoresSafeArea()
+                VStack(spacing: 8) {
+                    if !landscape { topBar }
+                    Group {
+                        if isCurrentSession {
+                            if let player {
+                                NativeVideoPlayer(player: player)
+                            } else if let errorMessage {
+                                VStack(spacing: 14) {
+                                    WagLockNote(kind: .error, title: "Could not open this video", text: errorMessage)
+                                    Button("Retry") { setupPlayer() }.buttonStyle(WagLockSecondaryButtonStyle())
+                                }.padding(.horizontal, 22)
+                            } else {
+                                ProgressView("Opening video…").tint(.white).foregroundStyle(.white).font(.wlBody)
+                            }
                         }
-                    } else {
-                        ProgressView("Opening video…").tint(.white)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    if !landscape {
+                        WagLockActionBar(actions: actions).padding(.horizontal, 22).padding(.bottom, 8)
                     }
                 }
-            }
-            .navigationTitle(video.fileName)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.black, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }.accessibilityIdentifier("video.close")
-                }
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button { shareVideo() } label: { Image(systemName: "square.and.arrow.up") }
-                        .accessibilityLabel("Share video")
-                        .accessibilityIdentifier("video.share")
-                        .disabled(!isCurrentSession || isSharing)
-                    Menu {
-                        Button("Info", systemImage: "info.circle") { showInfo = true }
-                        Button("Delete video", systemImage: "trash", role: .destructive) { showDeleteConfirmation = true }
-                    } label: { Image(systemName: "ellipsis.circle") }
-                        .accessibilityLabel("Video actions")
-                        .disabled(!isCurrentSession)
-                }
+                .ignoresSafeArea(edges: landscape ? .all : [])
+                if landscape { topBar.padding(.horizontal, 40) }
             }
         }
         .preferredColorScheme(.dark)
@@ -102,7 +126,7 @@ struct VideoPlayerView: View {
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .background:
-                stopPlayback(); cancelSharing(); showInfo = false
+                stopPlayback(); cancelSharing(); showInfo = false; showMoveToAlbum = false
             case .inactive:
                 player?.pause()
             case .active:
@@ -111,17 +135,11 @@ struct VideoPlayerView: View {
             }
         }
         .sheet(isPresented: $showInfo) {
-            NavigationStack {
-                Form {
-                    LabeledContent("Name", value: video.fullFileName)
-                    LabeledContent("Size", value: video.formattedFileSize)
-                    if let dimensions = video.formattedDimensions { LabeledContent("Dimensions", value: dimensions) }
-                    if let duration = video.formattedDuration { LabeledContent("Duration", value: duration) }
-                    LabeledContent("Created", value: video.formattedCreatedDate)
-                }
-                .navigationTitle("Video info")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showInfo = false } } }
+            PhotoInfoSheet(snapshot: video, subtitle: "Video") { showInfo = false }
+        }
+        .sheet(isPresented: $showMoveToAlbum) {
+            if isCurrentSession {
+                MoveToAlbumSheet(items: [sourceVideo]) { stopPlayback(); dismiss() }
             }
         }
         .sheet(isPresented: $showShareSheet, onDismiss: { exportedURLs.removeAll() }) {

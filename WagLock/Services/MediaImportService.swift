@@ -104,15 +104,118 @@ class MediaImportService {
         password: String,
         progress: @escaping (ImportProgress) -> Void = { _ in }
     ) async throws -> [MediaItem] {
-        try await importBatch(Array(urls.enumerated())) { index, url in
-            let current = ImportProgress(current: index + 1, total: urls.count,
+        lastFileSources = []
+        // A still and video picked together become one Live Photo only when they share a
+        // base name and content identifier; the paired video is then not imported twice.
+        let livePairs: [LivePhotoSupport.FilePair]
+        if LivePhotoSupport.isEnabled {
+            let scoped = urls.filter { $0.startAccessingSecurityScopedResource() }
+            livePairs = await LivePhotoSupport.pairs(in: urls)
+            for url in scoped { url.stopAccessingSecurityScopedResource() }
+        } else { livePairs = [] }
+        let pairedVideos = Set(livePairs.map(\.video))
+        let videoForStill = Dictionary(uniqueKeysWithValues: livePairs.map { ($0.still, $0.video) })
+        let inputs = urls.filter { !pairedVideos.contains($0) }
+        let items = try await importBatch(Array(inputs.enumerated())) { index, url in
+            let current = ImportProgress(current: index + 1, total: inputs.count,
                                          currentFileName: url.lastPathComponent)
             await MainActor.run { progress(current) }
             guard url.startAccessingSecurityScopedResource() else { return nil }
             defer { url.stopAccessingSecurityScopedResource() }
+            if let video = videoForStill[url] {
+                guard video.startAccessingSecurityScopedResource() else { return nil }
+                defer { video.stopAccessingSecurityScopedResource() }
+                let item = try await self.importLivePhoto(still: url, video: video, password: password)
+                self.lastFileSources.append(ImportedFileSource(original: url, encryptedPath: item.encryptedPath,
+                                                               fileExtension: item.fileExtension))
+                if let motion = item.livePhotoVideoPath, let ext = item.livePhotoVideoExtension {
+                    self.lastFileSources.append(ImportedFileSource(original: video, encryptedPath: motion, fileExtension: ext))
+                }
+                return item
+            }
+            let item = try await self.importSingleFile(url: url, password: password)
+            if let item {
+                self.lastFileSources.append(ImportedFileSource(original: url, encryptedPath: item.encryptedPath,
+                                                               fileExtension: item.fileExtension))
+            }
+            return item
+        }
+        let kept = Set(items.flatMap(\.encryptedPaths))
+        lastFileSources.removeAll { !kept.contains($0.encryptedPath) }
+        return items
+    }
+
+    /// Imports files WagLock itself wrote to owned temporary folders (camera captures).
+    /// The folders are removed afterwards, whatever the outcome.
+    func importOwnedFiles(_ urls: [URL], password: String,
+                          progress: @escaping (ImportProgress) -> Void = { _ in }) async throws -> [MediaItem] {
+        defer { for url in urls { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) } }
+        return try await importBatch(Array(urls.enumerated())) { index, url in
+            let current = ImportProgress(current: index + 1, total: urls.count, currentFileName: url.lastPathComponent)
+            await MainActor.run { progress(current) }
             return try await self.importSingleFile(url: url, password: password)
         }
     }
+
+    /// Imports photo-library assets picked in WagLock's own browser (Select All). Each
+    /// asset's resources are copied to an owned folder, encrypted through the same paths
+    /// as Files (byte-preserving) or as a Live Photo pair, and the copy is removed.
+    func importLibraryAssets(_ identifiers: [String], password: String,
+                             progress: @escaping (ImportProgress) -> Void = { _ in }) async throws -> [MediaItem] {
+        try await importBatch(Array(identifiers.enumerated())) { index, identifier in
+            let current = ImportProgress(current: index + 1, total: identifiers.count, currentFileName: "Item \(index + 1)")
+            await MainActor.run { progress(current) }
+            guard let written = try await PhotoLibraryAssetExport.write(localIdentifier: identifier) else { return nil }
+            defer { try? FileManager.default.removeItem(at: written.folder) }
+            if let motion = written.motion {
+                return try await self.importLivePhoto(still: written.primary, video: motion, password: password)
+            }
+            return try await self.importSingleFile(url: written.primary, password: password)
+        }
+    }
+
+    /// Import items the person pasted with the system Paste button. Each item's own
+    /// representation is copied into an owned, protected temporary folder, encrypted
+    /// through the same paths as Photos and Files, and the copy is removed afterwards.
+    func importPasted(
+        _ providers: [NSItemProvider],
+        password: String,
+        progress: @escaping (ImportProgress) -> Void = { _ in }
+    ) async throws -> [MediaItem] {
+        try await importBatch(Array(providers.enumerated())) { index, provider in
+            let current = ImportProgress(current: index + 1, total: providers.count,
+                                         currentFileName: provider.suggestedName ?? "Pasted item \(index + 1)")
+            await MainActor.run { progress(current) }
+            return try await self.importSinglePasted(provider, password: password)
+        }
+    }
+
+    private func importSinglePasted(_ provider: NSItemProvider, password: String) async throws -> MediaItem? {
+        if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+            return try await importImage(from: provider, password: password)
+        }
+        if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
+            return try await importVideo(from: provider, password: password)
+        }
+        // Prefer the item's content over references to it (URLs are not files).
+        guard let type = Self.pastedContentType(provider.registeredTypeIdentifiers) else { return nil }
+        let url = try await ownedRepresentation(from: provider, type: type)
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        return try await importSingleFile(url: url, password: password)
+    }
+
+    nonisolated static func pastedContentType(_ identifiers: [String]) -> String? {
+        identifiers.first { identifier in
+            guard let type = UTType(identifier) else { return false }
+            return type.conforms(to: .data) && !type.conforms(to: .url)
+        }
+    }
+
+    /// Originals picked in Files for the last file batch, paired with their encrypted copies.
+    private(set) var lastFileSources: [ImportedFileSource] = []
+
+    /// True when the last batch stopped early because reserved space was full.
+    private(set) var lastBatchStoppedForReservedSpace = false
 
     /// Owns fresh outputs until the complete batch is handed to its caller.
     /// Cancellation discards the batch; ordinary per-item failures retain successes.
@@ -120,9 +223,10 @@ class MediaImportService {
                             operation: (Input) async throws -> MediaItem?) async throws -> [MediaItem] {
         var imported: [MediaItem] = []
         var handedOff = false
+        lastBatchStoppedForReservedSpace = false
         defer {
             if !handedOff {
-                for item in imported { try? storageService.deleteFile(path: item.encryptedPath) }
+                for item in imported { for path in item.encryptedPaths { try? storageService.deleteFile(path: path) } }
             }
         }
         for input in inputs {
@@ -131,6 +235,11 @@ class MediaImportService {
                 if let item = try await operation(input) { imported.append(item) }
             } catch is CancellationError {
                 throw CancellationError()
+            } catch FileStorageError.reservedSpaceFull {
+                // Fixed-size storage has no room: later items would fail the same way.
+                lastBatchStoppedForReservedSpace = true
+                if imported.isEmpty { throw FileStorageError.reservedSpaceFull }
+                break
             } catch {
                 // A failed item must not erase successfully imported siblings.
             }
@@ -148,6 +257,12 @@ class MediaImportService {
     {
         let itemProvider = result.itemProvider
 
+        // A Live Photo keeps its paired video when iOS provides both resources.
+        if let live = await LivePhotoSupport.resources(from: itemProvider) {
+            defer { try? FileManager.default.removeItem(at: live.folder) }
+            return try await importLivePhoto(still: live.still, video: live.video, password: password)
+        }
+
         // Is it an image?
         if itemProvider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
             return try await importImage(from: itemProvider, password: password)
@@ -159,6 +274,24 @@ class MediaImportService {
         }
 
         return nil
+    }
+
+    /// Still and motion are encrypted unchanged as one item. If the motion can't be saved
+    /// (for example reserved space is full), the still is removed too: no half pairs.
+    func importLivePhoto(still: URL, video: URL, password: String) async throws -> MediaItem {
+        let item = try processOriginalImage(still, password: password)
+        do {
+            try Task.checkCancellation()
+            let motion = try await Task.detached(priority: .userInitiated) { [storageService] in
+                try storageService.saveEncryptedFile(from: video, password: password, originalFileName: video.lastPathComponent)
+            }.value
+            item.livePhotoVideoPath = motion
+            item.livePhotoVideoExtension = "." + (video.pathExtension.isEmpty ? "MOV" : video.pathExtension)
+            return item
+        } catch {
+            try? storageService.deleteFile(path: item.encryptedPath)
+            throw error
+        }
     }
 
     /// Preserve the provider's current encoded representation; never re-encode originals.

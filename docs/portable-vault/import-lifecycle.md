@@ -29,3 +29,57 @@ The full iOS 18.4 suite exposed a calculator-model deinitialization crash. Its s
 The earlier iOS 26.5 attempt failed before execution with a Mach server-died launch error. Build 24's UI workflow had already passed after the user-approved shared simulator-service restart. The initial build 25 full run recorded the older-runtime allocator crash and was not counted as a complete pass.
 
 Final combined results/log: `/private/tmp/vaultito-build25-complete-tests.xcresult`, `/private/tmp/vaultito-build25-complete-tests.log`. Signed build: `/private/tmp/vaultito-build25-complete-device.log`. Reproduction: `/private/tmp/vaultito-import-before.log`. Evidence is local/ephemeral. Device installation and manual results are recorded separately in BUILD_ERRORS_SUMMARY.md; no phone pass is inferred from compilation.
+
+## Paste (2026-11-09)
+
+The Add to WagLock sheet has a **Paste** row backed by the system `PasteButton`. iOS releases the clipboard only to that tap, so no "Allow Paste" prompt appears, and WagLock never reads the clipboard on its own (no background or launch-time access, no polling).
+
+- **Accepted items:** images and movies take the same paths as Photos imports. Other items, such as audio, PDFs, documents, archives and plain text, are copied through `MediaImportService.importPasted` into an owned protected temporary folder, encrypted through `importSingleFile`, and the copy is removed.
+- **Skipped items:** links and other references (`public.url`, `public.file-url`) are not files and are skipped. If nothing on the clipboard can be added, the sheet says so instead of closing.
+- **Commit and storage:** pasted batches use the same commit-after-save boundary, session checks, stop-on-lock behavior and fixed-size reserve claims as other imports.
+- **Clearing the clipboard:** the completion screen warns that what was copied is still on the clipboard and can sync to the person's other devices (Universal Clipboard), and offers **Clear clipboard**, which empties `UIPasteboard.general`. Clearing is never automatic. The source the item was copied from is not changed.
+- **Albums:** album menus do not offer Paste yet; pasted items land in the Library and can be moved into an album from there.
+
+Tests: `WagLockTests/PasteImportTests.swift` (content preferred over references, image and text items encrypted, links skipped, temporary copies removed). Not compiled or run in this environment.
+
+## Deleting originals after import (2026-11-09)
+
+After an import, the completion screen offers to delete the originals:
+
+- **Photos:** **Remove from Photos…** appears only when every selected item committed. iOS shows its own confirmation, and the items go to Recently Deleted in Photos.
+- **Files and audio:** **Delete originals…** applies to the files picked in Files whose encrypted copies were committed by that import. The picker opens originals in place (not copies), so WagLock can delete them. After the person confirms in WagLock's dialog, `ImportedOriginalsRemover` handles each original in turn:
+  1. Decrypts the stored copy to a temporary file and compares its SHA-256 with the original, streamed in 1 MiB chunks. Every import path stores original bytes unchanged.
+  2. Deletes the original with a coordinated delete only if the hashes match. It tries the provider's Recently Deleted (trash) first and falls back to permanent removal, as the dialog warns.
+  3. Keeps any original whose copy can't be decrypted, doesn't match, or sits in a location that refuses deletion. The result says how many were deleted and how many kept.
+  4. Removes the decrypted temporary copy every time.
+- **Locking** WagLock or changing session stops the run at once; everything not yet deleted is kept.
+- **Pasted items** have no original to delete. The completion screen offers Clear clipboard instead.
+
+Nothing is ever deleted without the explicit tap and confirmation, and Keep is always offered. Tests: `WagLockTests/ImportedOriginalsRemoverTests.swift` (only verified originals deleted, mismatched or unreadable copies keep their originals, plaintext copies removed, lock stops before deletion). Not compiled or run in this environment.
+
+## Camera capture (2026-11-10)
+
+**Take photo or video** in the Add to WagLock sheet opens the system camera (`UIImagePickerController`). It is hidden where no camera exists, such as the Simulator.
+
+- **Never in the camera roll:** captures are not saved to Photos.
+- **Photos:** encoded once to HEIC (JPEG where HEIC isn't available) with the camera's metadata dictionary and EXIF orientation.
+- **Videos:** the camera's temporary movie is moved into an owned folder.
+- **Owned temporary folder:** each capture is written into a protected folder with the same `waglock-media-import-` prefix as other import copies, so launch cleanup also removes abandoned ones. It is imported through `MediaImportService.importOwnedFiles`, the usual commit, session, lock and reserve path, and the folder is removed afterwards whatever the outcome.
+- **Permissions:** the camera permission string is added; video reuses the existing microphone string.
+- **Live Photos and location:** the system camera can't capture Live Photos and doesn't add location.
+
+Tests: `WagLockTests/CameraCaptureTests.swift` (camera metadata kept, the import leaves no plaintext folder, a captured movie moves into an owned folder). Not compiled or run in this environment.
+
+## Select all from Photos (2026-11-10)
+
+The iOS photo picker has no Select All, so Add to WagLock now has a second Photos row, **Select all from Photos**, that opens WagLock's own browser (`PhotoLibraryBrowserView`). "Photos & videos" still opens the system picker, which needs no Photos access.
+
+- **Access:** the browser asks for Photos read access only when opened. With limited access it shows only the allowed items and says so. If access is off, it explains that the system picker still works and offers Settings.
+- **Selecting:** album chips (All, Videos, Favorites, your albums), tap to toggle, and **Select All / Deselect All** for the album shown. **Drag to select** works as in Photos: a drag that starts sideways selects or deselects the run of tiles from where it started to the finger (the start tile decides which), moving back restores the tiles left behind, and a drag that starts vertically scrolls. During a selection drag the grid stops following the finger, and holding near the top or bottom edge (70 pt) scrolls it a row at a time, faster the closer to the edge, so the selection keeps growing. The grid has fixed columns so the tile under the finger can be found (`PhotoGridGeometry`). Picks from other albums stay selected. Import follows the order items were selected.
+- **Thumbnails:** requested from Photos' image manager and held in memory only. Nothing is written until **Add** is tapped.
+- **Import:** for each asset, `PhotoLibraryAssetExport` writes the current photo or video (the same version the system picker's `.current` mode gives) into an owned `waglock-media-import-` folder. Live Photos keep the still and paired video together. `MediaImportService.importLibraryAssets` then encrypts them through the byte-preserving Files path or `importLivePhoto`, inside the usual batch, commit, session, lock and reserve rules. The folder is removed afterwards whatever the outcome. iCloud originals download through iOS.
+- **Originals:** the selected identifiers feed the existing "Remove from Photos…" offer, which still needs an explicit tap and the iOS prompt.
+- **Albums:** an album's Add menu and actions menu also offer **Select All from Photos**. `AlbumStore.importPhotoLibraryAsset` encrypts each asset into the album's own key domain. Live Photos keep their motion, on this path and on the album's iOS-picker path (via `LivePhotoSupport.resources`): `importPair` imports the still and motion and links them, or keeps neither. Items no longer in Photos are skipped and counted. When the batch finishes without error, a completion sheet offers the same explicit, iOS-confirmed **Remove from Photos…** (`PhotosOriginalsCard`, shared with the main import) for exactly the items added. The album's iOS-picker import ("Import Photos & Videos") shows the same sheet for the items iOS identified, once the whole batch is added. A failed or cancelled batch, or the album locking, offers nothing.
+- The Files picker is unchanged.
+
+Tests: `WagLockTests/PhotoLibrarySelectionTests.swift` (Select All and Deselect All per album, drag-to-select ranges, grid hit-testing, edge auto-scroll zones and targets, order, Live and edited resource choice, unsafe names, owned folder) and `AlbumLivePhotoTests.photoBrowserPairsAreLinkedOrNotKeptAtAll`. Not compiled or run in this environment.

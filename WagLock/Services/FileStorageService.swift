@@ -16,6 +16,7 @@ enum FileStorageError: Error {
     case fileSaveFailed  // File save failed
     case fileDeleteFailed  // File delete failed
     case insufficientStorage  // Insufficient storage
+    case reservedSpaceFull  // Fixed-size storage has no room left
     case fileTooLarge  // File too large
     case invalidPath  // Invalid path
 
@@ -31,6 +32,8 @@ enum FileStorageError: Error {
             return String(localized: "fileStorage.error.fileDelete")
         case .insufficientStorage:
             return AppConstants.ErrorMessages.storageInsufficient
+        case .reservedSpaceFull:
+            return "Reserved space is full. New items can’t be added until there’s room. Nothing you’ve already saved is affected."
         case .fileTooLarge:
             return AppConstants.ErrorMessages.fileTooLarge
         case .invalidPath:
@@ -65,6 +68,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
     private let bindingLock = NSLock()
     private var bindings: CiphertextBindings?
     private let availableCapacity: @Sendable (URL) throws -> Int64
+    private let reserve: StorageReserve
 
     // MARK: - Initialization
 
@@ -72,6 +76,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
         let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
         storageDirectory = documentsURL.appendingPathComponent(storageDirectoryName)
         availableCapacity = Self.readAvailableCapacity
+        reserve = .shared
         // Make sure the storage directory exists
         createStorageDirectoryIfNeeded()
     }
@@ -81,9 +86,11 @@ nonisolated class FileStorageService: @unchecked Sendable {
     }
 
     /// Disposable directories and injected capacity failures keep storage tests isolated.
-    init(directory: URL, availableCapacity: @escaping @Sendable (URL) throws -> Int64) {
+    init(directory: URL, availableCapacity: @escaping @Sendable (URL) throws -> Int64,
+         reserve: StorageReserve = .shared) {
         storageDirectory = directory
         self.availableCapacity = availableCapacity
+        self.reserve = reserve
         createStorageDirectoryIfNeeded()
     }
 
@@ -139,6 +146,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
             // Return a relative path (file name only), not an absolute path
             return fileName
         } catch {
+            releaseClaim()
             throw FileStorageError.fileSaveFailed
         }
     }
@@ -171,6 +179,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
             }
         } catch {
             try? fileManager.removeItem(at: destinationURL)
+            releaseClaim()
             throw error
         }
 
@@ -217,6 +226,8 @@ nonisolated class FileStorageService: @unchecked Sendable {
         } catch {
             throw FileStorageError.fileDeleteFailed
         }
+        reserve.invalidateUsage()
+        NotificationCenter.default.post(name: .wagLockStorageChanged, object: nil)
     }
 
     /// Get file size
@@ -332,12 +343,26 @@ nonisolated class FileStorageService: @unchecked Sendable {
     /// - Parameter requiredBytes: Number of bytes required
     /// - Throws: FileStorageError
     private func checkStorageSpace(requiredBytes: Int64) throws {
-        let freeSpace = try availableCapacity(storageDirectory)
+        // Fixed-size storage: take the bytes out of the reserve first. That also frees the
+        // matching device space before the free-space check below.
+        do { try reserve.claim(requiredBytes) }
+        catch StorageReserve.Failure.full { throw FileStorageError.reservedSpaceFull }
+        catch { throw FileStorageError.insufficientStorage }
+        let freeSpace: Int64
+        do { freeSpace = try availableCapacity(storageDirectory) } catch { releaseClaim(); throw error }
         let safetyMargin: Int64 = 100 * 1024 * 1024
         guard requiredBytes >= 0, freeSpace >= safetyMargin,
               requiredBytes <= freeSpace - safetyMargin else {
+            releaseClaim()
             throw FileStorageError.insufficientStorage
         }
+    }
+
+    /// A claimed write didn't happen: re-measure and let the reserve grow back, so a failed
+    /// write never leaves WagLock's fixed size smaller than chosen.
+    private func releaseClaim() {
+        reserve.invalidateUsage()
+        NotificationCenter.default.post(name: .wagLockStorageChanged, object: nil)
     }
 
     private static func readAvailableCapacity(at directory: URL) throws -> Int64 {

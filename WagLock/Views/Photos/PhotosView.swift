@@ -46,6 +46,11 @@ struct PhotosView: View {
     @State private var selectedPhotoIDs: Set<UUID> = []
     @State private var batchPhotosToDelete: [MediaItem] = []
     @State private var showBatchDeleteConfirmation = false
+    @State private var showMoveToAlbum = false
+
+    /// False inside the Library tab, whose header already names the screen.
+    private let showsTitle: Bool
+    init(showsTitle: Bool = true) { self.showsTitle = showsTitle }
 
     // MARK: - Constants
 
@@ -59,19 +64,12 @@ struct PhotosView: View {
         NavigationStack {
             VStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("\(guestModeManager.isGuestMode ? 0 : photos.count) photos · On this device")
-                        .font(.footnote).foregroundStyle(ColorTheme.secondaryText)
-                    WagLockSearchField(title: "Search photos", text: $searchText)
-                    if guestModeManager.isOwnerMode {
-                        NavigationLink { AlbumBrowserView() } label: {
-                            HStack(spacing: 0) {
-                                WagLockNavigationRow(symbol: "rectangle.stack", title: "Albums", detail: "Organize with separate protection")
-                                Image(systemName: "chevron.right").font(.footnote)
-                                    .foregroundStyle(ColorTheme.secondaryText).padding(.trailing, 14)
-                            }.background(ColorTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 14))
-                        }.accessibilityIdentifier("photos.albums")
+                    if showsTitle {
+                        Text("\(guestModeManager.isGuestMode ? 0 : photos.count) photos · On this device")
+                            .font(.wlMeta).foregroundStyle(Graphite.textMuted)
                     }
-                }.padding(.horizontal, 24)
+                    WagLockSearchField(title: "Search photos", text: $searchText)
+                }.padding(.horizontal, 22)
                 ZStack {
                 // Always show the empty state in guest mode
                 if guestModeManager.isGuestMode || photos.isEmpty {
@@ -85,7 +83,7 @@ struct PhotosView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .background(ColorTheme.primaryBackground)
-            .navigationTitle(String(localized: "photos.title"))
+            .navigationTitle(showsTitle ? String(localized: "photos.title") : "")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -133,6 +131,12 @@ struct PhotosView: View {
                 })
                 .environment(\.modelContext, modelContext)
                 .environmentObject(authViewModel)
+            }
+            .sheet(isPresented: $showMoveToAlbum) {
+                MoveToAlbumSheet(items: filteredPhotos.filter { selectedPhotoIDs.contains($0.id) }) {
+                    isSelectionMode = false
+                    selectedPhotoIDs.removeAll()
+                }
             }
             .sheet(isPresented: $showExportView) {
                 BatchExportView(initialSelection: isSelectionMode ? selectedPhotoIDs : [])
@@ -202,7 +206,10 @@ struct PhotosView: View {
                 WagLockEmptyState(symbol: "photo", title: "Make room for your memories.", detail: "Add a few photos to get started. Your originals stay in your photo library.")
                 if guestModeManager.isOwnerMode {
                     Button("Add photos") { showImportView = true }
-                        .buttonStyle(WagLockPrimaryButtonStyle()).padding(.horizontal, 24)
+                        .buttonStyle(WagLockPrimaryButtonStyle()).padding(.horizontal, 22)
+                    Button("Import files or audio instead") { showImportView = true }
+                        .font(WagLockFonts.poppins(14, .semibold, relativeTo: .body))
+                        .foregroundStyle(Graphite.accentText).frame(minHeight: 44)
                 }
             }.padding(.vertical, 48)
         }
@@ -214,11 +221,11 @@ struct PhotosView: View {
         VStack(spacing: 16) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 50))
-                .foregroundColor(.secondary)
+                .foregroundStyle(Graphite.textMuted)
 
             Text(String(localized: "photos.search.noResults"))
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+                .font(.wlBody)
+                .foregroundStyle(Graphite.textMuted)
         }
     }
 
@@ -249,14 +256,14 @@ struct PhotosView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 18) {
                 ForEach(photoDays) { day in
-                    Text(day.title).font(.footnote).foregroundStyle(ColorTheme.secondaryText)
+                    WagLockSectionLabel(day.title)
                     LazyVGrid(columns: columns, spacing: 6) {
                         ForEach(day.items) { photo in
                             photoTile(photo)
                         }
                     }
                 }
-            }.padding(.horizontal, 24).padding(.vertical, 8)
+            }.padding(.horizontal, 22).padding(.vertical, 8)
         }
     }
 
@@ -280,6 +287,7 @@ struct PhotosView: View {
                         // Normal mode: tap to preview
                         GridItemView(mediaItem: photo, showsMetadata: false)
                             .aspectRatio(1, contentMode: .fill)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                             .onTapGesture {
                                 selectedPhoto = PhotoSelection(view: PhotoDetailView(photo: photo, allPhotos: filteredPhotos, sessionID: authViewModel.librarySessionID))
                             }
@@ -336,37 +344,23 @@ struct PhotosView: View {
     // MARK: - Batch Actions Toolbar
 
     private var batchActionsToolbar: some View {
-        VStack(spacing: 0) {
-            Divider()
-
-            HStack(spacing: 20) {
-                Text(
-                    String(
-                        format: String(localized: "gallery.selectedCount"),
-                        selectedPhotoIDs.count)
-                )
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-                Spacer()
-
-                Button { showExportView = true } label: {
-                    Label("Export", systemImage: "square.and.arrow.up")
-                }.accessibilityIdentifier("photos.exportSelection")
-
-                Button(role: .destructive) {
-                    batchPhotosToDelete = filteredPhotos.filter {
-                        selectedPhotoIDs.contains($0.id)
-                    }
+        VStack(spacing: 8) {
+            Text("\(selectedPhotoIDs.count) selected")
+                .font(.wlBodyStrong).foregroundStyle(Graphite.textPrimary)
+            WagLockActionBar(actions: [
+                WagLockAction(id: "photos.moveSelection", symbol: "rectangle.stack.badge.plus", title: "Move to album") {
+                    showMoveToAlbum = true
+                },
+                WagLockAction(id: "photos.exportSelection", symbol: "square.and.arrow.up", title: "Export") {
+                    showExportView = true
+                },
+                WagLockAction(id: "photos.deleteSelection", symbol: "trash", title: String(localized: "common.delete"), destructive: true) {
+                    batchPhotosToDelete = filteredPhotos.filter { selectedPhotoIDs.contains($0.id) }
                     showBatchDeleteConfirmation = true
-                } label: {
-                    Label(String(localized: "common.delete"), systemImage: "trash")
-                        .font(.subheadline)
-                }
-            }
-            .padding()
-            .background(.ultraThinMaterial)
+                },
+            ])
         }
+        .padding(.horizontal, 22).padding(.bottom, 8)
     }
 
     // MARK: - Computed Properties
@@ -394,7 +388,7 @@ struct PhotosView: View {
     }
 
     private func deletePhoto(_ photo: MediaItem) {
-        let encryptedPath = photo.encryptedPath
+        let encryptedPaths = photo.encryptedPaths // Includes Live Photo motion.
 
         // Commit the database deletion first and delete files only after it succeeds,
         // so a failed save never leaves records pointing at deleted files
@@ -409,10 +403,9 @@ struct PhotosView: View {
             return
         }
 
-        do {
-            try vaultServices.storage.deleteFile(path: encryptedPath)
-        } catch {
+        for path in encryptedPaths {
             // The record is gone; a failed file delete only leaves an unreferenced encrypted file
+            try? vaultServices.storage.deleteFile(path: path)
         }
     }
 
@@ -420,7 +413,7 @@ struct PhotosView: View {
     private func deletePhotos(_ items: [MediaItem]) {
         guard !items.isEmpty else { return }
 
-        let encryptedPaths = items.map { $0.encryptedPath }
+        let encryptedPaths = items.flatMap(\.encryptedPaths)
 
         // Commit the database deletion first and delete files only after it succeeds,
         // so a failed save never leaves records pointing at deleted files

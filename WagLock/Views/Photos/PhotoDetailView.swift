@@ -16,8 +16,14 @@ struct PhotoDetailView: View {
     struct Entry: Identifiable {
         let source: MediaItem
         let snapshot: MediaPreviewSnapshot
+        /// Live Photo motion, captured as immutable values while the library is mounted.
+        let motionPath: String?
+        let motionExtension: String?
         var id: UUID { snapshot.id }
-        init(_ item: MediaItem) { source = item; snapshot = MediaPreviewSnapshot(item) }
+        init(_ item: MediaItem) {
+            source = item; snapshot = MediaPreviewSnapshot(item)
+            motionPath = item.livePhotoVideoPath; motionExtension = item.livePhotoVideoExtension
+        }
     }
     private let originatingSessionID: UUID?
 
@@ -39,6 +45,10 @@ struct PhotoDetailView: View {
     @State private var showShareSheet = false
     @State private var exportError: String?
     @State private var showExportError = false
+    @State private var showMoveToAlbum = false
+    @State private var playingLive: Entry?
+    @State private var liveSaveMessage: String?
+    @State private var isSavingLive = false
 
     // MARK: - Initialization
 
@@ -57,55 +67,75 @@ struct PhotoDetailView: View {
     // MARK: - Body
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 18) {
+        GeometryReader { geometry in
+            let landscape = geometry.size.width > geometry.size.height
+            ZStack {
+                Graphite.media.ignoresSafeArea()
                 if isCurrentSession, let current = currentPhoto {
-                    Text("\(currentIndex + 1) of \(photos.count) · Original photograph")
-                        .font(.footnote).foregroundStyle(ColorTheme.secondaryText)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     TabView(selection: $currentIndex) {
                         ForEach(Array(photos.enumerated()), id: \.element.id) { index, entry in
                             ZoomableImageView(photo: entry.snapshot, sessionID: originatingSessionID)
                                 .environmentObject(authViewModel).tag(index)
                         }
-                    }.tabViewStyle(.page(indexDisplayMode: .never))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    HStack {
-                        Button("Info") { showPhotoInfo = true }.frame(maxWidth: .infinity)
-                        Button("Export") { sharePhoto() }.frame(maxWidth: .infinity)
-                            .disabled(isExporting).accessibilityIdentifier("photo.share")
-                        Button("Delete", role: .destructive) { showDeleteAlert = true }.frame(maxWidth: .infinity)
-                    }.buttonStyle(.bordered).padding(3)
-                        .background(ColorTheme.tertiaryBackground, in: RoundedRectangle(cornerRadius: 12))
-                    Button { showPhotoInfo = true } label: {
-                        WagLockNavigationRow(symbol: "info.circle", title: current.snapshot.fullFileName,
-                            detail: [current.snapshot.formattedDimensions, current.snapshot.formattedFileSize].compactMap { $0 }.joined(separator: " · "))
-                    }.buttonStyle(.plain).accessibilityIdentifier("photo.info")
-                    Text("Pinch to zoom · Swipe to the next photo").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .ignoresSafeArea()
+                    .simultaneousGesture(TapGesture().onEnded { withAnimation(.easeInOut(duration: 0.2)) { showControls.toggle() } })
+                    .accessibilityAction(named: showControls ? "Hide controls" : "Show controls") { showControls.toggle() }
+
+                    if let playing = playingLive, let motion = playing.motionPath {
+                        LivePhotoPlaybackView(stillPath: playing.snapshot.encryptedPath, stillExtension: playing.snapshot.fileExtension,
+                                              motionPath: motion, motionExtension: playing.motionExtension ?? ".MOV",
+                                              sessionID: originatingSessionID) { playingLive = nil }
+                            .transition(.opacity)
+                            .zIndex(1)
+                    }
+
+                    if showControls && playingLive == nil {
+                        VStack(spacing: 0) {
+                            topBar(current)
+                            if current.motionPath != nil {
+                                HStack {
+                                    Button { playingLive = current } label: { LivePhotoBadge() }
+                                        .accessibilityLabel("Play Live Photo")
+                                        .accessibilityHint("Plays the motion recorded with this photo")
+                                        .accessibilityIdentifier("photo.live.play")
+                                        .simultaneousGesture(LongPressGesture(minimumDuration: 0.25).onEnded { _ in playingLive = current })
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 22).padding(.top, 10)
+                            }
+                            Spacer()
+                            if !landscape {
+                                WagLockActionBar(actions: actions).padding(.horizontal, 22).padding(.bottom, 8)
+                            }
+                        }
+                        .padding(.horizontal, landscape ? 62 : 0)
+                        .transition(.opacity)
+                        if landscape {
+                            HStack {
+                                Spacer()
+                                WagLockActionBar(actions: actions, vertical: true).padding(.trailing, 62)
+                            }
+                            .transition(.opacity)
+                        }
+                    }
                 }
-            }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(ColorTheme.primaryBackground.ignoresSafeArea())
-                .navigationTitle(currentPhoto?.snapshot.formattedCreatedDate ?? "Photo")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.accessibilityIdentifier("photo.close") } }
+            }
         }
+        .statusBarHidden(!showControls)
+        .alert("Live Photo", isPresented: Binding(get: { liveSaveMessage != nil }, set: { if !$0 { liveSaveMessage = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: { Text(liveSaveMessage ?? "") }
+        .onChange(of: currentIndex) { _, _ in playingLive = nil }
         .sheet(isPresented: $showPhotoInfo) {
             if isCurrentSession, let current = currentPhoto {
-                NavigationStack {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 18) {
-                            Text(current.snapshot.fullFileName).font(.footnote).foregroundStyle(ColorTheme.secondaryText)
-                            ZoomableImageView(photo: current.snapshot, sessionID: originatingSessionID)
-                                .frame(height: 180).clipShape(RoundedRectangle(cornerRadius: 12))
-                            Text("DETAILS").font(.footnote).foregroundStyle(ColorTheme.secondaryText)
-                            WagLockNavigationRow(symbol: "clock", title: "Created", detail: current.snapshot.formattedCreatedDate)
-                            WagLockNavigationRow(symbol: "photo", title: "Dimensions", detail: current.snapshot.formattedDimensions ?? "Not recorded")
-                            WagLockNavigationRow(symbol: "internaldrive", title: "File size", detail: "\(current.snapshot.formattedFileSize) · \(current.snapshot.fileExtension.uppercased())")
-                        }.padding(24)
-                    }.background(ColorTheme.primaryBackground).navigationTitle("Photo information")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showPhotoInfo = false }.accessibilityIdentifier("photo.info.close") } }
-                }
+                PhotoInfoSheet(snapshot: current.snapshot) { showPhotoInfo = false }
+            }
+        }
+        .sheet(isPresented: $showMoveToAlbum) {
+            if isCurrentSession, let current = currentPhoto {
+                MoveToAlbumSheet(items: [current.source]) { removeEntry(current.id) }
             }
         }
         .alert(String(localized: "photo.delete.confirmTitle"), isPresented: $showDeleteAlert) {
@@ -142,6 +172,81 @@ struct PhotoDetailView: View {
             message: isDeleting
                 ? String(localized: "photo.deleting") : String(localized: "photo.decrypting")
         )
+    }
+
+    private func topBar(_ current: Entry) -> some View {
+        HStack(spacing: 12) {
+            WagLockRoundButton(symbol: "xmark", label: "Close", onMedia: true) { dismiss() }
+                .accessibilityIdentifier("photo.close")
+            Spacer()
+            VStack(spacing: 0) {
+                Text(current.snapshot.createdAt.formatted(.dateTime.month(.abbreviated).day().year()))
+                    .font(.wlBodyStrong).foregroundStyle(.white)
+                Text(current.snapshot.createdAt.formatted(.dateTime.hour().minute()) + " · \(currentIndex + 1) of \(photos.count)")
+                    .font(.wlMeta).foregroundStyle(Color.white.opacity(0.75))
+            }
+            .accessibilityElement(children: .combine)
+            Spacer()
+            Menu {
+                Button("Info", systemImage: "info.circle") { showPhotoInfo = true }
+                Button("Export", systemImage: "square.and.arrow.up") { sharePhoto() }
+                if current.motionPath != nil {
+                    Button("Save to Photos as Live Photo", systemImage: "livephoto") { saveLiveToPhotos(current) }
+                        .disabled(isSavingLive)
+                }
+                Button("Delete", systemImage: "trash", role: .destructive) { showDeleteAlert = true }
+            } label: {
+                Image(systemName: "ellipsis").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
+                    .frame(width: 44, height: 44).background(Color.black.opacity(0.45), in: Circle())
+            }
+            .accessibilityLabel("More actions")
+        }
+        .padding(.horizontal, 22).padding(.top, 8)
+    }
+
+    private var actions: [WagLockAction] {
+        [
+            WagLockAction(id: "photo.info", symbol: "info.circle", title: "Info") { showPhotoInfo = true },
+            WagLockAction(id: "photo.album", symbol: "rectangle.stack.badge.plus", title: "Album") { showMoveToAlbum = true },
+            WagLockAction(id: "photo.share", symbol: "square.and.arrow.up", title: "Export", enabled: !isExporting) { sharePhoto() },
+            WagLockAction(id: "photo.delete", symbol: "trash", title: "Delete", destructive: true) { showDeleteAlert = true },
+        ]
+    }
+
+    /// Rebuilds a Live Photo in the person's photo library from temporary decrypted copies,
+    /// which are removed afterwards. Asks for add-only Photos access on first use.
+    private func saveLiveToPhotos(_ entry: Entry) {
+        guard isCurrentSession, let motion = entry.motionPath, let password = authViewModel.sessionPassword else { return }
+        isSavingLive = true
+        let storage = vaultServices.storage
+        Task {
+            defer { isSavingLive = false }
+            var copies: [URL] = []
+            defer { for url in copies { try? FileManager.default.removeItem(at: url) } }
+            do {
+                let still = try await storage.createDecryptedTempFileAsync(path: entry.snapshot.encryptedPath, password: password,
+                                                                           preferredExtension: entry.snapshot.fileExtension)
+                copies.append(still)
+                let video = try await storage.createDecryptedTempFileAsync(path: motion, password: password,
+                                                                           preferredExtension: entry.motionExtension ?? ".MOV")
+                copies.append(video)
+                guard isCurrentSession else { return }
+                try await LivePhotoSupport.saveToPhotos(still: still, video: video)
+                liveSaveMessage = "Saved to Photos as a Live Photo. That copy is outside WagLock."
+            } catch LivePhotoSupport.SaveFailure.notAuthorized {
+                liveSaveMessage = "WagLock needs permission to add to Photos. Nothing was saved."
+            } catch {
+                liveSaveMessage = "The Live Photo couldn’t be saved to Photos. Nothing was saved."
+            }
+        }
+    }
+
+    /// After a verified move into an album the original record is gone; drop it locally.
+    private func removeEntry(_ id: UUID) {
+        guard let index = photos.firstIndex(where: { $0.id == id }) else { return }
+        photos.remove(at: index)
+        if photos.isEmpty { dismiss(); return }
+        currentIndex = min(currentIndex, photos.count - 1)
     }
 
     // MARK: - Computed Properties
@@ -192,7 +297,7 @@ struct PhotoDetailView: View {
         let photoToDelete = entry.source
         isDeleting = true
 
-        let encryptedPath = photoToDelete.encryptedPath
+        let encryptedPaths = photoToDelete.encryptedPaths // Includes Live Photo motion.
 
         // Commit the database deletion first, then close the screen and delete files;
         // on failure, stay on the screen and show an error instead of dismissing silently
@@ -217,10 +322,9 @@ struct PhotoDetailView: View {
             }
         }
 
-        do {
-            try vaultServices.storage.deleteFile(path: encryptedPath)
-        } catch {
+        for path in encryptedPaths {
             // The record is gone; a failed file delete only leaves an unreferenced encrypted file
+            try? vaultServices.storage.deleteFile(path: path)
         }
 
         isDeleting = false
@@ -458,4 +562,52 @@ struct ZoomableImageView: View {
 
     return PhotoDetailView(photo: samplePhoto, allPhotos: [samplePhoto])
         .environmentObject(AuthenticationViewModel())
+}
+
+/// Photo information: name, created, dimensions, size and format, all from the immutable snapshot.
+struct PhotoInfoSheet: View {
+    let snapshot: MediaPreviewSnapshot
+    var subtitle = "Original photograph"
+    let close: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Capsule().fill(Graphite.line).frame(width: 40, height: 5).frame(maxWidth: .infinity).accessibilityHidden(true)
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(snapshot.fullFileName).font(.wlHeading).foregroundStyle(Graphite.textPrimary).lineLimit(2)
+                    Text(subtitle).font(.wlMeta).foregroundStyle(Graphite.textMuted)
+                }
+                Spacer()
+                Button("Done", action: close).font(WagLockFonts.poppins(15, .semibold, relativeTo: .body))
+                    .foregroundStyle(Graphite.accentText).frame(minHeight: 44)
+                    .accessibilityIdentifier("photo.info.close")
+            }
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 10) {
+                card("Created", snapshot.createdAt.formatted(.dateTime.month(.abbreviated).day().year()),
+                     snapshot.createdAt.formatted(.dateTime.hour().minute()))
+                card("Dimensions", snapshot.formattedDimensions ?? "Not recorded", nil)
+                card("File size", snapshot.formattedFileSize, snapshot.fileExtension.uppercased())
+                if let duration = snapshot.formattedDuration { card("Duration", duration, nil) }
+            }
+            Label("Encrypted and stored on this device", systemImage: "lock")
+                .font(.wlMeta).foregroundStyle(Graphite.textMuted)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 22).padding(.top, 10).padding(.bottom, 20)
+        .background(Graphite.base)
+        .presentationDetents([.medium, .large])
+    }
+
+    private func card(_ label: String, _ value: String, _ detail: String?) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label.uppercased()).font(WagLockFonts.poppins(11, .semibold, relativeTo: .caption)).tracking(1.5)
+                .foregroundStyle(Graphite.textMuted)
+            Text(value).font(.wlBodyStrong).foregroundStyle(Graphite.textPrimary)
+            if let detail { Text(detail).font(.wlMeta).foregroundStyle(Graphite.textMuted) }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading).padding(14)
+        .background(Graphite.surface1, in: RoundedRectangle(cornerRadius: 14))
+        .accessibilityElement(children: .combine)
+    }
 }

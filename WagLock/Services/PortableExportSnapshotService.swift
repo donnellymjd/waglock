@@ -27,12 +27,15 @@ struct PortableExportSnapshot: Equatable {
         let height: Int?
         let duration: Double?
         let source: Source
+        /// Live Photo still → the asset carrying its motion (same domain).
+        var livePhotoMotionID: UUID? = nil
         static func == (lhs: Self, rhs: Self) -> Bool {
             lhs.id == rhs.id && lhs.albumID == rhs.albumID && lhs.bytes == rhs.bytes
                 && sameExportText([lhs.name, lhs.fileExtension, lhs.storedType], [rhs.name, rhs.fileExtension, rhs.storedType])
                 && lhs.effectiveType == rhs.effectiveType && lhs.thumbnail == rhs.thumbnail
                 && lhs.createdAt == rhs.createdAt && lhs.modifiedAt == rhs.modifiedAt
                 && lhs.width == rhs.width && lhs.height == rhs.height && lhs.duration == rhs.duration && lhs.source == rhs.source
+                && lhs.livePhotoMotionID == rhs.livePhotoMotionID
         }
     }
     struct Album: Equatable {
@@ -206,7 +209,22 @@ final class PortableExportSnapshotService {
                           storedType: item.typeRawValue, effectiveType: item.type, bytes: item.fileSize,
                           thumbnail: item.thumbnailData, createdAt: item.createdAt, modifiedAt: item.modifiedAt,
                           width: item.width, height: item.height, duration: item.duration,
-                          source: try source(item.encryptedPath)), to: .root)
+                          source: try source(item.encryptedPath),
+                          livePhotoMotionID: item.livePhotoVideoPath == nil ? nil : LivePhotoSupport.motionAssetID(for: item.id)), to: .root)
+            // Live Photo motion travels as a sibling video with the same base name
+            // (IMG_0001.HEIC + IMG_0001.MOV), the layout Files and Photos already pair.
+            // Never omitted: a missing or unreadable motion file fails the snapshot.
+            if let motion = item.livePhotoVideoPath {
+                guard let ext = item.livePhotoVideoExtension, ext.hasPrefix("."), ext.count > 1 else {
+                    throw Failure.invalidInventory
+                }
+                let motionSource = try source(motion)
+                try add(.init(id: LivePhotoSupport.motionAssetID(for: item.id), albumID: nil, name: item.fileName,
+                              fileExtension: ext, storedType: MediaType.video.rawValue, effectiveType: .video,
+                              bytes: motionSource.ciphertextBytes, thumbnail: nil, createdAt: item.createdAt,
+                              modifiedAt: item.modifiedAt, width: nil, height: nil, duration: nil,
+                              source: motionSource), to: .root)
+            }
         }
         let albumRevision = albums.revision
         for album in records {
@@ -221,7 +239,8 @@ final class PortableExportSnapshotService {
                 try add(.init(id: item.id, albumID: album.id, name: item.fileName, fileExtension: item.fileExtension,
                               storedType: item.type.rawValue, effectiveType: item.type, bytes: item.fileSize,
                               thumbnail: item.thumbnail, createdAt: item.createdAt, modifiedAt: nil,
-                              width: nil, height: nil, duration: nil, source: try source(item.encryptedPath)), to: ownDomain)
+                              width: nil, height: nil, duration: nil, source: try source(item.encryptedPath),
+                              livePhotoMotionID: item.livePhotoMotionID), to: ownDomain)
             }
         }
         var noteRows: [PortableExportSnapshot.Note] = []
@@ -232,6 +251,13 @@ final class PortableExportSnapshotService {
             noteRows.append(.init(id: note.id, title: note.title, content: note.content,
                                  createdAt: note.createdAt, modifiedAt: note.modifiedAt,
                                  isFavorite: note.isFavorite, tags: note.tags))
+        }
+        // Every Live Photo link must name a distinct video asset in the same domain.
+        for rows in assetRows.values {
+            let types = Dictionary(uniqueKeysWithValues: rows.map { ($0.id, $0.effectiveType) })
+            let links = rows.compactMap(\.livePhotoMotionID)
+            guard Set(links).count == links.count,
+                  rows.allSatisfy({ $0.livePhotoMotionID.map { types[$0] == .video } ?? true }) else { throw Failure.invalidInventory }
         }
         guard Set(drafts.map(\.origin)).count == drafts.count else { throw Failure.invalidInventory }
         for draft in drafts {
@@ -281,7 +307,8 @@ final class PortableExportSnapshotService {
         // Explicit field inventory: adding a model OR a persisted field requires review.
         let supported: [String: Set<String>] = [
             "MediaItem": ["id", "fileName", "fileExtension", "fileSize", "typeRawValue", "encryptedPath",
-                          "thumbnailData", "createdAt", "modifiedAt", "width", "height", "duration"],
+                          "thumbnailData", "createdAt", "modifiedAt", "width", "height", "duration",
+                          "livePhotoVideoPath", "livePhotoVideoExtension"],
             "SecretNote": ["id", "title", "content", "createdAt", "modifiedAt", "isFavorite", "tags"],
             "VaultAlbum": ["id", "parentID", "name", "protectionRawValue", "wrappedKey", "encryptedCatalog",
                            "biometricAccount", "createdAt"]]

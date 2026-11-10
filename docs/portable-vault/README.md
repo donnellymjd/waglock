@@ -4,6 +4,13 @@
 
 WagLock is an independent fork of [SealedPocket / ZeroNet Space](https://github.com/materialofair/zeroNet_Space). This project is based on ZeroNet Space but is not the official version.
 
+- [Libraries and passcodes: 16-slot model](library-slots.md): ADR-029 symmetric libraries, key slots, shared attempts, time lock, delete, Face ID, known deniability gaps and open crypto-review items (2026-11-09, unbuilt).
+- [Code review, 2026-11-10](review-2026-11-10.md): pre-resubmission review of the redesign branch; six fixes and four open findings.
+- [Auto-lock delay and short passcodes and passwords](locking-options.md): ADR-032 informed choices, including album and backup passwords, in onboarding and Settings, with the risks shown (2026-11-10, unbuilt).
+- [WagLock Dev Encrypted](dev-encrypted-build.md): ADR-031 third build `com.d2sci.waglock.dev` on the encrypted library; legacy WagLock Dev deprecated, deletion goal 2026-12-15 (2026-11-10).
+- [Live Photos](live-photos.md): still plus paired motion as one encrypted item, Photos/Files import, playback, export, Save to Photos, album moves and backup layout (2026-11-10, unbuilt).
+- [Fixed-size storage](fixed-size-storage.md): ADR-030 reserve file that keeps WagLock's size constant, modes, screens and what it does not hide (2026-11-09, unbuilt).
+- [Graphite redesign](graphite-redesign.md): dark-only tokens, Poppins, components, implemented screens and the remaining handover work (2026-11-09, unbuilt).
 - [Final adversarial review](audits/D2S-151.md): build64 findings, corrected candidate verification, blunt critique and release limits.
 - [First-release security closeout](audits/launch-closeout-2026-10-26.md): current architecture, evidence-backed finding dispositions and residual limits.
 - [Password collision incident and recovery](password-collision-incident.md): D2S-178 incident, non-destructive recovery, primary-only prevention and owner63 acceptance.

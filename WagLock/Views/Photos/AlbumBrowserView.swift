@@ -14,6 +14,8 @@ struct AlbumBrowserView: View {
     @State private var showSecurity = false
     @State private var showFiles = false
     @State private var showPhotos = false
+    @State private var showPhotoBrowser = false
+    @State private var photosImport: AlbumPhotosImportResult?
     @State private var showLibrary = false
     @State private var selectedAsset: AlbumAsset?
     @State private var busy = false
@@ -32,6 +34,12 @@ struct AlbumBrowserView: View {
         guard canAccess, let parent else { return [] }
         return (try? store.assets(in: parent, albums: albums)) ?? []
     }
+    /// A Live Photo shows once: its motion asset is reached through the still.
+    private var visibleAssets: [AlbumAsset] {
+        let all = assets
+        let motion = AlbumStore.motionIDs(in: all)
+        return all.filter { !motion.contains($0.id) }
+    }
 
     var body: some View {
         Group {
@@ -43,7 +51,8 @@ struct AlbumBrowserView: View {
                 albumContents
             }
         }
-        .navigationTitle(parent?.name ?? "Albums")
+        .navigationTitle(parent == nil ? "" : "")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if canAccess && parent == nil {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -58,8 +67,9 @@ struct AlbumBrowserView: View {
                         }
                         if let parent {
                             Button("Import Photos & Videos", systemImage: "photo.on.rectangle") { showPhotos = true }
+                            Button("Select All from Photos", systemImage: "checkmark.circle") { showPhotoBrowser = true }
                             Button("Import from Files", systemImage: "doc.badge.plus") { showFiles = true }
-                            Button("Move from Main Library", systemImage: "photo.stack") { showLibrary = true }
+                            Button("Move from Library", systemImage: "photo.stack") { showLibrary = true }
                             Button("Album Security", systemImage: "lock.shield") { showSecurity = true }
                             Button("Rename Album", systemImage: "pencil") {
                                 newName = parent.name
@@ -85,6 +95,15 @@ struct AlbumBrowserView: View {
         .sheet(isPresented: $showPhotos) {
             PhotoPickerRepresentable(isPresented: $showPhotos) { results in importPhotos(results) }
         }
+        .fullScreenCover(isPresented: $showPhotoBrowser) {
+            PhotoLibraryBrowserView(add: { identifiers in
+                showPhotoBrowser = false
+                importLibraryAssets(identifiers)
+            }, cancel: { showPhotoBrowser = false })
+        }
+        .sheet(item: $photosImport) { result in
+            AlbumPhotosImportCompleteView(result: result) { photosImport = nil }
+        }
         .sheet(isPresented: $showFiles) {
             DocumentPickerRepresentable(isPresented: $showFiles, contentTypes: [.item], allowsMultipleSelection: true) {
                 importURLs($0)
@@ -104,6 +123,8 @@ struct AlbumBrowserView: View {
                 showCreate = false
                 showSecurity = false
                 showPhotos = false
+                showPhotoBrowser = false
+                photosImport = nil
                 showFiles = false
                 showLibrary = false
                 selectedAsset = nil
@@ -144,68 +165,149 @@ struct AlbumBrowserView: View {
     }
 
     private var albumContents: some View {
-        List {
-            if parent == nil {
-                Section {
-                    WagLockInfoCard(title: "A place for everything", detail: "Choose separate protection for each album. Album names remain visible.")
-                        .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                if let parent { albumHeader(parent) } else { rootHeader }
+                if busy { ProgressView("Encrypting import…").tint(Graphite.accentText).font(.wlMeta) }
+                if parent != nil {
+                    if visibleAssets.isEmpty {
+                        WagLockNote(kind: .info, text: "Import media into this album. Its contents, filenames and thumbnails are encrypted separately.")
+                    } else {
+                        assetGrid
+                    }
+                    WagLockSectionLabel("Subalbums").padding(.top, 4)
                 }
-            }
-            if busy { ProgressView("Encrypting import…") }
-            Section(parent == nil ? "Albums" : "Subalbums") {
-                ForEach(children) { album in
-                    NavigationLink {
-                        AlbumBrowserView(parent: album)
+                albumGrid
+                if parent != nil {
+                    Menu {
+                        Button("Import Photos & Videos", systemImage: "photo.on.rectangle") { showPhotos = true }
+                        Button("Select All from Photos", systemImage: "checkmark.circle") { showPhotoBrowser = true }
+                        Button("Import from Files", systemImage: "doc.badge.plus") { showFiles = true }
+                        Button("Move from Library", systemImage: "photo.stack") { showLibrary = true }
                     } label: {
-                        WagLockNavigationRow(
-                            symbol: store.isUnlocked(album, albums: albums) ? "folder" : "lock",
-                            title: album.name,
-                            detail: (store.isUnlocked(album, albums: albums) ? "" : "Locked · ") + (AlbumProtection(rawValue: album.protectionRawValue)?.title ?? "Unavailable"))
-                    }.wagLockCardRow()
+                        Text("Add to album").font(.wlButton).tracking(3.3).textCase(.uppercase)
+                            .frame(maxWidth: .infinity, minHeight: 54).foregroundStyle(Graphite.onAccent)
+                            .background(Graphite.accentGradient, in: RoundedRectangle(cornerRadius: 14))
+                    }
+                    .accessibilityIdentifier("album.add")
+                    .padding(.top, 6)
                 }
-                if children.isEmpty {
-                    Text(parent == nil ? "Create your first album." : "No subalbums yet.").foregroundStyle(.secondary)
-                }
-                Button(parent == nil ? "New Album" : "New Subalbum") { showCreate = true }
-                    .accessibilityIdentifier(parent == nil ? "album.create.footer" : "album.create")
             }
-            if parent != nil {
-                Section("Photos, Videos & Files") {
-                    if assets.isEmpty { Text("Import media into this album.").foregroundStyle(.secondary) }
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
-                        ForEach(assets) { asset in
-                            Button { selectedAsset = asset } label: {
-                                GeometryReader { proxy in
-                                    ZStack {
-                                        ColorTheme.tertiaryBackground
-                                        if let data = asset.thumbnail, let image = UIImage(data: data) {
-                                            if asset.type == .video {
-                                                VideoThumbnailImage(image: image)
-                                            } else {
-                                                Image(uiImage: image).resizable().scaledToFill()
-                                                    .frame(width: proxy.size.width, height: proxy.size.height).clipped()
-                                            }
-                                        } else {
-                                            VStack(spacing: 8) {
-                                                Image(systemName: asset.type.iconName).font(.title2)
-                                                Text(asset.fileName).font(.caption).lineLimit(2)
-                                            }.padding(8).foregroundStyle(ColorTheme.primaryText)
-                                        }
-                                    }.clipShape(RoundedRectangle(cornerRadius: 12))
-                                }.aspectRatio(1, contentMode: .fit)
-                            }.buttonStyle(.plain).accessibilityLabel(asset.fileName)
-                                .accessibilityIdentifier("album.asset")
-                                .contextMenu { Button("Delete", role: .destructive) { assetToDelete = asset } }
-                        }
-                    }.listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
-                    Button("Import Photos & Videos") { showPhotos = true }
-                    Button("Import from Files") { showFiles = true }
-                    Button("Move from Main Library") { showLibrary = true }
+            .padding(.horizontal, 22).padding(.vertical, 12)
+        }
+        .background(Graphite.base)
+        .disabled(busy)
+    }
+
+    private var rootHeader: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            WagLockTitle(text: "Albums")
+            Text("Choose protection for each album. Album names remain visible.")
+                .font(WagLockFonts.poppins(13, .regular, relativeTo: .footnote)).foregroundStyle(Graphite.textMuted)
+        }
+    }
+
+    private func albumHeader(_ album: VaultAlbum) -> some View {
+        let protection = AlbumProtection(rawValue: album.protectionRawValue)
+        let shown = visibleAssets
+        let photosCount = shown.filter { $0.type == .photo }.count
+        let videoCount = shown.filter { $0.type == .video }.count
+        let parts = [photosCount > 0 ? "\(photosCount) photo\(photosCount == 1 ? "" : "s")" : nil,
+                     videoCount > 0 ? "\(videoCount) video\(videoCount == 1 ? "" : "s")" : nil].compactMap { $0 }
+        return VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                WagLockTitle(text: album.name, size: .display)
+                Text("\(shown.count) item\(shown.count == 1 ? "" : "s")" + (parts.isEmpty ? "" : " · " + parts.joined(separator: ", ")))
+                    .font(WagLockFonts.poppins(13, .regular, relativeTo: .footnote)).foregroundStyle(Graphite.textSecondary)
+            }
+            HStack(spacing: 8) {
+                Label(protection == .inherited ? "Inherits parent" : protection?.title ?? "Unavailable", systemImage: "shield")
+                    .font(WagLockFonts.poppins(12, .semibold, relativeTo: .caption))
+                    .foregroundStyle(Color(hex: 0xB8D6FF)).padding(.horizontal, 12).frame(minHeight: 30)
+                    .background(Graphite.accentText.opacity(0.14), in: Capsule())
+                if protection == .inherited {
+                    Text("Opens with this library").font(WagLockFonts.poppins(12, .medium, relativeTo: .caption))
+                        .foregroundStyle(Graphite.textSecondary).padding(.horizontal, 12).frame(minHeight: 30)
+                        .background(Graphite.surface1, in: Capsule())
                 }
             }
         }
-        .wagLockList()
-        .disabled(busy)
+    }
+
+    private var assetGrid: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 4), spacing: 6) {
+            ForEach(visibleAssets) { asset in
+                Button { selectedAsset = asset } label: {
+                    GeometryReader { proxy in
+                        ZStack {
+                            Graphite.surface2
+                            if let data = asset.thumbnail, let image = UIImage(data: data) {
+                                if asset.type == .video {
+                                    VideoThumbnailImage(image: image)
+                                } else {
+                                    Image(uiImage: image).resizable().scaledToFill()
+                                        .frame(width: proxy.size.width, height: proxy.size.height).clipped()
+                                }
+                            } else {
+                                VStack(spacing: 6) {
+                                    Image(systemName: asset.type.iconName).font(.title3)
+                                    Text(asset.fileName).font(.wlMeta).lineLimit(2)
+                                }.padding(6).foregroundStyle(Graphite.textPrimary)
+                            }
+                        }
+                        .overlay(alignment: .topLeading) {
+                            if asset.livePhotoMotionID != nil { LivePhotoBadge().padding(4) }
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }.aspectRatio(1, contentMode: .fit)
+                }.buttonStyle(.plain).accessibilityLabel(asset.fileName)
+                    .accessibilityIdentifier("album.asset")
+                    .contextMenu { Button("Delete", role: .destructive) { assetToDelete = asset } }
+            }
+        }
+    }
+
+    private var albumGrid: some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
+            ForEach(children) { album in
+                let open = store.isUnlocked(album, albums: albums)
+                let protection = AlbumProtection(rawValue: album.protectionRawValue)
+                NavigationLink { AlbumBrowserView(parent: album) } label: {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Image(systemName: open ? "rectangle.stack" : "lock").font(.system(size: 20))
+                                .foregroundStyle(Graphite.accentText)
+                                .frame(width: 40, height: 40).background(Graphite.surface2, in: RoundedRectangle(cornerRadius: 11))
+                            Spacer()
+                            Text(open ? "OPEN" : "LOCKED").font(WagLockFonts.poppins(10, .semibold, relativeTo: .caption2))
+                                .tracking(1.2).foregroundStyle(open ? Graphite.accentText : Graphite.textMuted)
+                        }
+                        Spacer(minLength: 0)
+                        Text(album.name).font(.wlHeading).foregroundStyle(Graphite.textPrimary).lineLimit(2)
+                        Text((open ? "Open · " : "Locked · ") + (protection == .inherited ? "Inherits parent" : protection?.title ?? "Unavailable"))
+                            .font(.wlMeta).foregroundStyle(Graphite.textMuted).lineLimit(2)
+                    }
+                    .padding(14).frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
+                    .background(Graphite.surface1, in: RoundedRectangle(cornerRadius: 18))
+                }
+                .buttonStyle(.plain)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(album.name + (open ? ", open" : ", locked"))
+                .accessibilityIdentifier(album.name)
+            }
+            Button { showCreate = true } label: {
+                VStack(spacing: 8) {
+                    Image(systemName: "plus").font(.system(size: 20, weight: .semibold)).foregroundStyle(Graphite.accentText)
+                        .frame(width: 40, height: 40).background(Graphite.accentTint, in: RoundedRectangle(cornerRadius: 11))
+                    Text(parent == nil ? "New album" : "New subalbum").font(.wlBodyStrong).foregroundStyle(Graphite.textPrimary)
+                }
+                .frame(maxWidth: .infinity, minHeight: 150)
+                .background(Graphite.surface1, in: RoundedRectangle(cornerRadius: 18))
+                .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Graphite.line, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier(parent == nil ? "album.create.footer" : "album.create")
+        }
     }
 
     private func importURLs(_ urls: [URL]) {
@@ -222,19 +324,58 @@ struct AlbumBrowserView: View {
         }
     }
 
+    /// Assets chosen in WagLock's photo browser. Live Photos keep their motion here.
+    /// Only a batch that finished without error offers to remove the added originals
+    /// from Photos, and only those actually added.
+    private func importLibraryAssets(_ identifiers: [String]) {
+        guard let parent, canAccess, !busy, !identifiers.isEmpty else { return }
+        busy = true
+        operation = Task {
+            defer { busy = false }
+            var added: [String] = []
+            do {
+                for identifier in identifiers {
+                    try Task.checkCancellation()
+                    if try await store.importPhotoLibraryAsset(identifier, into: parent, albums: albums, context: context) {
+                        added.append(identifier)
+                    }
+                }
+                guard canAccess, !Task.isCancelled, !added.isEmpty else {
+                    if canAccess, !Task.isCancelled { self.error = "None of these items were available in Photos." }
+                    return
+                }
+                photosImport = AlbumPhotosImportResult(albumName: parent.name, addedAssetIDs: added,
+                                                       skipped: identifiers.count - added.count)
+            } catch is CancellationError {} catch { self.error = error.localizedDescription }
+        }
+    }
+
+    /// iOS's picker. When the whole batch is added, offers to remove the originals from
+    /// Photos for the items iOS identified (it identifies items picked from the library).
     private func importPhotos(_ results: [PHPickerResult]) {
         guard let parent, canAccess, !busy else { return }
         busy = true
         operation = Task {
             defer { busy = false }
+            var added: [String] = []
             do {
                 for result in results {
                     try Task.checkCancellation()
-                    let url = try await AlbumPhotoTransfer.copyFile(from: result.itemProvider)
-                    defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
-                    try Task.checkCancellation()
-                    try await store.importFile(url, into: parent, albums: albums, context: context)
+                    if let live = await LivePhotoSupport.resources(from: result.itemProvider) {
+                        // Live Photo: still and motion, linked, or neither.
+                        defer { try? FileManager.default.removeItem(at: live.folder) }
+                        try Task.checkCancellation()
+                        try await store.importPair(still: live.still, motion: live.video, into: parent, albums: albums, context: context)
+                    } else {
+                        let url = try await AlbumPhotoTransfer.copyFile(from: result.itemProvider)
+                        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+                        try Task.checkCancellation()
+                        try await store.importFile(url, into: parent, albums: albums, context: context)
+                    }
+                    if let identifier = result.assetIdentifier { added.append(identifier) }
                 }
+                guard canAccess, !Task.isCancelled, !added.isEmpty else { return }
+                photosImport = AlbumPhotosImportResult(albumName: parent.name, addedAssetIDs: added, skipped: 0)
             } catch is CancellationError {} catch { self.error = error.localizedDescription }
         }
     }
@@ -254,7 +395,7 @@ private struct AlbumLibraryMoveView: View {
         NavigationStack {
             List {
                 Section {
-                    Text("The destination is encrypted and verified before the original is removed from the main library. Existing database journals may retain old metadata until later cleanup.")
+                    Text("The destination is encrypted and verified before the original is removed from the Library tab. Existing database journals may retain old metadata until later cleanup.")
                         .font(.footnote)
                 }
                 if busy { ProgressView("Moving…") }
@@ -271,7 +412,7 @@ private struct AlbumLibraryMoveView: View {
                         }
                     } label: { Label(item.fullFileName, systemImage: item.type.iconName) }
                 }
-                if media.isEmpty { Text("No media in the main library.") }
+                if media.isEmpty { Text("No media outside albums.") }
             }
             .wagLockList()
             .disabled(busy)
@@ -298,32 +439,70 @@ struct AlbumUnlockView: View {
     private var protection: AlbumProtection? { AlbumProtection(rawValue: album.protectionRawValue) }
 
     var body: some View {
-        Form {
-            Section {
-                Label("Album Locked", systemImage: "lock.shield")
+        ScrollView {
+            VStack(spacing: 14) {
+                Image(systemName: "lock").font(.system(size: 40)).foregroundStyle(Graphite.accentText)
+                    .frame(width: 104, height: 104)
+                    .background(Graphite.surface1, in: RoundedRectangle(cornerRadius: 30))
+                    .overlay(RoundedRectangle(cornerRadius: 30).stroke(Graphite.accentText.opacity(0.25), lineWidth: 1))
+                    .shadow(color: Graphite.accentStrong.opacity(0.28), radius: 40)
+                    .accessibilityHidden(true).padding(.top, 40)
+                VStack(spacing: 2) {
+                    WagLockTitle(text: album.name)
+                    Text(protection == .inherited ? "Inherits parent protection" : protection?.title ?? "Unavailable")
+                        .font(WagLockFonts.poppins(13, .regular, relativeTo: .footnote)).foregroundStyle(Graphite.textMuted)
+                }
                 if protection?.requiresPassword == true {
                     PasswordKeyboardPicker(selection: Binding(get: { PasswordKeyboard(rawValue: keyboardRaw) ?? .numberPad }, set: { keyboardRaw = $0.rawValue }))
-                    SwitchablePasswordField(title: "Album password", text: $password,
-                        keyboard: PasswordKeyboard(rawValue: keyboardRaw) ?? .numberPad,
-                        identifier: "album.unlock.password", submitTitle: "Unlock Album") {
-                            if !password.isEmpty && !busy { unlock(biometric: false) }
-                        }.frame(minHeight: 30).disabled(busy)
-                    Button("Unlock with Password") { unlock(biometric: false) }
-                        .disabled(password.isEmpty || busy)
+                        .padding(.top, 12)
+                    HStack(spacing: 12) {
+                        Image(systemName: "key").foregroundStyle(Color(hex: 0xC9CFDB)).accessibilityHidden(true)
+                        SwitchablePasswordField(title: "Album password", text: $password,
+                            keyboard: PasswordKeyboard(rawValue: keyboardRaw) ?? .numberPad,
+                            identifier: "album.unlock.password", submitTitle: "Unlock Album") {
+                                if !password.isEmpty && !busy { unlock(biometric: false) }
+                            }.frame(minHeight: 24).disabled(busy)
+                    }
+                    .padding(.horizontal, 16).frame(minHeight: 54)
+                    .background(Graphite.input, in: RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(error == nil ? .clear : Graphite.dangerLine, lineWidth: 1.5))
                 }
-                if protection?.usesBiometrics == true {
-                    Button("Unlock with Face ID", systemImage: "faceid") { unlock(biometric: true) }
-                        .disabled(busy)
+                HStack(spacing: 10) {
+                    if protection?.requiresPassword == true {
+                        Button("Unlock album") { unlock(biometric: false) }
+                            .buttonStyle(WagLockPrimaryButtonStyle())
+                            .disabled(password.isEmpty || busy)
+                            .accessibilityIdentifier("album.unlock.submit")
+                    } else if protection == .inherited {
+                        Button("Open album") { unlock(biometric: false) }
+                            .buttonStyle(WagLockPrimaryButtonStyle()).disabled(busy)
+                            .accessibilityIdentifier("album.unlock.inherited")
+                    } else if protection == .faceIDOnly {
+                        Button("Unlock with Face ID") { unlock(biometric: true) }
+                            .buttonStyle(WagLockPrimaryButtonStyle()).disabled(busy)
+                            .accessibilityIdentifier("album.unlock.faceID")
+                    }
+                    if protection == .passwordAndFaceID {
+                        Button { unlock(biometric: true) } label: {
+                            Image(systemName: "faceid").font(.system(size: 22)).foregroundStyle(Graphite.accentText)
+                                .frame(width: 54, height: 54)
+                                .background(Graphite.surface1, in: RoundedRectangle(cornerRadius: 14))
+                                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Graphite.line, lineWidth: 1))
+                        }
+                        .disabled(busy).accessibilityLabel("Unlock with Face ID")
+                        .accessibilityIdentifier("album.unlock.faceID")
+                    }
                 }
-                if protection == .inherited {
-                    Text("This album inherits its parent’s protection.")
-                    Button("Open Album") { unlock(biometric: false) }.disabled(busy)
-                        .accessibilityIdentifier("album.unlock.inherited")
-                }
-                if busy { ProgressView() }
-                if let error { Text(error).foregroundStyle(.red) }
+                if busy { ProgressView().tint(Graphite.accentText) }
+                if let error { WagLockNote(kind: .error, text: error) }
+                Label("Stays unlocked until you leave WagLock", systemImage: "timer")
+                    .font(.wlMeta).foregroundStyle(Graphite.textMuted)
+                WagLockNote(kind: .info, text: "Contents, filenames and thumbnails stay encrypted until you unlock.")
+                    .padding(.top, 20)
             }
-        }.wagLockList()
+            .padding(.horizontal, 24).padding(.bottom, 24)
+        }
+        .background(Graphite.base)
         .onDisappear { password = "" }
         .onChange(of: scenePhase) { _, phase in if phase == .background { password = "" } }
     }
@@ -355,66 +534,104 @@ struct AlbumConfigurationView: View {
     @State private var error: String?
 
     var body: some View {
-        NavigationStack {
-            Form {
-                if editing == nil {
-                    Section("Album") {
-                        TextField("Album name", text: $name).accessibilityIdentifier("album.name")
-                        if let parent { Text("Inside: \(parent.name)").font(.caption) }
+        VStack(alignment: .leading, spacing: 14) {
+            WagLockSheetHeader(title: editing == nil ? "New album" : "Album security") { dismiss() }
+                .disabled(busy)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    WagLockTitle(text: editing == nil ? "Name & protect" : editing?.name ?? "", size: .sheet)
+                    if editing == nil {
+                        HStack(spacing: 12) {
+                            Image(systemName: "rectangle.stack").foregroundStyle(Graphite.textSecondary).accessibilityHidden(true)
+                            TextField("Album name", text: $name).font(WagLockFonts.poppins(16, .medium, relativeTo: .body))
+                                .foregroundStyle(Graphite.textPrimary)
+                                .accessibilityIdentifier("album.name")
+                        }
+                        .padding(.horizontal, 16).frame(minHeight: 54)
+                        .background(Graphite.input, in: RoundedRectangle(cornerRadius: 12))
+                        if let parent { Text("Inside: \(parent.name)").font(.wlMeta).foregroundStyle(Graphite.textMuted) }
                     }
-                }
-                Section("Security") {
-                    Picker("Protection", selection: $protection) {
-                        ForEach(AlbumProtection.allCases) { Text($0.title).tag($0) }
+                    WagLockSectionLabel("Protection")
+                    VStack(spacing: 8) {
+                        ForEach(AlbumProtection.allCases) { option in protectionRow(option) }
                     }
+                    .accessibilityElement(children: .contain)
                     .accessibilityIdentifier("album.protection")
                     if protection.requiresPassword {
-                        SecureField("New album password (6+ characters)", text: $password)
+                        SecureField("New album password (\(PasscodePolicy.albumPasswordMinimum)+ characters)", text: $password)
                             .accessibilityIdentifier("album.password")
                             .textContentType(.newPassword)
                             .textInputAutocapitalization(.never).autocorrectionDisabled()
+                            .modifier(GraphiteFieldChrome())
+                        if let hint = PasscodePolicy.lengthHint(password, minimum: PasscodePolicy.albumPasswordMinimum) {
+                            Text(hint).font(.wlMeta).foregroundStyle(Graphite.warn).accessibilityIdentifier("album.password.tooShort")
+                        }
                         SecureField("Confirm album password", text: $confirmation)
                             .accessibilityIdentifier("album.password.confirm")
                             .textContentType(.newPassword)
                             .textInputAutocapitalization(.never).autocorrectionDisabled()
+                            .modifier(GraphiteFieldChrome())
                     }
-                    Text("Parent protection always applies. Album contents, filenames and thumbnails are encrypted separately; album names and hierarchy remain visible.")
-                        .font(.footnote).foregroundStyle(.secondary)
                     if protection == .faceIDOnly {
-                        Text("Face ID-only albums have no album-password fallback. Resetting Face ID, removing the device passcode, losing the device or losing its Keychain entry can permanently lock the contents. Portable recovery is not implemented yet.")
-                            .font(.footnote)
+                        WagLockNote(kind: .caution, text: "Face ID-only albums have no album-password fallback. Resetting Face ID, removing the device passcode, losing the device or losing its Keychain entry can permanently lock the contents. Portable recovery is not implemented yet.")
                         Toggle("I understand this album is device-bound", isOn: $acknowledgeDeviceBound)
+                            .font(.wlBodyStrong).foregroundStyle(Graphite.textPrimary).tint(Graphite.accentStrong)
                     }
                     if protection.usesBiometrics {
                         Text("Face ID must be available and enrolled. Cancelling authentication leaves the album unchanged.")
-                            .font(.footnote).foregroundStyle(.secondary)
+                            .font(.wlMeta).foregroundStyle(Graphite.textMuted)
                     }
-                }
-                if let error { Text(error).foregroundStyle(.red) }
-                if busy { ProgressView() }
-            }
-            .wagLockList()
-            .navigationTitle(editing == nil ? "New Album" : "Album Security")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(busy) }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }.disabled(!canSave || busy)
-                        .accessibilityIdentifier("album.save")
+                    WagLockNote(kind: .info, text: "Parent protection always applies. Album contents, filenames and thumbnails are encrypted separately; album names and hierarchy remain visible.")
+                    if let error { WagLockNote(kind: .error, text: error) }
                 }
             }
-            .interactiveDismissDisabled(busy)
-            .onDisappear { password = ""; confirmation = "" }
-            .onAppear {
-                if let editing, let mode = AlbumProtection(rawValue: editing.protectionRawValue) {
-                    protection = mode
-                }
+            Button(editing == nil ? "Create album" : "Save") { save() }
+                .buttonStyle(WagLockPrimaryButtonStyle())
+                .disabled(!canSave || busy)
+                .accessibilityIdentifier("album.save")
+        }
+        .padding(.horizontal, 22).padding(.top, 12).padding(.bottom, 24)
+        .background(Graphite.base)
+        .interactiveDismissDisabled(busy)
+        .onDisappear { password = ""; confirmation = "" }
+        .onAppear {
+            if let editing, let mode = AlbumProtection(rawValue: editing.protectionRawValue) {
+                protection = mode
             }
         }
     }
 
+    private func protectionRow(_ option: AlbumProtection) -> some View {
+        let selected = protection == option
+        let detail: String
+        switch option {
+        case .inherited: detail = "Opens with this library"
+        case .password: detail = "A separate password for this album"
+        case .passwordAndFaceID: detail = "Face ID, with the password as fallback"
+        case .faceIDOnly: detail = "No album-password fallback"
+        }
+        return Button { protection = option } label: {
+            HStack(spacing: 12) {
+                Image(systemName: selected ? "largecircle.fill.circle" : "circle")
+                    .font(.system(size: 20)).foregroundStyle(selected ? Graphite.accentText : Graphite.line)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(option.title).font(.wlBodyStrong).foregroundStyle(Graphite.textPrimary)
+                    Text(detail).font(.wlMeta).foregroundStyle(Graphite.textMuted)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14).padding(.vertical, 12)
+            .background(Graphite.surface1, in: RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(selected ? Graphite.accentText.opacity(0.6) : .clear, lineWidth: 1.5))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityIdentifier(option.title)
+    }
+
     private var canSave: Bool {
         (editing != nil || !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            && (!protection.requiresPassword || (password.count >= 6 && PasswordText.matches(password, confirmation)))
+            && (!protection.requiresPassword || (password.count >= PasscodePolicy.albumPasswordMinimum && PasswordText.matches(password, confirmation)))
             && (protection != .faceIDOnly || acknowledgeDeviceBound)
     }
 
@@ -463,5 +680,55 @@ enum AlbumPhotoTransfer {
                 }
             }
         }
+    }
+}
+
+/// Input chrome for plain SwiftUI fields that must keep their own identifiers.
+struct GraphiteFieldChrome: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(WagLockFonts.poppins(16, .medium, relativeTo: .body))
+            .foregroundStyle(Graphite.textPrimary)
+            .padding(.horizontal, 16).frame(minHeight: 54)
+            .background(Graphite.input, in: RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+struct AlbumPhotosImportResult: Identifiable {
+    let id = UUID()
+    let albumName: String
+    let addedAssetIDs: [String]
+    let skipped: Int
+}
+
+/// After a Select All import into an album: what was added and the same explicit,
+/// iOS-confirmed "Remove from Photos…" offer as the main import.
+private struct AlbumPhotosImportCompleteView: View {
+    let result: AlbumPhotosImportResult
+    let done: () -> Void
+    @State private var removing = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    Image(systemName: "checkmark.seal").font(.system(size: 34)).foregroundStyle(Graphite.accentText)
+                        .frame(width: 64, height: 64).background(Graphite.accentTint, in: Circle())
+                        .accessibilityHidden(true).padding(.top, 24)
+                    WagLockTitle(text: "\(result.addedAssetIDs.count) item\(result.addedAssetIDs.count == 1 ? "" : "s") added", size: .sheet)
+                    Text("Encrypted and saved in \(result.albumName)").font(.wlBody).foregroundStyle(Graphite.textMuted)
+                    if result.skipped > 0 {
+                        WagLockNote(kind: .info, text: "\(result.skipped) item\(result.skipped == 1 ? " wasn’t" : "s weren’t") in Photos any more and \(result.skipped == 1 ? "wasn’t" : "weren’t") added.")
+                    }
+                    PhotosOriginalsCard(photoAssetIDs: result.addedAssetIDs, isRemoving: $removing)
+                }
+            }
+            Button("Done", action: done).buttonStyle(WagLockPrimaryButtonStyle())
+                .disabled(removing)
+                .accessibilityIdentifier("album.import.done")
+        }
+        .padding(.horizontal, 22).padding(.bottom, 24)
+        .background(Graphite.base.ignoresSafeArea())
+        .interactiveDismissDisabled(removing)
     }
 }

@@ -188,4 +188,16 @@ final class VaultResetTests: XCTestCase {
         auth.password = "PUBLIC-new-password"; auth.confirmPassword = auth.password
         XCTAssertTrue(auth.isSetupButtonEnabled)
     }
+
+    func testEraseFactoryIsLimitedToTheExactEncryptedIdentities() {
+        XCTAssertEqual(VaultResetService.liveNamespaces, ["com.d2sci.waglock", "com.d2sci.waglock.dev"])
+        XCTAssertFalse(VaultResetService.liveNamespaces.contains("com.d2sci.vaultito.dev"))
+        let id = UUID().uuidString
+        // Release and Dev Encrypted never claim each other's services.
+        XCTAssertFalse(VaultResetService.owns(service: "com.d2sci.waglock.dev", namespace: "com.d2sci.waglock"))
+        XCTAssertFalse(VaultResetService.owns(service: "com.d2sci.waglock.dev.vault." + id, namespace: "com.d2sci.waglock"))
+        XCTAssertFalse(VaultResetService.owns(service: "com.d2sci.waglock.vault." + id, namespace: "com.d2sci.waglock.dev"))
+        XCTAssertTrue(VaultResetService.owns(service: "com.d2sci.waglock.dev.vault." + id, namespace: "com.d2sci.waglock.dev"))
+        XCTAssertFalse(VaultResetService.owns(service: "com.d2sci.vaultito.dev", namespace: "com.d2sci.waglock.dev"))
+    }
 }

@@ -7,8 +7,8 @@ struct UnlockHelpView: View {
         NavigationStack {
             Form {
                 Section("Try saved access") {
-                    Text("Check your password manager for your saved WagLock password. Use https://waglock.d2sci.co as its website, then choose Full keyboard on the unlock screen if needed.")
-                    Text("Face ID can help only if you enabled it earlier. If it still opens your library, make an encrypted backup before changing anything.")
+                    Text("Check your password manager for waglock.d2sci.co, then pick the right keyboard on the unlock screen.")
+                    Text("Face ID can help only if you set it up earlier. If it still opens your library, make an encrypted backup before changing anything.")
                     if auth.isBiometricUnlockEnabled {
                         Button("Try Face ID") {
                             dismiss()
@@ -17,14 +17,14 @@ struct UnlockHelpView: View {
                     }
                 }
                 Section("Recover an existing backup") {
-                    Text("An exported encrypted backup can be opened on a computer using its own backup password or recovery key. Protected albums may need their separate passwords. Your backup password may differ from your WagLock password.")
-                    Text("Recovery extracts your files. Restoring a backup inside WagLock is not available yet. WagLock cannot recover a forgotten password for you.")
+                    Text("Open an encrypted backup on a computer with its password or recovery key. Protected albums may need their separate passwords. A backup password may differ from your passcode.")
+                    Text("Restoring a backup inside WagLock isn’t available yet. WagLock can’t recover a forgotten passcode.")
                     Link("Open recovery instructions", destination: URL(string: "https://github.com/donnellymjd/waglock/blob/main/docs/portable-vault/backup-recovery.md")!)
                         .accessibilityIdentifier("recovery.instructions")
                 }
                 if auth.canEraseLocalData {
                     Section("Start over") {
-                        Text("If you cannot recover access, you can erase WagLock's local vault content and create a new password. This cannot recover or unlock the old content.")
+                        Text("Erase WagLock and start over. Deletes everything stored in WagLock on this iPhone. Backups and originals elsewhere are kept.")
                         NavigationLink { EraseWagLockView() } label: {
                             Text("Erase WagLock and start over").foregroundStyle(ColorTheme.destructive)
                         }.accessibilityIdentifier("recovery.erase.open")
@@ -46,8 +46,8 @@ private struct EraseWagLockView: View {
     var body: some View {
         Form {
             Section {
-                Text("This permanently deletes all vault content stored in WagLock on this device, including protected photos, videos, files, notes and saved unlock credentials. Saved Face ID access is removed.")
-                Text("Exported backups and originals saved outside the vault are not deleted. They remain protected by their existing passwords. This does not guarantee forensic erasure from the device or its backups.")
+                Text("This permanently deletes everything stored in WagLock on this iPhone, including protected photos, videos, files, notes and saved unlock credentials. Saved Face ID access is removed.")
+                Text("Exported backups and originals saved outside WagLock are not deleted. They remain protected by their existing passwords. This does not guarantee forensic erasure from the device or its backups.")
                 Text("After you confirm, erasure cannot be cancelled. If interrupted, it resumes when you reopen WagLock.")
             }
             Section("Confirm permanent deletion") {

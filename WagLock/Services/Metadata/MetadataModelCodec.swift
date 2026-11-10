@@ -10,10 +10,13 @@ enum MetadataModelCodec {
         let id: UUID, fileName: String, fileExtension: String, fileSize: Int64, typeRawValue: String
         let encryptedPath: String, thumbnailData: Data?, createdAt: Date, modifiedAt: Date
         let width: Int?, height: Int?, duration: Double?
+        /// Optional, so records written before Live Photo support decode with no motion.
+        let livePhotoVideoPath: String?, livePhotoVideoExtension: String?
         init(_ x: MediaItem) {
             id = x.id; fileName = x.fileName; fileExtension = x.fileExtension; fileSize = x.fileSize
             typeRawValue = x.typeRawValue; encryptedPath = x.encryptedPath; thumbnailData = x.thumbnailData
             createdAt = x.createdAt; modifiedAt = x.modifiedAt; width = x.width; height = x.height; duration = x.duration
+            livePhotoVideoPath = x.livePhotoVideoPath; livePhotoVideoExtension = x.livePhotoVideoExtension
         }
     }
     struct Note: Codable {
@@ -102,7 +105,8 @@ enum MetadataModelCodec {
         case .media(let x):
             let item = MediaItem(id: x.id, fileName: x.fileName, fileExtension: x.fileExtension, fileSize: x.fileSize,
                 type: .document, encryptedPath: x.encryptedPath, thumbnailData: x.thumbnailData,
-                createdAt: x.createdAt, modifiedAt: x.modifiedAt, width: x.width, height: x.height, duration: x.duration)
+                createdAt: x.createdAt, modifiedAt: x.modifiedAt, width: x.width, height: x.height, duration: x.duration,
+                livePhotoVideoPath: x.livePhotoVideoPath, livePhotoVideoExtension: x.livePhotoVideoExtension)
             item.typeRawValue = x.typeRawValue; context.insert(item)
         case .note(let x):
             let item = SecretNote(title: x.title, content: x.content, isFavorite: x.isFavorite, tags: x.tags)
@@ -148,7 +152,8 @@ enum MetadataModelCodec {
             case .media(let x):
                 let item = MediaItem(id: x.id, fileName: x.fileName, fileExtension: x.fileExtension, fileSize: x.fileSize,
                     type: .document, encryptedPath: x.encryptedPath, thumbnailData: x.thumbnailData,
-                    createdAt: x.createdAt, modifiedAt: x.modifiedAt, width: x.width, height: x.height, duration: x.duration)
+                    createdAt: x.createdAt, modifiedAt: x.modifiedAt, width: x.width, height: x.height, duration: x.duration,
+                livePhotoVideoPath: x.livePhotoVideoPath, livePhotoVideoExtension: x.livePhotoVideoExtension)
                 item.typeRawValue = x.typeRawValue; context.insert(item)
             case .note(let x):
                 let item = SecretNote(title: x.title, content: x.content, isFavorite: x.isFavorite, tags: x.tags)
@@ -172,7 +177,7 @@ enum MetadataModelCodec {
         try Task.checkCancellation()
         guard allowPending || !context.hasChanges else { throw Failure.dirtyContext }
         let fields: [String: Set<String>] = [
-            "MediaItem": ["id", "fileName", "fileExtension", "fileSize", "typeRawValue", "encryptedPath", "thumbnailData", "createdAt", "modifiedAt", "width", "height", "duration"],
+            "MediaItem": ["id", "fileName", "fileExtension", "fileSize", "typeRawValue", "encryptedPath", "thumbnailData", "createdAt", "modifiedAt", "width", "height", "duration", "livePhotoVideoPath", "livePhotoVideoExtension"],
             "SecretNote": ["id", "title", "content", "createdAt", "modifiedAt", "isFavorite", "tags"],
             "VaultAlbum": ["id", "parentID", "name", "protectionRawValue", "wrappedKey", "encryptedCatalog", "biometricAccount", "createdAt"]]
         let entities = context.container.schema.entities

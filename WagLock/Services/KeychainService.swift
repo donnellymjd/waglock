@@ -156,7 +156,8 @@ class KeychainService: LibraryIdentityAnchor, LibraryCommitAnchor {
     /// - Returns: Whether a password has been set
     func isPasswordSet() -> Bool {
         // Unavailable, corrupt or partial credentials must never route to setup.
-        for account in [ownerAccount, passwordAccount, saltAccount, isSetAccount, dataPasswordAccount] {
+        for account in [ownerAccount, passwordAccount, saltAccount, isSetAccount, dataPasswordAccount,
+                        LibrarySlotTable.tableAccount] {
             do {
                 _ = try readFromKeychain(account: account)
                 return true
@@ -553,6 +554,45 @@ extension KeychainService {
             throw KeychainError.invalidData
         }
         return record
+    }
+}
+
+// MARK: - Library Slot Table
+
+extension KeychainService {
+    /// The install-wide slot table lives in this service's namespace, so explicit erase covers it.
+    func librarySlotTable(logN: UInt8 = LibrarySlotCrypto.productionLogN,
+                          now: @escaping () -> Date = Date.init) -> LibrarySlotTable {
+        LibrarySlotTable(storage: storage, namespace: service, now: now, logN: logN)
+    }
+
+    /// Checked read of the pre-slot owner record (nil only on checked absence).
+    func legacyOwnerSnapshot() throws -> Data? { try optionalItem(account: ownerAccount) }
+
+    /// Checked read of the pre-slot independent record (nil only on checked absence).
+    func legacyIndependentSnapshot() throws -> Data? { try optionalItem(account: independentGuestAccount) }
+
+    /// Retire the pre-slot owner wrapper only when it is unchanged and a slot already
+    /// holds the same verified secret. Keys and library data are untouched.
+    func retireLegacyOwnerRecord(matching snapshot: Data) throws {
+        guard try optionalItem(account: ownerAccount) == snapshot else { throw KeychainError.invalidData }
+        try storage.delete(account: ownerAccount)
+        guard try optionalItem(account: ownerAccount) == nil else { throw KeychainError.invalidData }
+    }
+
+    /// Same contract for the pre-slot independent wrapper.
+    func retireLegacyIndependentRecord(matching snapshot: Data) throws {
+        guard try optionalItem(account: independentGuestAccount) == snapshot else { throw KeychainError.invalidData }
+        try storage.delete(account: independentGuestAccount)
+        guard try optionalItem(account: independentGuestAccount) == nil else { throw KeychainError.invalidData }
+    }
+
+    /// Retire the inherited presentation-only guest hash; it is not a library and
+    /// must not keep a second unlock path alive once slots are in use.
+    func retireLegacyPresentationGuest() {
+        for account in [guestPasswordAccount, guestSaltAccount, isGuestSetAccount] {
+            try? storage.delete(account: account)
+        }
     }
 }
 

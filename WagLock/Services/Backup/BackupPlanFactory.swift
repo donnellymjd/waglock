@@ -37,13 +37,18 @@ enum BackupPlanFactory {
             // A separate-password child must not become readable with its parent's password.
             if let parent = domain.parent, case .password(let own) = credential,
                case .password(let outer) = credentials[parent], Data(own.utf8) == Data(outer.utf8) { throw Failure.credentials }
-            let assetRows: [[String: Any]] = domain.assets.map { item in [
+            let assetRows: [[String: Any]] = domain.assets.map { item in
+                var row: [String: Any] = [
                 "id": item.id.uuidString, "albumID": optional(item.albumID?.uuidString), "name": item.name,
                 "fileExtension": item.fileExtension, "storedType": item.storedType, "effectiveType": item.effectiveType.rawValue,
                 "declaredBytes": item.bytes, "createdAt": item.createdAt.timeIntervalSince1970,
                 "modifiedAt": optional(item.modifiedAt?.timeIntervalSince1970), "width": optional(item.width), "height": optional(item.height),
                 "duration": optional(item.duration), "payload": "media/" + item.id.uuidString,
-                "thumbnail": item.thumbnail == nil ? NSNull() : "thumbnails/" + item.id.uuidString] }
+                "thumbnail": item.thumbnail == nil ? NSNull() : "thumbnails/" + item.id.uuidString]
+                // Only Live Photo stills carry this key, so other backups stay readable by older recovery tools.
+                if let motion = item.livePhotoMotionID { row["livePhotoMotionID"] = motion.uuidString }
+                return row
+            }
             let metadata: [String: Any] = [
                 "schema": "waglock-backup-metadata-1", "domain": label(domain.id), "parent": optional(domain.parent.map(label)),
                 "assets": assetRows,

@@ -3,7 +3,7 @@
 //  WagLock
 //
 //  Main tab bar view
-//  Tabs: Photos, Media, Files, Notes and Settings
+//  Tabs: Library, Albums, Files, Notes and Settings
 //
 
 import SwiftUI
@@ -23,53 +23,27 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            // Photos tab
-            PhotosView()
+            LibraryView()
                 .environmentObject(authViewModel)
-                .tabItem {
-                    Label(
-                        String(localized: "tab.photos"),
-                        systemImage: selectedTab == 0 ? "photo.fill" : "photo")
-                }
+                .tabItem { Label("Library", systemImage: "square.grid.2x2") }
                 .tag(0)
 
-            // Media tab (videos and audio combined)
-            MediaView()
-                .environmentObject(authViewModel)
-                .tabItem {
-                    Label(
-                        String(localized: "tab.media"),
-                        systemImage: selectedTab == 1 ? "play.rectangle.on.rectangle.fill" : "play.rectangle.on.rectangle")
-                }
+            AlbumsTabView()
+                .tabItem { Label("Albums", systemImage: "rectangle.stack") }
                 .tag(1)
 
-            // Files tab
             FilesView()
                 .environmentObject(authViewModel)
-                .tabItem {
-                    Label(
-                        String(localized: "tab.files"),
-                        systemImage: selectedTab == 2 ? "folder.fill" : "folder")
-                }
+                .tabItem { Label(String(localized: "tab.files"), systemImage: "folder") }
                 .tag(2)
 
-            // Secret space tab (now a regular notes tab)
             SecretSpaceView()
-                .tabItem {
-                    Label(
-                        String(localized: "tab.secretSpace"),
-                        systemImage: selectedTab == 3 ? "note.text" : "note")
-                }
+                .tabItem { Label("Notes", systemImage: "note.text") }
                 .tag(3)
 
-            // Settings tab
             SettingsView()
                 .environmentObject(authViewModel)
-                .tabItem {
-                    Label(
-                        String(localized: "tab.settings"),
-                        systemImage: selectedTab == 4 ? "gearshape.fill" : "gearshape")
-                }
+                .tabItem { Label(String(localized: "tab.settings"), systemImage: "slider.horizontal.3") }
                 .tag(4)
         }
         .tint(ColorTheme.accent)  // Tab bar selection color
@@ -79,12 +53,15 @@ struct MainTabView: View {
                   authViewModel.librarySessionID == services.sessionID else { return }
             showBackupReminder = reminders.claimDuePrompt()
         }
-        .alert("Time for a backup", isPresented: $showBackupReminder) {
+        .alert("Time to back up WagLock", isPresented: $showBackupReminder) {
             Button("Open backups") { showBackup = true }
             Button("Remind me in a week") { reminders.remindInAWeek() }
             Button("Not now", role: .cancel) { }
         } message: {
             Text("Keep a recoverable encrypted copy of this library. You choose where to save it.")
+        }
+        .sheet(isPresented: $authViewModel.showsFirstBackupSetup) {
+            FirstBackupSetupView()
         }
         .sheet(isPresented: $showBackup) {
             NavigationStack {

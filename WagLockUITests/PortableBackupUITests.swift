@@ -59,7 +59,7 @@ final class PortableBackupUITests: XCTestCase {
         XCTAssertTrue(create.waitForExistence(timeout: 10))
         for _ in 0..<5 { app.swipeDown() }
         let method = app.segmentedControls["backup.method"]
-        XCTAssertTrue(method.waitForExistence(timeout: 5)); method.buttons["Age recovery key"].tap()
+        XCTAssertTrue(method.waitForExistence(timeout: 5)); method.buttons["Recovery key"].tap()
         let recipient = app.textFields["backup.recipient"]
         XCTAssertTrue(recipient.waitForExistence(timeout: 5)); recipient.tap()
         recipient.typeText("age1zvkyg2lqzraa2lnjvqej32nkuu0ues2s82hzrye869xeexvn73equnujwj\n")

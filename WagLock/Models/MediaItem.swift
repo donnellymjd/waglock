@@ -52,6 +52,12 @@ final class MediaItem {
     /// Video duration (seconds)
     var duration: Double?
 
+    /// Live Photo motion: encrypted path of the paired video, stored unchanged beside the still.
+    var livePhotoVideoPath: String?
+
+    /// Live Photo motion: the paired video's extension (e.g. ".MOV").
+    var livePhotoVideoExtension: String?
+
     // MARK: - Computed Properties
 
     /// Media type (computed property)
@@ -68,6 +74,14 @@ final class MediaItem {
             typeRawValue = newValue.rawValue
         }
     }
+
+    /// A still with its paired motion video.
+    @Transient
+    var isLivePhoto: Bool { livePhotoVideoPath != nil }
+
+    /// Every ciphertext this item owns. Deleting an item must remove all of them.
+    @Transient
+    var encryptedPaths: [String] { [encryptedPath] + (livePhotoVideoPath.map { [$0] } ?? []) }
 
     /// Full file name (with extension)
     @Transient
@@ -137,7 +151,9 @@ final class MediaItem {
         modifiedAt: Date = Date(),
         width: Int? = nil,
         height: Int? = nil,
-        duration: Double? = nil
+        duration: Double? = nil,
+        livePhotoVideoPath: String? = nil,
+        livePhotoVideoExtension: String? = nil
     ) {
         self.id = id
         self.fileName = fileName
@@ -151,6 +167,8 @@ final class MediaItem {
         self.width = width
         self.height = height
         self.duration = duration
+        self.livePhotoVideoPath = livePhotoVideoPath
+        self.livePhotoVideoExtension = livePhotoVideoExtension
     }
 
     // MARK: - Methods

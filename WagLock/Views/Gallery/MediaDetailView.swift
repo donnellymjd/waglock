@@ -633,14 +633,11 @@ struct MediaDetailView: View {
                 // Commit the database deletion first and delete files only after it succeeds,
                 // so a failed save never leaves records pointing at deleted files
                 guard isCurrentSession, !Task.isCancelled else { return }
-                let encryptedPath = mediaItem.encryptedPath
+                let encryptedPaths = sourceItem.encryptedPaths // Includes Live Photo motion.
                 modelContext.delete(sourceItem)
                 try LibraryWriteCoordinator.save(modelContext)
 
-                do {
-                    try storageService.deleteFile(path: encryptedPath)
-                } catch {
-                }
+                for path in encryptedPaths { try? storageService.deleteFile(path: path) }
 
                 // Go back to the previous screen
                 await MainActor.run {

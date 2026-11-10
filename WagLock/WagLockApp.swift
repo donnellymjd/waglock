@@ -12,6 +12,9 @@ import SwiftUI
 @main
 struct WagLockApp: App {
     init() {
+        WagLockChrome.apply()
+        // The retired Appearance preference must not linger in a fresh setting screen.
+        UserDefaults.standard.removeObject(forKey: "waglock.appearance")
         ProtectedTemporaryFiles.removeAbandonedJobs()
         ProtectedTemporaryFiles.removeAbandonedJobs(in: FileManager.default.temporaryDirectory
             .appendingPathComponent("WagLockSessions").appendingPathComponent("WagLockSessionJobs"))
@@ -27,7 +30,8 @@ struct WagLockApp: App {
 
     @StateObject private var authViewModel = AuthenticationViewModel()
     @StateObject private var guestModeManager = GuestModeManager.shared
-    @AppStorage(WagLockAppearance.preferenceKey) private var appearance = WagLockAppearance.system.rawValue
+    /// App-wide fixed-size storage; the same in every library.
+    @StateObject private var storage = StorageReserveCoordinator.shared
     @State private var showLaunchScreen = true
     @State private var screenCaptured = UIScreen.main.isCaptured
 
@@ -36,7 +40,8 @@ struct WagLockApp: App {
     // if multi-window is enabled later, the privacy cover and auto-lock must move to the scene level
     @Environment(\.scenePhase) private var scenePhase
     /// Time the app last went to the background (used for auto-lock)
-    @State private var lastBackgroundedAt: Date?
+    /// Monotonic, including sleep: changing the iPhone's clock can't stretch the auto-lock delay.
+    @State private var lastBackgroundedAt: ContinuousClock.Instant?
 
     // MARK: - Scene
 
@@ -107,7 +112,13 @@ struct WagLockApp: App {
                         .zIndex(2)
                 }
             }
-            .preferredColorScheme((WagLockAppearance(rawValue: appearance) ?? .system).colorScheme)
+            // Graphite is dark only; the Appearance setting was removed in the redesign.
+            .preferredColorScheme(.dark)
+            .environmentObject(storage)
+            .fullScreenCover(isPresented: Binding(get: { storage.showsSwitching && !showLaunchScreen && !screenCaptured },
+                                                  set: { if !$0 { storage.dismissSwitching() } })) {
+                StorageSwitchingView().environmentObject(storage)
+            }
             .tint(ColorTheme.accent)
             .environment(\.locale, AppConstants.presentationLocale)
             .task {
@@ -124,10 +135,14 @@ struct WagLockApp: App {
             .onChange(of: scenePhase) { _, newPhase in
                 switch newPhase {
                 case .background:
-                    lastBackgroundedAt = Date()
-                    // Fresh 1.0 libraries always drop their session keys on background.
+                    storage.pause()
+                    lastBackgroundedAt = .now
+                    // Encrypted libraries lock on background unless the person chose a delay
+                    // (ADR-032). Album keys, previews and exports always close here; with a
+                    // delay, the library key stays in memory and the delay is checked on return.
                     // New recording is disabled there; preserve the legacy Dev recording policy.
-                    authViewModel.handleBackground(lockImmediately: LibraryStoragePolicy.encryptedMetadata)
+                    authViewModel.handleBackground(lockImmediately: LibraryStoragePolicy.encryptedMetadata
+                        && AppSettings.shared.autoLockTimeout == .immediately)
                 case .active:
                     screenCaptured = UIScreen.main.isCaptured
                     if screenCaptured { revokeCapturedSession() }
@@ -137,6 +152,7 @@ struct WagLockApp: App {
                     autoLockIfNeeded()
                     if returnedFromBackground { authViewModel.resumeAlbumAccess() }
                     authViewModel.vaultContext?.audio.tick()
+                    storage.resume()
                 default:
                     break
                 }
@@ -167,7 +183,7 @@ struct WagLockApp: App {
         let timeout = AppSettings.shared.autoLockTimeout
         guard timeout != .never else { return }
 
-        if Date().timeIntervalSince(backgroundedAt) >= Double(timeout.rawValue) {
+        if ContinuousClock.now - backgroundedAt >= .seconds(timeout.rawValue) {
             authViewModel.logout()
         }
     }

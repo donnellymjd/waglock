@@ -281,9 +281,14 @@ def validate_metadata(meta, actual, nested, domain, parent):
     expected_paths = {"metadata.json"} | set(nested)
     asset_ids = set()
     fields = {"id", "albumID", "name", "fileExtension", "storedType", "effectiveType", "declaredBytes", "createdAt", "modifiedAt", "width", "height", "duration", "payload", "thumbnail"}
+    live_links = {}
+    asset_types = {}
     for asset in meta["assets"]:
-        if not isinstance(asset, dict) or set(asset) != fields:
+        # "livePhotoMotionID" appears only on Live Photo stills (WagLock 2026-11-10 and later).
+        if not isinstance(asset, dict) or set(asset) not in (fields, fields | {"livePhotoMotionID"}):
             raise InvalidBackup("Malformed asset metadata")
+        if "livePhotoMotionID" in asset:
+            live_links[asset["id"]] = identifier(asset["livePhotoMotionID"])
         value = identifier(asset["id"])
         if asset["albumID"] is not None:
             identifier(asset["albumID"])
@@ -296,9 +301,15 @@ def validate_metadata(meta, actual, nested, domain, parent):
             raise InvalidBackup("Unsupported asset metadata")
         if not number(asset["createdAt"]) or not number(asset["modifiedAt"], optional=True) or not number(asset["duration"], optional=True, positive=True) or any(value is not None and (type(value) is not int or value <= 0) for value in [asset["width"], asset["height"]]):
             raise InvalidBackup("Invalid asset dates or dimensions")
+        asset_types[value] = asset["effectiveType"]
         expected_paths.add(asset["payload"])
         if asset["thumbnail"] is not None:
             expected_paths.add(asset["thumbnail"])
+    # A Live Photo links a photo to a distinct video in the same domain, at most once.
+    if len(set(live_links.values())) != len(live_links) or any(
+            asset_types.get(still) != "photo" or asset_types.get(motion) != "video" or motion == still
+            for still, motion in live_links.items()):
+        raise InvalidBackup("Invalid Live Photo link")
     if expected_paths != set(actual):
         raise InvalidBackup("Unreferenced or missing payload")
     note_ids = set()

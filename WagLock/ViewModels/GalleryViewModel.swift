@@ -77,7 +77,7 @@ class GalleryViewModel: ObservableObject {
         guard let item = mediaItemToDelete, let context = modelContext else { return }
 
         Task {
-            let encryptedPath = item.encryptedPath
+            let encryptedPaths = item.encryptedPaths // Includes Live Photo motion.
             let fileName = item.fileName
 
             do {
@@ -86,10 +86,9 @@ class GalleryViewModel: ObservableObject {
                 context.delete(item)
                 try LibraryWriteCoordinator.save(context)
 
-                do {
-                    try storageService.deleteFile(path: encryptedPath)
-                } catch {
+                for path in encryptedPaths {
                     // The record is gone; a failed file delete only leaves an unreferenced encrypted file
+                    try? storageService.deleteFile(path: path)
                 }
 
 
@@ -133,7 +132,7 @@ class GalleryViewModel: ObservableObject {
         Task {
             // Commit the database deletion first and delete files only after it succeeds,
             // so a failed save never leaves records pointing at deleted files
-            let encryptedPaths = items.map { $0.encryptedPath }
+            let encryptedPaths = items.flatMap(\.encryptedPaths)
             for item in items {
                 context.delete(item)
             }

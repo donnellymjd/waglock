@@ -20,13 +20,17 @@ class StorageService {
     // MARK: - Storage Calculation
 
     /// Calculate the total size of all encrypted files
-    func calculateTotalStorageUsed(modelContext: ModelContext) async -> Int64 {
+    /// This library's media, including each Live Photo's motion file (counted at its
+    /// stored size, since only the still's original size is recorded).
+    func calculateTotalStorageUsed(modelContext: ModelContext, storage: FileStorageService? = nil) async -> Int64 {
         let descriptor = FetchDescriptor<MediaItem>()
 
         do {
             let items = try modelContext.fetch(descriptor)
-            let totalSize = items.reduce(0) { $0 + $1.fileSize }
-            return totalSize
+            let files = storage ?? .shared
+            return items.reduce(0) { total, item in
+                total + item.fileSize + (item.livePhotoVideoPath.flatMap { files.getFileSize(path: $0) } ?? 0)
+            }
         } catch {
             return 0
         }
@@ -153,7 +157,7 @@ class StorageService {
 
     /// Get storage statistics
     func getStorageInfo(modelContext: ModelContext, storage: FileStorageService? = nil) async -> StorageInfo {
-        let totalUsed = await calculateTotalStorageUsed(modelContext: modelContext)
+        let totalUsed = await calculateTotalStorageUsed(modelContext: modelContext, storage: storage)
         let cacheSize = storage == nil ? calculateCacheSize() : 0
         let documentsSize = storage.map { calculateDirectorySize(url: $0.getStorageDirectory()) } ?? calculateDocumentsDirectorySize()
 

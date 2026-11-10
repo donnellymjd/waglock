@@ -31,6 +31,8 @@ private struct ScopedPortableBackupView: View {
     @State private var handoff: BackupFile?
     @State private var saved = false
     @State private var backupName = PortableBackupSession.suggestedExportName()
+    @State private var generatedKey: GeneratedKey?
+    private struct GeneratedKey: Identifiable { let id = UUID(); let key: AgeRecoveryKey }
     private struct BackupFile: Identifiable { let id = UUID(); let url: URL }
     private var request: LibraryMountCoordinator.Request { .init(sessionID: auth.librarySessionID, scope: auth.libraryScope) }
     private var biometricRows: [PortableBackupSession.AlbumRow] { session.rows.filter { $0.policy == .faceIDOnly } }
@@ -46,7 +48,7 @@ private struct ScopedPortableBackupView: View {
                 Section("Protect the backup") {
                     Picker("Encryption method", selection: $method) {
                         Text("Password").tag("password")
-                        Text("Age recovery key").tag("recipient")
+                        Text("Recovery key").tag("recipient")
                     }.pickerStyle(.segmented).accessibilityIdentifier("backup.method")
                     if method == "password" {
                         PasswordKeyboardPicker(selection: $keyboard)
@@ -60,17 +62,29 @@ private struct ScopedPortableBackupView: View {
                                 .accessibilityIdentifier("backup.reuseConsent")
                         } else {
                             passwordField("New backup password", text: $password, identifier: "backup.password", contentType: .newPassword)
+                            if let hint = PasscodePolicy.lengthHint(password, minimum: PasscodePolicy.backupPasswordMinimum) {
+                                Text(hint).font(.footnote).foregroundStyle(Graphite.warn).accessibilityIdentifier("backup.password.tooShort")
+                            }
                             passwordField("Confirm backup password", text: $confirmation, identifier: "backup.confirm", contentType: .newPassword)
                             PasswordConfirmationButton(password: password, confirmation: $confirmation, identifier: "backup.confirmEntered")
                             PasswordStrengthView(password: password)
-                            Text("Use at least 12 characters, preferably several random words. This password protects the copy; it does not change your WagLock password.")
+                            Text("Use at least \(PasscodePolicy.backupPasswordMinimum) characters" + (PasscodePolicy.allowsShortPasscodes ? ". Short passwords are allowed in Settings, but anyone with a copy of this backup can guess them offline with no wait. Several random words are much safer." : ", preferably several random words.") + " This password protects the copy; it does not change your WagLock password.")
                                 .font(.footnote)
                         }
                     } else {
+                        Button {
+                            generatedKey = GeneratedKey(key: AgeRecoveryKey.generate())
+                        } label: {
+                            Label(recipient.isEmpty ? "Generate a recovery key" : "Generate a different recovery key", systemImage: "key")
+                        }
+                        .accessibilityIdentifier("backup.generateKey")
+                        if !recipient.isEmpty {
+                            Text("Using the recovery key you saved. Keep it safe; WagLock won’t show it again.").font(.footnote)
+                        }
                         TextField("age1… public recipient", text: $recipient)
                             .textInputAutocapitalization(.never).autocorrectionDisabled()
                             .accessibilityIdentifier("backup.recipient")
-                        Text("Enter an age X25519 public recipient. Keep its matching private identity separately; the public recipient cannot decrypt a backup.")
+                        Text("Or enter an existing age X25519 public recipient. Keep its matching private identity separately; the public recipient cannot decrypt a backup.")
                             .font(.footnote)
                     }
                     Text("Standard age encryption uses ChaCha20-Poly1305. Password mode uses scrypt; recovery-key mode uses X25519.")
@@ -88,10 +102,13 @@ private struct ScopedPortableBackupView: View {
                                     identifier: "backup.album." + album.id.uuidString,
                                     contentType: album.policy == .faceIDOnly ? .newPassword : .password)
                                 if album.policy == .faceIDOnly {
+                                    if let hint = PasscodePolicy.lengthHint(albumPasswords[album.id] ?? "", minimum: PasscodePolicy.backupPasswordMinimum) {
+                                        Text(hint).font(.footnote).foregroundStyle(Graphite.warn)
+                                    }
                                     passwordField("Confirm export password",
                                         text: Binding(get: { albumConfirmations[album.id] ?? "" }, set: { albumConfirmations[album.id] = $0 }),
                                         identifier: "backup.album.confirm." + album.id.uuidString, contentType: .newPassword)
-                                    Text("Choose at least 12 characters. Face ID will authorize this album's export. The copy will use this separate password; this phone's album protection stays unchanged.").font(.footnote)
+                                    Text("Choose at least \(PasscodePolicy.backupPasswordMinimum) characters. Face ID will authorize this album's export. The copy will use this separate password; this phone's album protection stays unchanged.").font(.footnote)
                                     PasswordStrengthView(password: albumPasswords[album.id] ?? "")
                                 }
                             }
@@ -138,7 +155,16 @@ private struct ScopedPortableBackupView: View {
                     Button("Discard this copy", role: .destructive) { session.cancel() }.accessibilityIdentifier("backup.discard")
                 }
             }
-            if let error = session.error { Section { Text(error).foregroundStyle(ColorTheme.destructive).accessibilityIdentifier("backup.error") } }
+            if let error = session.error {
+                if session.readyURL == nil && !session.isWorking {
+                    Section {
+                        BackupFailedCard(reason: error, lastBackup: reminders.lastSaved) { if canStart { start() } }
+                            .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
+                    }
+                } else {
+                    Section { WagLockNote(kind: .error, text: error).accessibilityIdentifier("backup.error") }
+                }
+            }
             if saved {
                 Section { Text("Saved to Files. Your provider manages cloud upload; verify the copy on another device.").accessibilityIdentifier("backup.saved") }
             }
@@ -158,10 +184,15 @@ private struct ScopedPortableBackupView: View {
         .onDisappear { session.cancel(); clearCredentials() }
         .onChange(of: useVaultPassword) { _, _ in password = ""; confirmation = ""; acknowledgedReuse = false }
         .onChange(of: method) { _, _ in clearCredentials() }
-        .onChange(of: scenePhase) { _, phase in if phase == .background { session.cancel(); clearCredentials() } }
+        .onChange(of: scenePhase) { _, phase in if phase == .background { session.cancel(); clearCredentials(); generatedKey = nil } }
         .onChange(of: session.readyURL) { previous, url in
             if url != nil { password = ""; confirmation = ""; albumPasswords = [:]; albumConfirmations = [:] }
             if previous == nil, url != nil { backupName = PortableBackupSession.suggestedExportName() }
+        }
+        .fullScreenCover(item: $generatedKey) { generated in
+            RecoveryKeyView(key: generated.key, onContinue: { value in
+                recipient = value; generatedKey = nil
+            }, onCancel: { generatedKey = nil })
         }
         .sheet(item: $handoff, onDismiss: { if session.handingOff { session.finishHandoff() } }) { file in
             SystemBackupSave(url: file.url) { success in
@@ -186,11 +217,11 @@ private struct ScopedPortableBackupView: View {
         if method == "password" {
             if useVaultPassword {
                 guard acknowledgedReuse, !password.isEmpty else { return false }
-            } else { guard password.count >= 12, PasswordText.matches(password, confirmation) else { return false } }
+            } else { guard password.count >= PasscodePolicy.backupPasswordMinimum, PasswordText.matches(password, confirmation) else { return false } }
         } else { guard (try? AgeFileWriter.decodeRecipient(recipient.trimmingCharacters(in: .whitespacesAndNewlines))) != nil else { return false } }
         return session.rows.filter { $0.policy != .inherited }.allSatisfy { album in
             let value = albumPasswords[album.id] ?? ""
-            return album.policy == .faceIDOnly ? biometricConsent && value.count >= 12 && PasswordText.matches(value, albumConfirmations[album.id] ?? "") : !value.isEmpty
+            return album.policy == .faceIDOnly ? biometricConsent && value.count >= PasscodePolicy.backupPasswordMinimum && PasswordText.matches(value, albumConfirmations[album.id] ?? "") : !value.isEmpty
         }
     }
     private func start() {

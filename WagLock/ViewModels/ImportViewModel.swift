@@ -38,6 +38,17 @@ class ImportViewModel: ObservableObject {
     /// Number of items imported successfully
     @Published var importedCount: Int = 0
 
+    /// Fixed-size storage had no room for (some of) the selection; shows Reserved space full.
+    @Published var reservedSpaceFull = false
+
+    /// Photos asset identifiers of the last import, set only when every selected item was
+    /// committed. Used solely for the user-initiated "Remove from Photos…" on Import complete.
+    @Published private(set) var removablePhotoAssetIDs: [String] = []
+    /// Originals picked in Files whose encrypted copies were committed by the last import.
+    @Published private(set) var removableFileSources: [ImportedFileSource] = []
+    private var importingFromFiles = false
+    private var pendingPhotoAssetIDs: [String] = []
+
     /// Whether to show the encrypted-file password prompt
     @Published var showEncryptedPasswordInput: Bool = false
 
@@ -78,10 +89,86 @@ class ImportViewModel: ObservableObject {
         errorMessage = nil
         isImporting = true
         importedCount = 0
+        removablePhotoAssetIDs = []
+        removableFileSources = []
+        importingFromFiles = false
+        lastImportWasPaste = false
+        let identifiers = results.compactMap(\.assetIdentifier)
+        pendingPhotoAssetIDs = identifiers.count == results.count ? identifiers : []
 
         startImportTask { password, progress in
             try await self.importService.importMedia(from: results, password: password, progress: progress)
         }
+    }
+
+    /// Assets chosen in WagLock's own photo browser (the one with Select All). Their
+    /// identifiers feed the same "Remove from Photos…" offer as the system picker.
+    func importFromLibraryAssets(_ identifiers: [String]) {
+        guard !isImporting, !identifiers.isEmpty else { return }
+        errorMessage = nil
+        isImporting = true
+        importedCount = 0
+        removablePhotoAssetIDs = []
+        removableFileSources = []
+        importingFromFiles = false
+        lastImportWasPaste = false
+        pendingPhotoAssetIDs = identifiers
+        startImportTask { password, progress in
+            try await self.importService.importLibraryAssets(identifiers, password: password, progress: progress)
+        }
+    }
+
+    /// Items from the system Paste button. Nothing reads the clipboard without that tap.
+    @Published private(set) var lastImportWasPaste = false
+
+    /// A photo or video just taken with the camera; never saved to the camera roll.
+    func importFromCamera(_ url: URL) {
+        guard !isImporting else { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()); return }
+        errorMessage = nil
+        isImporting = true
+        importedCount = 0
+        removablePhotoAssetIDs = []
+        removableFileSources = []
+        importingFromFiles = false
+        pendingPhotoAssetIDs = []
+        lastImportWasPaste = false
+        startImportTask { password, progress in
+            try await self.importService.importOwnedFiles([url], password: password, progress: progress)
+        }
+    }
+
+    func importFromPasteboard(providers: [NSItemProvider]) {
+        guard !isImporting, !providers.isEmpty else { return }
+        errorMessage = nil
+        isImporting = true
+        importedCount = 0
+        removablePhotoAssetIDs = []
+        removableFileSources = []
+        importingFromFiles = false
+        pendingPhotoAssetIDs = []
+        lastImportWasPaste = true
+        startImportTask { password, progress in
+            try await self.importService.importPasted(providers, password: password, progress: progress)
+        }
+    }
+
+    /// Deletes the Files originals of the last import, only after the person confirms, and
+    /// only those whose encrypted copy decrypts to identical bytes. Stops on lock.
+    func removeFileOriginals() async -> ImportedOriginalsRemover.Outcome {
+        let sources = removableFileSources
+        guard !sources.isEmpty, let auth = authViewModel, auth.isAuthenticated,
+              GuestModeManager.shared.isOwnerMode,
+              let session = auth.sessionPasswordData, let password = session.string else {
+            return .init(deleted: 0, kept: sources.count)
+        }
+        let storage = self.storage
+        let outcome = await ImportedOriginalsRemover.remove(sources, decrypt: { path, ext in
+            try await storage.createDecryptedTempFileAsync(path: path, password: password, preferredExtension: ext)
+        }, stillAuthorized: { [weak auth] in
+            auth?.isAuthenticated == true && auth?.sessionPasswordData === session && GuestModeManager.shared.isOwnerMode
+        })
+        removableFileSources = []
+        return outcome
     }
 
     /// Import from Files
@@ -112,6 +199,11 @@ class ImportViewModel: ObservableObject {
         }
 
         // Import non-encrypted files normally
+        lastImportWasPaste = false
+        removableFileSources = []
+        importingFromFiles = true
+        pendingPhotoAssetIDs = []
+        removablePhotoAssetIDs = []
         errorMessage = nil
         isImporting = true
         importedCount = 0
@@ -145,6 +237,7 @@ class ImportViewModel: ObservableObject {
         importProgress = nil
         errorMessage = nil
         importedCount = 0
+        pendingPhotoAssetIDs = []
         pendingEncryptedFile = nil
         showEncryptedPasswordInput = false
     }
@@ -207,7 +300,7 @@ class ImportViewModel: ObservableObject {
             }
             isImporting = true
             let items = try await operation(password)
-            createdPaths = items.map(\.encryptedPath)
+            createdPaths = items.flatMap(\.encryptedPaths)
             try Task.checkCancellation()
             guard token == importGeneration, auth.isAuthenticated,
                   auth.sessionPasswordData === session, GuestModeManager.shared.isOwnerMode else {
@@ -218,11 +311,17 @@ class ImportViewModel: ObservableObject {
             catch { context.rollback(); throw error }
             committed = true
             importedCount = items.count
+            removablePhotoAssetIDs = items.count >= pendingPhotoAssetIDs.count ? pendingPhotoAssetIDs : []
+            removableFileSources = importingFromFiles ? importService.lastFileSources : []
+            if importService.lastBatchStoppedForReservedSpace { removablePhotoAssetIDs = []; reservedSpaceFull = true }
+            pendingPhotoAssetIDs = []
             isImporting = false
             importProgress = nil
             onImportComplete?(items)
         } catch is CancellationError {
             if token == importGeneration { errorMessage = nil }
+        } catch FileStorageError.reservedSpaceFull {
+            if token == importGeneration { errorMessage = nil; reservedSpaceFull = true }
         } catch {
             if token == importGeneration {
                 if encryptedInput, error is EncryptionError {
