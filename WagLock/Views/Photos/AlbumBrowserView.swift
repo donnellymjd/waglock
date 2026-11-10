@@ -628,7 +628,7 @@ struct AlbumConfigurationView: View {
 
     private var canSave: Bool {
         (editing != nil || !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            && (!protection.requiresPassword || (password.count >= 6 && PasswordText.matches(password, confirmation)))
+            && (!protection.requiresPassword || (password.count >= PasscodePolicy.albumPasswordMinimum && PasswordText.matches(password, confirmation)))
             && (protection != .faceIDOnly || acknowledgeDeviceBound)
     }
 

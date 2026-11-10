@@ -65,7 +65,7 @@ private struct ScopedPortableBackupView: View {
                             passwordField("Confirm backup password", text: $confirmation, identifier: "backup.confirm", contentType: .newPassword)
                             PasswordConfirmationButton(password: password, confirmation: $confirmation, identifier: "backup.confirmEntered")
                             PasswordStrengthView(password: password)
-                            Text("Use at least 12 characters, preferably several random words. This password protects the copy; it does not change your WagLock password.")
+                            Text("Use at least \(PasscodePolicy.backupPasswordMinimum) characters" + (PasscodePolicy.allowsShortPasscodes ? ". Short passwords are allowed in Settings, but anyone with a copy of this backup can guess them offline with no wait. Several random words are much safer." : ", preferably several random words.") + " This password protects the copy; it does not change your WagLock password.")
                                 .font(.footnote)
                         }
                     } else {
@@ -102,7 +102,7 @@ private struct ScopedPortableBackupView: View {
                                     passwordField("Confirm export password",
                                         text: Binding(get: { albumConfirmations[album.id] ?? "" }, set: { albumConfirmations[album.id] = $0 }),
                                         identifier: "backup.album.confirm." + album.id.uuidString, contentType: .newPassword)
-                                    Text("Choose at least 12 characters. Face ID will authorize this album's export. The copy will use this separate password; this phone's album protection stays unchanged.").font(.footnote)
+                                    Text("Choose at least \(PasscodePolicy.backupPasswordMinimum) characters. Face ID will authorize this album's export. The copy will use this separate password; this phone's album protection stays unchanged.").font(.footnote)
                                     PasswordStrengthView(password: albumPasswords[album.id] ?? "")
                                 }
                             }
@@ -211,11 +211,11 @@ private struct ScopedPortableBackupView: View {
         if method == "password" {
             if useVaultPassword {
                 guard acknowledgedReuse, !password.isEmpty else { return false }
-            } else { guard password.count >= 12, PasswordText.matches(password, confirmation) else { return false } }
+            } else { guard password.count >= PasscodePolicy.backupPasswordMinimum, PasswordText.matches(password, confirmation) else { return false } }
         } else { guard (try? AgeFileWriter.decodeRecipient(recipient.trimmingCharacters(in: .whitespacesAndNewlines))) != nil else { return false } }
         return session.rows.filter { $0.policy != .inherited }.allSatisfy { album in
             let value = albumPasswords[album.id] ?? ""
-            return album.policy == .faceIDOnly ? biometricConsent && value.count >= 12 && PasswordText.matches(value, albumConfirmations[album.id] ?? "") : !value.isEmpty
+            return album.policy == .faceIDOnly ? biometricConsent && value.count >= PasscodePolicy.backupPasswordMinimum && PasswordText.matches(value, albumConfirmations[album.id] ?? "") : !value.isEmpty
         }
     }
     private func start() {

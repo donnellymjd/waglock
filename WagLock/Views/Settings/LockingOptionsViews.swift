@@ -97,22 +97,24 @@ struct AutoLockOptions: View {
     }
 }
 
-/// The passcode-length option cards. Existing passcodes always keep working.
+/// The length option cards, for passcodes, album passwords and backup passwords.
+/// Existing passcodes and passwords always keep working.
 struct PasscodeLengthOptions: View {
     @State private var allowShort = PasscodePolicy.allowsShortPasscodes
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             WagLockOptionCard(selected: !allowShort, title: "Standard", badge: "Recommended",
-                              detail: "At least \(PasscodePolicy.standardMinimum) characters. Letters and numbers make it much harder to guess.") {
+                              detail: "Passcodes and album passwords: at least \(PasscodePolicy.standardMinimum) characters. Backup passwords: at least \(PasscodePolicy.standardBackupMinimum). Letters and numbers make them much harder to guess.") {
                 set(false)
             }
             .accessibilityIdentifier("passcodeLength.standard")
             WagLockOptionCard(selected: allowShort, title: "Short",
-                              detail: "Allows passcodes of \(PasscodePolicy.shortMinimum) or \(PasscodePolicy.shortMinimum + 1) characters, such as a 4-digit PIN.",
+                              detail: "Passcodes, album passwords and backup passwords can be as short as \(PasscodePolicy.shortMinimum) characters, such as a 4-digit PIN.",
                               caveats: ["A 4-digit PIN has only 10,000 possibilities.",
-                                        "On this iPhone, the 30-second wait after each wrong guess slows guessing down. Someone with a full copy of the iPhone’s data could try every 4-digit PIN within minutes.",
-                                        "Applies to new and changed passcodes in every library."]) {
+                                        "On this iPhone, the 30-second wait after each wrong guess slows guessing down. Someone with a full copy of the iPhone’s data could try every 4-digit passcode within an hour.",
+                                        "A backup file has no wait at all. Anyone who gets a copy, for example from a cloud account, could try every 4-digit backup password within hours on an ordinary computer.",
+                                        "Applies to new and changed passcodes and passwords in every library."]) {
                 set(true)
             }
             .accessibilityIdentifier("passcodeLength.short")
@@ -139,7 +141,7 @@ struct OnboardingLockingView: View {
                         .font(.wlBody).foregroundStyle(Graphite.textMuted)
                     WagLockSectionLabel("Auto-lock").padding(.top, 4)
                     AutoLockOptions()
-                    WagLockSectionLabel("Passcode length").padding(.top, 8)
+                    WagLockSectionLabel("Passcode & password length").padding(.top, 8)
                     PasscodeLengthOptions()
                 }
             }
@@ -169,17 +171,15 @@ struct AutoLockSettingsView: View {
     }
 }
 
-/// Settings › Security & access › Passcode length.
+/// Settings › Security & access › Passcode & password length.
 struct PasscodeLengthSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                WagLockTitle(text: "Passcode length")
-                Text("The shortest passcode WagLock accepts when you create or change one. Passcodes you already have keep working either way.")
+                WagLockTitle(text: "Passcode & password length")
+                Text("The shortest passcode, album password or backup password WagLock accepts when you create or change one. Ones you already have keep working either way.")
                     .font(.wlBody).foregroundStyle(Graphite.textMuted)
                 PasscodeLengthOptions()
-                Text("Album passwords and backup passwords still need at least \(PasscodePolicy.standardMinimum) characters.")
-                    .font(.wlMeta).foregroundStyle(Graphite.textMuted)
             }
             .padding(.horizontal, 22).padding(.vertical, 12)
         }

@@ -113,7 +113,7 @@ final class AlbumStore: ObservableObject {
                 password: String, albums: [VaultAlbum], context: ModelContext) async throws -> VaultAlbum {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, name.count <= 100 else { throw VaultAccessError.invalidAlbum }
-        guard !protection.requiresPassword || KeychainService.validatePasswordStrength(password).isValid else {
+        guard !protection.requiresPassword || PasscodePolicy.validate(password, minimum: PasscodePolicy.albumPasswordMinimum).isValid else {
             throw VaultAccessError.invalidPassword
         }
         let parentSecret: String
@@ -228,7 +228,7 @@ final class AlbumStore: ObservableObject {
                           password: String, albums: [VaultAlbum], context: ModelContext) async throws {
         let secret = try key(for: album, albums: albums)
         let parentSecret = try parentKey(for: album, albums: albums)
-        guard !protection.requiresPassword || KeychainService.validatePasswordStrength(password).isValid else {
+        guard !protection.requiresPassword || PasscodePolicy.validate(password, minimum: PasscodePolicy.albumPasswordMinimum).isValid else {
             throw VaultAccessError.invalidPassword
         }
         let token = generation

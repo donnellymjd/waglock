@@ -241,7 +241,7 @@ struct SettingsView: View {
                         securityRow("lock.rotation", "Auto-lock", settings.autoLockTimeout.optionTitle)
                     }.accessibilityIdentifier("settings.autoLock").wagLockCardRow()
                     NavigationLink { PasscodeLengthSettingsView() } label: {
-                        securityRow("textformat.123", "Passcode length", PasscodePolicy.allowsShortPasscodes ? "Short allowed" : "Standard")
+                        securityRow("textformat.123", "Passcode & password length", PasscodePolicy.allowsShortPasscodes ? "Short allowed" : "Standard")
                     }.accessibilityIdentifier("settings.passcodeLength").wagLockCardRow()
                 } else {
                 NavigationLink {

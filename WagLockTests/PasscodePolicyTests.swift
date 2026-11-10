@@ -35,6 +35,9 @@ final class PasscodePolicyTests: XCTestCase {
         XCTAssertFalse(PasscodePolicy.validate("", minimum: 4).isValid)
         XCTAssertFalse(PasscodePolicy.validate(String(repeating: "a", count: 129), minimum: 4).isValid)
         XCTAssertTrue(PasscodePolicy.validate(String(repeating: "a", count: 128), minimum: 4).isValid)
+        // Backup passwords: 12+ by default, 4+ only with the Short choice.
+        XCTAssertEqual(PasscodePolicy.backupMinimum(allowShort: false), 12)
+        XCTAssertEqual(PasscodePolicy.backupMinimum(allowShort: true), 4)
     }
 
     func testTheLegacyDevBuildCannotAllowShortPasscodes() {
@@ -45,6 +48,8 @@ final class PasscodePolicyTests: XCTestCase {
         UserDefaults.standard.set(true, forKey: PasscodePolicy.shortPasscodesKey)
         XCTAssertFalse(PasscodePolicy.allowsShortPasscodes)
         XCTAssertEqual(PasscodePolicy.minimumLength, 6)
+        XCTAssertEqual(PasscodePolicy.albumPasswordMinimum, 6)
+        XCTAssertEqual(PasscodePolicy.backupPasswordMinimum, 12)
     }
 
     func testShortPasscodesNeedTheChoiceAndKeepWorkingAfterItIsTurnedOff() async throws {

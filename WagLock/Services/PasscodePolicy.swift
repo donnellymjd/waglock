@@ -1,12 +1,14 @@
 import Foundation
 
-/// Library passcode length. Standard is 6–128 characters. In the encrypted builds the
-/// person can choose to allow short passcodes (4–128) after reading the risk, in
-/// onboarding or Settings › Security & access. The choice is app-wide and device-only,
-/// applies to new and changed passcodes, and never stops an existing passcode working:
-/// unlock never checks length. Album and backup passwords keep their own 6+ rule.
+/// Minimum lengths for library passcodes, album passwords and backup passwords.
+/// Standard: passcodes and album passwords 6+, backup passwords 12+. In the encrypted
+/// builds the person can choose Short (4+ for all three) after reading the risks, in
+/// onboarding or Settings › Security & access (ADR-032). The choice is app-wide and
+/// device-only, applies to new and changed passwords, and never stops an existing one
+/// working: unlocking never checks length.
 enum PasscodePolicy {
     static let standardMinimum = 6
+    static let standardBackupMinimum = 12
     static let shortMinimum = 4
     static let maximum = 128
     static let shortPasscodesKey = "allowShortPasscodes"
@@ -22,6 +24,14 @@ enum PasscodePolicy {
     static var minimumLength: Int { minimumLength(allowShort: allowsShortPasscodes) }
 
     static func minimumLength(allowShort: Bool) -> Int { allowShort ? shortMinimum : standardMinimum }
+
+    /// Album passwords follow the passcode rule.
+    static var albumPasswordMinimum: Int { minimumLength }
+
+    /// Backup (age) passwords, including Face ID-only album export passwords.
+    static var backupPasswordMinimum: Int { backupMinimum(allowShort: allowsShortPasscodes) }
+
+    static func backupMinimum(allowShort: Bool) -> Int { allowShort ? shortMinimum : standardBackupMinimum }
 
     /// "6–128" or "4–128", for field placeholders.
     static var rangeText: String { "\(minimumLength)–\(maximum)" }

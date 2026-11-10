@@ -1,4 +1,4 @@
-# Auto-lock delay and short passcodes
+# Auto-lock delay and short passcodes and passwords
 
 Decided by the owner on 2026-11-10 (ADR-032): "I want that as an option. I also want users to be able to have shorter passcodes. This should be options in the onboarding flow as well as in settings. Just like the fixed library size options, let's note the security risks but let the user decide."
 
@@ -26,22 +26,30 @@ Each option is a card with its risks listed, like the storage modes (`WagLockOpt
 
 **Risks stated in the app:** until the time runs out, anyone holding the unlocked iPhone can open WagLock without its passcode, and the library key stays in the iPhone's memory while WagLock is in the background. With "Only when you lock it", anyone who can unlock the iPhone can open WagLock.
 
-## Passcode length
+## Passcode and password length
 
-| Option | Rule for new and changed passcodes |
-| --- | --- |
-| Standard (default, recommended) | 6–128 characters. |
-| Short | 4–128 characters, so a 4-digit PIN is allowed. |
+The owner extended the choice to album and backup passwords later the same day ("allow short album and backup passwords too"). One setting covers all three.
 
-- `PasscodePolicy` holds the rule. `LibraryPasscodeService` checks it on first setup, add and change. A too-short proposal gets the usual generic rejection and 30-second wait.
-- **Unlock never checks length**, so switching back to Standard never locks anyone out. Existing short passcodes keep working; new and changed ones must meet Standard again.
-- Album passwords and backup passwords keep their own 6+ rule.
-- The legacy WagLock Dev build doesn't offer the choice and keeps 6+.
+| Option | Library passcodes | Album passwords | Backup passwords (incl. Face ID-only album export passwords) |
+| --- | --- | --- | --- |
+| Standard (default, recommended) | 6–128 | 6–128 | 12+ |
+| Short | 4–128 | 4–128 | 4+ |
 
-**Risks stated in the app:** a 4-digit PIN has only 10,000 possibilities. On the iPhone, the shared attempt counter and 30-second wait slow guessing. Someone with a full copy of the iPhone's data, including its Keychain, could try every 4-digit PIN within minutes. Each guess costs one scrypt derivation (N = 2^16) however many libraries there are.
+- `PasscodePolicy` holds the rules (`minimumLength`, `albumPasswordMinimum`, `backupPasswordMinimum`).
+  - `LibraryPasscodeService` checks the passcode rule on first setup, add and change. A too-short proposal gets the usual generic rejection and 30-second wait.
+  - `AlbumStore` checks the album rule on create and on a security change.
+  - `PortableBackupSession` and `PortableBackupView` check the backup rule.
+- **Unlocking never checks length**, so switching back to Standard never locks anyone out. Existing short passcodes and passwords keep working; new and changed ones must meet Standard again.
+- This lowers the independent backup-password requirement from D2S-177 (12+), but only when the person chooses Short. The current-vault-password reuse path is unchanged.
+- The legacy WagLock Dev build doesn't offer the choice and keeps its rules.
+
+**Risks stated in the app:**
+- A 4-digit PIN has only 10,000 possibilities.
+- On the iPhone, the shared attempt counter and 30-second wait slow guessing. Someone with a full copy of the iPhone's data, including its Keychain, could try every 4-digit passcode within an hour. Each guess costs one scrypt derivation (N = 2^16) however many libraries there are.
+- A backup file has no wait. Anyone who gets a copy, for example from a cloud account, could try every 4-digit backup password within hours on an ordinary computer (age scrypt, N = 2^18). When Short is on, the backup screen repeats this and recommends several random words.
 
 ## Tests
 
-- `WagLockTests/PasscodePolicyTests.swift`: length rules, the legacy build can't allow short passcodes, short passcodes need the choice, and they keep working after it's turned off.
+- `WagLockTests/PasscodePolicyTests.swift`: length rules for all three, the legacy build can't allow short ones, short passcodes need the choice, and they keep working after it's turned off.
 - `EncryptedReleaseUITests` passes the new onboarding step and finds both Settings rows.
 - Not compiled or run in this environment.

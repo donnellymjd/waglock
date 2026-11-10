@@ -85,8 +85,8 @@ struct SecurityAccessView: View {
                         WagLockRow(symbol: "timer", title: "Auto-lock", detail: settings.autoLockTimeout.optionTitle)
                     }.buttonStyle(.plain).accessibilityIdentifier("settings.autoLock")
                     NavigationLink { PasscodeLengthSettingsView() } label: {
-                        WagLockRow(symbol: "textformat.123", title: "Passcode length",
-                                   detail: PasscodePolicy.allowsShortPasscodes ? "Short allowed · \(PasscodePolicy.shortMinimum) or more" : "Standard · \(PasscodePolicy.standardMinimum) or more")
+                        WagLockRow(symbol: "textformat.123", title: "Passcode & password length",
+                                   detail: PasscodePolicy.allowsShortPasscodes ? "Short allowed · \(PasscodePolicy.shortMinimum) or more" : "Standard")
                     }.buttonStyle(.plain).accessibilityIdentifier("settings.passcodeLength")
                 }
                 (Text("Keep your passcode safe. ").font(.wlMeta.weight(.semibold)).foregroundColor(Color(hex: 0xE3E7EF))
