@@ -438,6 +438,43 @@ final class AlbumStore: ObservableObject {
         revision += 1
     }
 
+    /// Imports one photo-library asset chosen in WagLock's photo browser (Select All).
+    /// A Live Photo's still and motion are imported and linked as a pair, or not at all.
+    /// Returns false when the asset is gone or has nothing importable.
+    @discardableResult
+    func importPhotoLibraryAsset(_ identifier: String, into album: VaultAlbum, albums: [VaultAlbum],
+                                 context: ModelContext) async throws -> Bool {
+        _ = try key(for: album, albums: albums)
+        guard let written = try await PhotoLibraryAssetExport.write(localIdentifier: identifier) else { return false }
+        defer { try? FileManager.default.removeItem(at: written.folder) }
+        try Task.checkCancellation()
+        try await importPair(still: written.primary, motion: written.motion, into: album, albums: albums, context: context)
+        return true
+    }
+
+    /// Imports a still (or any single file) and, when given, its Live Photo motion, linked.
+    /// All or nothing: if the motion can't be added or linked, neither stays.
+    @discardableResult
+    func importPair(still stillURL: URL, motion motionURL: URL?, into album: VaultAlbum, albums: [VaultAlbum],
+                    context: ModelContext) async throws -> AlbumAsset {
+        let still = try await importFile(stillURL, into: album, albums: albums, context: context)
+        guard let motionURL else { return still }
+        do {
+            try Task.checkCancellation()
+            let motion = try await importFile(motionURL, into: album, albums: albums, context: context)
+            do {
+                try linkLivePhoto(still: still.id, motion: motion.id, in: album, albums: albums, context: context)
+            } catch {
+                try? delete(motion, from: album, albums: albums, context: context)
+                throw error
+            }
+        } catch {
+            try? delete(still, from: album, albums: albums, context: context)
+            throw error
+        }
+        return try assets(in: album, albums: albums).first { $0.id == still.id } ?? still
+    }
+
     /// Links an album still to the album video holding its motion. Both must already be
     /// committed in this album's catalog; the motion must be a video not linked elsewhere.
     func linkLivePhoto(still: UUID, motion: UUID, in album: VaultAlbum, albums: [VaultAlbum], context: ModelContext) throws {

@@ -84,4 +84,29 @@ struct AlbumLivePhotoTests {
         let assets = try JSONDecoder().decode([AlbumAsset].self, from: Data(json.utf8))
         #expect(assets.first?.livePhotoMotionID == nil)
     }
+
+    @Test
+    func photoBrowserPairsAreLinkedOrNotKeptAtAll() async throws {
+        let (store, album, db, _, root) = try await fixture()
+        defer { store.endSession(); try? FileManager.default.removeItem(at: root) }
+        let pair = try await store.importPair(still: try write(root, "IMG_2.PNG", png()),
+                                              motion: try write(root, "IMG_2.MOV", Data(repeating: 4, count: 512)),
+                                              into: album, albums: [album], context: db.mainContext)
+        let catalog = try store.assets(in: album, albums: [album])
+        #expect(catalog.count == 2)
+        #expect(pair.livePhotoMotionID != nil)
+        #expect(AlbumStore.motionIDs(in: catalog) == [try #require(pair.livePhotoMotionID)])
+
+        // The motion can't be read: the still must not stay behind on its own.
+        let missing = root.appendingPathComponent("gone.MOV")
+        await #expect(throws: (any Error).self) {
+            try await store.importPair(still: try write(root, "IMG_3.PNG", png()), motion: missing,
+                                       into: album, albums: [album], context: db.mainContext)
+        }
+        #expect(try store.assets(in: album, albums: [album]).count == 2)
+
+        let single = try await store.importPair(still: try write(root, "IMG_4.PNG", png()), motion: nil,
+                                                into: album, albums: [album], context: db.mainContext)
+        #expect(single.livePhotoMotionID == nil)
+    }
 }

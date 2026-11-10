@@ -79,6 +79,7 @@ The iOS photo picker has no Select All, so Add to WagLock now has a second Photo
 - **Thumbnails:** requested from Photos' image manager and held in memory only. Nothing is written until **Add** is tapped.
 - **Import:** for each asset, `PhotoLibraryAssetExport` writes the current photo or video (the same version the system picker's `.current` mode gives) into an owned `waglock-media-import-` folder. Live Photos keep the still and paired video together. `MediaImportService.importLibraryAssets` then encrypts them through the byte-preserving Files path or `importLivePhoto`, inside the usual batch, commit, session, lock and reserve rules. The folder is removed afterwards whatever the outcome. iCloud originals download through iOS.
 - **Originals:** the selected identifiers feed the existing "Remove from Photos…" offer, which still needs an explicit tap and the iOS prompt.
-- The Files picker and the album import buttons are unchanged.
+- **Albums:** an album's Add menu and actions menu also offer **Select All from Photos**. `AlbumStore.importPhotoLibraryAsset` encrypts each asset into the album's own key domain. Unlike the system picker path in albums, Live Photos keep their motion: `importPair` imports the still and motion and links them, or keeps neither. Items no longer in Photos are skipped and counted in a message. Albums don't offer Remove from Photos.
+- The Files picker is unchanged.
 
-Tests: `WagLockTests/PhotoLibrarySelectionTests.swift` (Select All and Deselect All per album, order, Live and edited resource choice, unsafe names, owned folder). Not compiled or run in this environment.
+Tests: `WagLockTests/PhotoLibrarySelectionTests.swift` (Select All and Deselect All per album, order, Live and edited resource choice, unsafe names, owned folder) and `AlbumLivePhotoTests.photoBrowserPairsAreLinkedOrNotKeptAtAll`. Not compiled or run in this environment.

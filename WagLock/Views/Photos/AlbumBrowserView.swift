@@ -14,6 +14,7 @@ struct AlbumBrowserView: View {
     @State private var showSecurity = false
     @State private var showFiles = false
     @State private var showPhotos = false
+    @State private var showPhotoBrowser = false
     @State private var showLibrary = false
     @State private var selectedAsset: AlbumAsset?
     @State private var busy = false
@@ -65,6 +66,7 @@ struct AlbumBrowserView: View {
                         }
                         if let parent {
                             Button("Import Photos & Videos", systemImage: "photo.on.rectangle") { showPhotos = true }
+                            Button("Select All from Photos", systemImage: "checkmark.circle") { showPhotoBrowser = true }
                             Button("Import from Files", systemImage: "doc.badge.plus") { showFiles = true }
                             Button("Move from Library", systemImage: "photo.stack") { showLibrary = true }
                             Button("Album Security", systemImage: "lock.shield") { showSecurity = true }
@@ -92,6 +94,12 @@ struct AlbumBrowserView: View {
         .sheet(isPresented: $showPhotos) {
             PhotoPickerRepresentable(isPresented: $showPhotos) { results in importPhotos(results) }
         }
+        .fullScreenCover(isPresented: $showPhotoBrowser) {
+            PhotoLibraryBrowserView(add: { identifiers in
+                showPhotoBrowser = false
+                importLibraryAssets(identifiers)
+            }, cancel: { showPhotoBrowser = false })
+        }
         .sheet(isPresented: $showFiles) {
             DocumentPickerRepresentable(isPresented: $showFiles, contentTypes: [.item], allowsMultipleSelection: true) {
                 importURLs($0)
@@ -111,6 +119,7 @@ struct AlbumBrowserView: View {
                 showCreate = false
                 showSecurity = false
                 showPhotos = false
+                showPhotoBrowser = false
                 showFiles = false
                 showLibrary = false
                 selectedAsset = nil
@@ -167,6 +176,7 @@ struct AlbumBrowserView: View {
                 if parent != nil {
                     Menu {
                         Button("Import Photos & Videos", systemImage: "photo.on.rectangle") { showPhotos = true }
+                        Button("Select All from Photos", systemImage: "checkmark.circle") { showPhotoBrowser = true }
                         Button("Import from Files", systemImage: "doc.badge.plus") { showFiles = true }
                         Button("Move from Library", systemImage: "photo.stack") { showLibrary = true }
                     } label: {
@@ -304,6 +314,26 @@ struct AlbumBrowserView: View {
                 for url in urls {
                     try Task.checkCancellation()
                     try await store.importFile(url, into: parent, albums: albums, context: context)
+                }
+            } catch is CancellationError {} catch { self.error = error.localizedDescription }
+        }
+    }
+
+    /// Assets chosen in WagLock's photo browser. Live Photos keep their motion here.
+    private func importLibraryAssets(_ identifiers: [String]) {
+        guard let parent, canAccess, !busy, !identifiers.isEmpty else { return }
+        busy = true
+        operation = Task {
+            defer { busy = false }
+            var skipped = 0
+            do {
+                for identifier in identifiers {
+                    try Task.checkCancellation()
+                    let added = try await store.importPhotoLibraryAsset(identifier, into: parent, albums: albums, context: context)
+                    if !added { skipped += 1 }
+                }
+                if skipped > 0 {
+                    self.error = "\(skipped) item\(skipped == 1 ? " wasn’t" : "s weren’t") available in Photos and \(skipped == 1 ? "wasn’t" : "weren’t") added."
                 }
             } catch is CancellationError {} catch { self.error = error.localizedDescription }
         }
