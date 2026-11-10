@@ -35,6 +35,7 @@ The encrypted metadata codec and the backup snapshot's field inventory both list
   - The grid shows a linked pair once, with a LIVE badge, and the album's counts treat it as one photo.
   - The preview opens a `PHLivePhotoView` with touch-and-hold playback, plus a LIVE button that plays it once. Both files are decrypted to temporary preview folders that are removed on close, lock or background.
   - Deleting the still deletes its motion.
+  - **Importing straight into an album** from Photos (the album's iOS picker or Select All from Photos) also keeps the motion. `AlbumStore.importPair` adds the still and motion and links them, or keeps neither.
   - `AlbumStore.linkLivePhoto` accepts only a photo linked to a video in the same album that no other still claims.
 
 ## Backups

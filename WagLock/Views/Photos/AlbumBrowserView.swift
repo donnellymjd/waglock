@@ -361,10 +361,17 @@ struct AlbumBrowserView: View {
             do {
                 for result in results {
                     try Task.checkCancellation()
-                    let url = try await AlbumPhotoTransfer.copyFile(from: result.itemProvider)
-                    defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
-                    try Task.checkCancellation()
-                    try await store.importFile(url, into: parent, albums: albums, context: context)
+                    if let live = await LivePhotoSupport.resources(from: result.itemProvider) {
+                        // Live Photo: still and motion, linked, or neither.
+                        defer { try? FileManager.default.removeItem(at: live.folder) }
+                        try Task.checkCancellation()
+                        try await store.importPair(still: live.still, motion: live.video, into: parent, albums: albums, context: context)
+                    } else {
+                        let url = try await AlbumPhotoTransfer.copyFile(from: result.itemProvider)
+                        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+                        try Task.checkCancellation()
+                        try await store.importFile(url, into: parent, albums: albums, context: context)
+                    }
                     if let identifier = result.assetIdentifier { added.append(identifier) }
                 }
                 guard canAccess, !Task.isCancelled, !added.isEmpty else { return }
