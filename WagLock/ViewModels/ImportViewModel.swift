@@ -44,6 +44,9 @@ class ImportViewModel: ObservableObject {
     /// Photos asset identifiers of the last import, set only when every selected item was
     /// committed. Used solely for the user-initiated "Remove from Photos…" on Import complete.
     @Published private(set) var removablePhotoAssetIDs: [String] = []
+    /// Originals picked in Files whose encrypted copies were committed by the last import.
+    @Published private(set) var removableFileSources: [ImportedFileSource] = []
+    private var importingFromFiles = false
     private var pendingPhotoAssetIDs: [String] = []
 
     /// Whether to show the encrypted-file password prompt
@@ -87,6 +90,8 @@ class ImportViewModel: ObservableObject {
         isImporting = true
         importedCount = 0
         removablePhotoAssetIDs = []
+        removableFileSources = []
+        importingFromFiles = false
         lastImportWasPaste = false
         let identifiers = results.compactMap(\.assetIdentifier)
         pendingPhotoAssetIDs = identifiers.count == results.count ? identifiers : []
@@ -105,11 +110,32 @@ class ImportViewModel: ObservableObject {
         isImporting = true
         importedCount = 0
         removablePhotoAssetIDs = []
+        removableFileSources = []
+        importingFromFiles = false
         pendingPhotoAssetIDs = []
         lastImportWasPaste = true
         startImportTask { password, progress in
             try await self.importService.importPasted(providers, password: password, progress: progress)
         }
+    }
+
+    /// Deletes the Files originals of the last import, only after the person confirms, and
+    /// only those whose encrypted copy decrypts to identical bytes. Stops on lock.
+    func removeFileOriginals() async -> ImportedOriginalsRemover.Outcome {
+        let sources = removableFileSources
+        guard !sources.isEmpty, let auth = authViewModel, auth.isAuthenticated,
+              GuestModeManager.shared.isOwnerMode,
+              let session = auth.sessionPasswordData, let password = session.string else {
+            return .init(deleted: 0, kept: sources.count)
+        }
+        let storage = self.storage
+        let outcome = await ImportedOriginalsRemover.remove(sources, decrypt: { path, ext in
+            try await storage.createDecryptedTempFileAsync(path: path, password: password, preferredExtension: ext)
+        }, stillAuthorized: { [weak auth] in
+            auth?.isAuthenticated == true && auth?.sessionPasswordData === session && GuestModeManager.shared.isOwnerMode
+        })
+        removableFileSources = []
+        return outcome
     }
 
     /// Import from Files
@@ -141,6 +167,8 @@ class ImportViewModel: ObservableObject {
 
         // Import non-encrypted files normally
         lastImportWasPaste = false
+        removableFileSources = []
+        importingFromFiles = true
         pendingPhotoAssetIDs = []
         removablePhotoAssetIDs = []
         errorMessage = nil
@@ -251,6 +279,7 @@ class ImportViewModel: ObservableObject {
             committed = true
             importedCount = items.count
             removablePhotoAssetIDs = items.count >= pendingPhotoAssetIDs.count ? pendingPhotoAssetIDs : []
+            removableFileSources = importingFromFiles ? importService.lastFileSources : []
             if importService.lastBatchStoppedForReservedSpace { removablePhotoAssetIDs = []; reservedSpaceFull = true }
             pendingPhotoAssetIDs = []
             isImporting = false

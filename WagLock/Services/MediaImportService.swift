@@ -104,14 +104,23 @@ class MediaImportService {
         password: String,
         progress: @escaping (ImportProgress) -> Void = { _ in }
     ) async throws -> [MediaItem] {
-        try await importBatch(Array(urls.enumerated())) { index, url in
+        lastFileSources = []
+        let items = try await importBatch(Array(urls.enumerated())) { index, url in
             let current = ImportProgress(current: index + 1, total: urls.count,
                                          currentFileName: url.lastPathComponent)
             await MainActor.run { progress(current) }
             guard url.startAccessingSecurityScopedResource() else { return nil }
             defer { url.stopAccessingSecurityScopedResource() }
-            return try await self.importSingleFile(url: url, password: password)
+            let item = try await self.importSingleFile(url: url, password: password)
+            if let item {
+                self.lastFileSources.append(ImportedFileSource(original: url, encryptedPath: item.encryptedPath,
+                                                               fileExtension: item.fileExtension))
+            }
+            return item
         }
+        let kept = Set(items.map(\.encryptedPath))
+        lastFileSources.removeAll { !kept.contains($0.encryptedPath) }
+        return items
     }
 
     /// Import items the person pasted with the system Paste button. Each item's own
@@ -150,6 +159,9 @@ class MediaImportService {
             return type.conforms(to: .data) && !type.conforms(to: .url)
         }
     }
+
+    /// Originals picked in Files for the last file batch, paired with their encrypted copies.
+    private(set) var lastFileSources: [ImportedFileSource] = []
 
     /// True when the last batch stopped early because reserved space was full.
     private(set) var lastBatchStoppedForReservedSpace = false

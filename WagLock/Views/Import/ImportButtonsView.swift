@@ -37,6 +37,7 @@ private struct ScopedImportButtonsView: View {
 
     @State private var completedCount: Int?
     @State private var completedAssetIDs: [String] = []
+    @State private var completedFileOriginals = 0
 
     // MARK: - Body
 
@@ -46,7 +47,9 @@ private struct ScopedImportButtonsView: View {
                 Graphite.base.ignoresSafeArea()
                 if let completedCount {
                     ImportCompleteView(count: completedCount, photoAssetIDs: completedAssetIDs,
-                                       pasted: viewModel.lastImportWasPaste) { dismiss() }
+                                       pasted: viewModel.lastImportWasPaste,
+                                       fileOriginalCount: completedFileOriginals,
+                                       removeFileOriginals: { await viewModel.removeFileOriginals() }) { dismiss() }
                 } else if viewModel.isImporting {
                     importProgressView
                 } else {
@@ -122,6 +125,7 @@ private struct ScopedImportButtonsView: View {
                         dismiss()
                     } else {
                         completedAssetIDs = viewModel.removablePhotoAssetIDs
+                        completedFileOriginals = viewModel.removableFileSources.count
                         completedCount = items.count
                     }
                 }
@@ -226,11 +230,16 @@ private struct ImportCompleteView: View {
     let count: Int
     let photoAssetIDs: [String]
     var pasted = false
+    var fileOriginalCount = 0
+    var removeFileOriginals: () async -> ImportedOriginalsRemover.Outcome = { .init() }
     let done: () -> Void
     @EnvironmentObject private var reminders: BackupReminderStore
     @State private var removal: Removal = .idle
     @State private var showBackup = false
     @State private var clipboardCleared = false
+    @State private var fileRemoval: FileRemoval = .idle
+    @State private var confirmFileRemoval = false
+    enum FileRemoval: Equatable { case idle, kept, removing, done(ImportedOriginalsRemover.Outcome) }
     enum Removal: Equatable { case idle, kept, removing, removed, failed(String) }
 
     var body: some View {
@@ -244,6 +253,7 @@ private struct ImportCompleteView: View {
                     Text("Encrypted and saved in your Library").font(.wlBody).foregroundStyle(Graphite.textMuted)
                     if !photoAssetIDs.isEmpty { originalsCard }
                     if pasted { clipboardCard }
+                    if fileOriginalCount > 0 { fileOriginalsCard }
                     Button { showBackup = true } label: {
                         WagLockRow(symbol: "icloud.and.arrow.up", title: "Back up now",
                                    detail: reminders.lastSaved.map { "Last encrypted backup " + $0.formatted(.relative(presentation: .named)) }
@@ -252,7 +262,7 @@ private struct ImportCompleteView: View {
                 }
             }
             Button("Done", action: done).buttonStyle(WagLockPrimaryButtonStyle())
-                .disabled(removal == .removing)
+                .disabled(removal == .removing || fileRemoval == .removing)
                 .accessibilityIdentifier("import.complete.done")
         }
         .padding(.horizontal, 22).padding(.bottom, 24)
@@ -261,6 +271,44 @@ private struct ImportCompleteView: View {
                 PortableBackupView()
                     .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { showBackup = false } } }
             }
+        }
+    }
+
+    /// Files originals: kept unless the person asks, and each deletion is preceded by a
+    /// byte-for-byte check of the encrypted copy.
+    private var fileOriginalsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            switch fileRemoval {
+            case .kept:
+                WagLockNote(kind: .info, title: "Originals kept in Files", text: "They stay an independent copy outside WagLock.")
+            case .done(let outcome):
+                WagLockNote(kind: outcome.kept == 0 ? .info : .caution,
+                            title: "Deleted \(outcome.deleted) original\(outcome.deleted == 1 ? "" : "s")",
+                            text: outcome.kept == 0
+                                ? "Each one was checked against its encrypted copy first. Some locations keep deleted files in Recently Deleted."
+                                : "\(outcome.kept) kept because its copy couldn’t be checked or its location doesn’t allow deleting.")
+            case .removing:
+                ProgressView("Checking copies and deleting…").tint(Graphite.accentText).font(.wlMeta)
+            case .idle:
+                WagLockNote(kind: .caution, title: "Originals are still in Files",
+                            text: "The \(fileOriginalCount == 1 ? "file you picked is" : "\(fileOriginalCount) files you picked are") still where you found \(fileOriginalCount == 1 ? "it" : "them"). Keep them as an independent copy, or delete them now.")
+                HStack(spacing: 10) {
+                    Button("Keep") { fileRemoval = .kept }.buttonStyle(WagLockSecondaryButtonStyle())
+                        .accessibilityIdentifier("import.complete.keepFiles")
+                    Button("Delete originals…") { confirmFileRemoval = true }.buttonStyle(WagLockSecondaryButtonStyle())
+                        .accessibilityIdentifier("import.complete.deleteFiles")
+                }
+            }
+        }
+        .confirmationDialog("Delete \(fileOriginalCount) original\(fileOriginalCount == 1 ? "" : "s") from Files?",
+                            isPresented: $confirmFileRemoval, titleVisibility: .visible) {
+            Button("Delete originals", role: .destructive) {
+                fileRemoval = .removing
+                Task { fileRemoval = .done(await removeFileOriginals()) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("WagLock first checks that each encrypted copy matches its original exactly. Anything it can’t check is kept. Some locations move deleted files to Recently Deleted; others delete them permanently.")
         }
     }
 

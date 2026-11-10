@@ -41,3 +41,18 @@ The Add to WagLock sheet has a **Paste** row backed by the system `PasteButton`.
 - **Albums:** album menus do not offer Paste yet; pasted items land in the Library and can be moved into an album from there.
 
 Tests: `WagLockTests/PasteImportTests.swift` (content preferred over references, image and text items encrypted, links skipped, temporary copies removed). Not compiled or run in this environment.
+
+## Deleting originals after import (2026-11-09)
+
+After an import, the completion screen offers to delete the originals:
+
+- **Photos:** **Remove from Photos…** appears only when every selected item committed. iOS shows its own confirmation, and the items go to Recently Deleted in Photos.
+- **Files and audio:** **Delete originals…** applies to the files picked in Files whose encrypted copies were committed by that import. The picker opens originals in place (not copies), so WagLock can delete them. After the person confirms in WagLock's dialog, `ImportedOriginalsRemover` handles each original in turn:
+  1. Decrypts the stored copy to a temporary file and compares its SHA-256 with the original, streamed in 1 MiB chunks. Every import path stores original bytes unchanged.
+  2. Deletes the original with a coordinated delete only if the hashes match. It tries the provider's Recently Deleted (trash) first and falls back to permanent removal, as the dialog warns.
+  3. Keeps any original whose copy can't be decrypted, doesn't match, or sits in a location that refuses deletion. The result says how many were deleted and how many kept.
+  4. Removes the decrypted temporary copy every time.
+- **Locking** WagLock or changing session stops the run at once; everything not yet deleted is kept.
+- **Pasted items** have no original to delete. The completion screen offers Clear clipboard instead.
+
+Nothing is ever deleted without the explicit tap and confirmation, and Keep is always offered. Tests: `WagLockTests/ImportedOriginalsRemoverTests.swift` (only verified originals deleted, mismatched or unreadable copies keep their originals, plaintext copies removed, lock stops before deletion). Not compiled or run in this environment.
