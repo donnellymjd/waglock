@@ -15,6 +15,7 @@ struct AlbumBrowserView: View {
     @State private var showFiles = false
     @State private var showPhotos = false
     @State private var showPhotoBrowser = false
+    @State private var photosImport: AlbumPhotosImportResult?
     @State private var showLibrary = false
     @State private var selectedAsset: AlbumAsset?
     @State private var busy = false
@@ -100,6 +101,9 @@ struct AlbumBrowserView: View {
                 importLibraryAssets(identifiers)
             }, cancel: { showPhotoBrowser = false })
         }
+        .sheet(item: $photosImport) { result in
+            AlbumPhotosImportCompleteView(result: result) { photosImport = nil }
+        }
         .sheet(isPresented: $showFiles) {
             DocumentPickerRepresentable(isPresented: $showFiles, contentTypes: [.item], allowsMultipleSelection: true) {
                 importURLs($0)
@@ -120,6 +124,7 @@ struct AlbumBrowserView: View {
                 showSecurity = false
                 showPhotos = false
                 showPhotoBrowser = false
+                photosImport = nil
                 showFiles = false
                 showLibrary = false
                 selectedAsset = nil
@@ -320,21 +325,27 @@ struct AlbumBrowserView: View {
     }
 
     /// Assets chosen in WagLock's photo browser. Live Photos keep their motion here.
+    /// Only a batch that finished without error offers to remove the added originals
+    /// from Photos, and only those actually added.
     private func importLibraryAssets(_ identifiers: [String]) {
         guard let parent, canAccess, !busy, !identifiers.isEmpty else { return }
         busy = true
         operation = Task {
             defer { busy = false }
-            var skipped = 0
+            var added: [String] = []
             do {
                 for identifier in identifiers {
                     try Task.checkCancellation()
-                    let added = try await store.importPhotoLibraryAsset(identifier, into: parent, albums: albums, context: context)
-                    if !added { skipped += 1 }
+                    if try await store.importPhotoLibraryAsset(identifier, into: parent, albums: albums, context: context) {
+                        added.append(identifier)
+                    }
                 }
-                if skipped > 0 {
-                    self.error = "\(skipped) item\(skipped == 1 ? " wasn’t" : "s weren’t") available in Photos and \(skipped == 1 ? "wasn’t" : "weren’t") added."
+                guard canAccess, !Task.isCancelled, !added.isEmpty else {
+                    if canAccess, !Task.isCancelled { self.error = "None of these items were available in Photos." }
+                    return
                 }
+                photosImport = AlbumPhotosImportResult(albumName: parent.name, addedAssetIDs: added,
+                                                       skipped: identifiers.count - added.count)
             } catch is CancellationError {} catch { self.error = error.localizedDescription }
         }
     }
@@ -664,5 +675,44 @@ struct GraphiteFieldChrome: ViewModifier {
             .foregroundStyle(Graphite.textPrimary)
             .padding(.horizontal, 16).frame(minHeight: 54)
             .background(Graphite.input, in: RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+struct AlbumPhotosImportResult: Identifiable {
+    let id = UUID()
+    let albumName: String
+    let addedAssetIDs: [String]
+    let skipped: Int
+}
+
+/// After a Select All import into an album: what was added and the same explicit,
+/// iOS-confirmed "Remove from Photos…" offer as the main import.
+private struct AlbumPhotosImportCompleteView: View {
+    let result: AlbumPhotosImportResult
+    let done: () -> Void
+    @State private var removing = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    Image(systemName: "checkmark.seal").font(.system(size: 34)).foregroundStyle(Graphite.accentText)
+                        .frame(width: 64, height: 64).background(Graphite.accentTint, in: Circle())
+                        .accessibilityHidden(true).padding(.top, 24)
+                    WagLockTitle(text: "\(result.addedAssetIDs.count) item\(result.addedAssetIDs.count == 1 ? "" : "s") added", size: .sheet)
+                    Text("Encrypted and saved in \(result.albumName)").font(.wlBody).foregroundStyle(Graphite.textMuted)
+                    if result.skipped > 0 {
+                        WagLockNote(kind: .info, text: "\(result.skipped) item\(result.skipped == 1 ? " wasn’t" : "s weren’t") in Photos any more and \(result.skipped == 1 ? "wasn’t" : "weren’t") added.")
+                    }
+                    PhotosOriginalsCard(photoAssetIDs: result.addedAssetIDs, isRemoving: $removing)
+                }
+            }
+            Button("Done", action: done).buttonStyle(WagLockPrimaryButtonStyle())
+                .disabled(removing)
+                .accessibilityIdentifier("album.import.done")
+        }
+        .padding(.horizontal, 22).padding(.bottom, 24)
+        .background(Graphite.base.ignoresSafeArea())
+        .interactiveDismissDisabled(removing)
     }
 }

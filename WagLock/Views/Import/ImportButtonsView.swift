@@ -258,13 +258,12 @@ private struct ImportCompleteView: View {
     var removeFileOriginals: () async -> ImportedOriginalsRemover.Outcome = { .init() }
     let done: () -> Void
     @EnvironmentObject private var reminders: BackupReminderStore
-    @State private var removal: Removal = .idle
+    @State private var removingFromPhotos = false
     @State private var showBackup = false
     @State private var clipboardCleared = false
     @State private var fileRemoval: FileRemoval = .idle
     @State private var confirmFileRemoval = false
     enum FileRemoval: Equatable { case idle, kept, removing, done(ImportedOriginalsRemover.Outcome) }
-    enum Removal: Equatable { case idle, kept, removing, removed, failed(String) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -275,7 +274,7 @@ private struct ImportCompleteView: View {
                         .accessibilityHidden(true).padding(.top, 24)
                     WagLockTitle(text: "\(count) item\(count == 1 ? "" : "s") added", size: .sheet)
                     Text("Encrypted and saved in your Library").font(.wlBody).foregroundStyle(Graphite.textMuted)
-                    if !photoAssetIDs.isEmpty { originalsCard }
+                    if !photoAssetIDs.isEmpty { PhotosOriginalsCard(photoAssetIDs: photoAssetIDs, isRemoving: $removingFromPhotos) }
                     if pasted { clipboardCard }
                     if fileOriginalCount > 0 { fileOriginalsCard }
                     Button { showBackup = true } label: {
@@ -286,7 +285,7 @@ private struct ImportCompleteView: View {
                 }
             }
             Button("Done", action: done).buttonStyle(WagLockPrimaryButtonStyle())
-                .disabled(removal == .removing || fileRemoval == .removing)
+                .disabled(removingFromPhotos || fileRemoval == .removing)
                 .accessibilityIdentifier("import.complete.done")
         }
         .padding(.horizontal, 22).padding(.bottom, 24)
@@ -353,8 +352,18 @@ private struct ImportCompleteView: View {
             }
         }
     }
+}
 
-    private var originalsCard: some View {
+/// Originals still in Photos after an import: Keep, or an explicit, iOS-confirmed
+/// "Remove from Photos…". Nothing is removed without that tap and the iOS prompt.
+/// Used by the main import and by album imports.
+struct PhotosOriginalsCard: View {
+    let photoAssetIDs: [String]
+    @Binding var isRemoving: Bool
+    @State private var removal: Removal = .idle
+    enum Removal: Equatable { case idle, kept, removing, removed, failed(String) }
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             switch removal {
             case .removed:
@@ -378,6 +387,7 @@ private struct ImportCompleteView: View {
                 if case .failed(let message) = removal { WagLockNote(kind: .error, text: message) }
             }
         }
+        .onChange(of: removal) { _, value in isRemoving = value == .removing }
     }
 
     /// iOS shows its own deletion confirmation; cancelling it leaves everything in Photos.
