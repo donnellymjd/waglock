@@ -22,6 +22,13 @@ struct PhotoLibraryBrowserView: View {
     @State private var drag: PhotoDragSelection?
     /// A drag that started mostly vertically is a scroll, not a selection.
     @State private var dragIsScroll = false
+    /// Where the grid's top is within the visible area (negative once scrolled down).
+    @State private var gridTop: CGFloat = 0
+    @State private var viewportHeight: CGFloat = 0
+    /// The finger during a selection drag, relative to the visible area, so the edge
+    /// auto-scroll can keep selecting while the finger stays still.
+    @State private var fingerInViewport: CGPoint?
+    @State private var autoScroll: Task<Void, Never>?
 
     struct Album: Identifiable, Hashable {
         static let allID = "all"
@@ -130,48 +137,94 @@ struct PhotoLibraryBrowserView: View {
     private var columnCount: Int { PhotoGridGeometry.columns(width: gridWidth) }
 
     private var grid: some View {
-        ScrollView {
-            if shownIDs.isEmpty {
-                Text("Nothing here").font(.wlBody).foregroundStyle(Graphite.textMuted).padding(.top, 60)
-            }
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: columnCount), spacing: 2) {
-                ForEach(0..<assets.count, id: \.self) { index in
-                    let asset = assets.object(at: index)
-                    PhotoLibraryTile(asset: asset, selected: selection.contains(asset.localIdentifier))
-                        .id(asset.localIdentifier)
-                        .onTapGesture { selection.toggle(asset.localIdentifier) }
+        ScrollViewReader { scroller in
+            ScrollView {
+                if shownIDs.isEmpty {
+                    Text("Nothing here").font(.wlBody).foregroundStyle(Graphite.textMuted).padding(.top, 60)
                 }
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: columnCount), spacing: 2) {
+                    ForEach(0..<assets.count, id: \.self) { index in
+                        let asset = assets.object(at: index)
+                        PhotoLibraryTile(asset: asset, selected: selection.contains(asset.localIdentifier))
+                            .id(asset.localIdentifier)
+                            .onTapGesture { selection.toggle(asset.localIdentifier) }
+                    }
+                }
+                .coordinateSpace(name: "photoGrid")
+                .background(GeometryReader { proxy in
+                    let frame = proxy.frame(in: .named("photoScroll"))
+                    Color.clear
+                        .onAppear { gridWidth = frame.width; gridTop = frame.minY }
+                        .onChange(of: frame.width) { _, width in gridWidth = width }
+                        .onChange(of: frame.minY) { _, top in gridTop = top }
+                })
+                // Drag sideways across tiles to select or deselect a run of them, as in
+                // Photos. A drag that starts vertically scrolls. During a selection drag
+                // the grid stops following the finger, and holding near the top or
+                // bottom edge scrolls it so the selection can keep growing.
+                .simultaneousGesture(DragGesture(minimumDistance: 10, coordinateSpace: .named("photoGrid"))
+                    .onChanged { dragChanged($0, scroller: scroller) }
+                    .onEnded { _ in endDrag() })
+                .id(albumID)
             }
-            .coordinateSpace(name: "photoGrid")
+            .coordinateSpace(name: "photoScroll")
+            .scrollDisabled(drag != nil)
             .background(GeometryReader { proxy in
-                Color.clear.onAppear { gridWidth = proxy.size.width }
-                    .onChange(of: proxy.size.width) { _, width in gridWidth = width }
+                Color.clear
+                    .onAppear { viewportHeight = proxy.size.height }
+                    .onChange(of: proxy.size.height) { _, height in viewportHeight = height }
             })
-            // Drag sideways across tiles to select or deselect a run of them, as in Photos.
-            // A drag that starts vertically scrolls instead. Simultaneous, so scrolling
-            // still works and a selection drag can carry on down the grid.
-            .simultaneousGesture(DragGesture(minimumDistance: 10, coordinateSpace: .named("photoGrid"))
-                .onChanged(dragChanged)
-                .onEnded { _ in drag = nil; dragIsScroll = false })
-            .id(albumID)
         }
+        .onDisappear(perform: endDrag)
     }
 
-    private func dragChanged(_ value: DragGesture.Value) {
+    private func dragChanged(_ value: DragGesture.Value, scroller: ScrollViewProxy) {
         guard !dragIsScroll else { return }
-        let count = shownIDs.count
         if drag == nil {
             let moved = value.translation
             guard abs(moved.width) > abs(moved.height) else { dragIsScroll = true; return }
-            guard let start = PhotoGridGeometry.index(at: value.startLocation, width: gridWidth, columns: columnCount, count: count)
-            else { return }
+            guard let start = PhotoGridGeometry.index(at: value.startLocation, width: gridWidth, columns: columnCount,
+                                                      count: shownIDs.count) else { return }
             drag = PhotoDragSelection(anchor: start, shown: shownIDs, selection: selection)
             UISelectionFeedbackGenerator().selectionChanged()
         }
-        guard let drag, let current = PhotoGridGeometry.index(at: value.location, width: gridWidth, columns: columnCount, count: count)
-        else { return }
+        fingerInViewport = CGPoint(x: value.location.x, y: value.location.y + gridTop)
+        updateDragSelection()
+        if autoScroll == nil { autoScroll = Task { await runAutoScroll(scroller) } }
+    }
+
+    /// Applies the drag to the tile now under the finger.
+    private func updateDragSelection() {
+        guard let drag, let finger = fingerInViewport,
+              let current = PhotoGridGeometry.index(at: CGPoint(x: finger.x, y: finger.y - gridTop), width: gridWidth,
+                                                    columns: columnCount, count: shownIDs.count) else { return }
         let updated = drag.selection(shown: shownIDs, current: current)
         if updated != selection { selection = updated }
+    }
+
+    /// While the finger is held near an edge, scrolls a row at a time, faster nearer the edge.
+    private func runAutoScroll(_ scroller: ScrollViewProxy) async {
+        while !Task.isCancelled, drag != nil {
+            let finger = fingerInViewport?.y ?? viewportHeight / 2
+            let step = PhotoGridGeometry.autoScrollStep(fingerY: finger, viewportHeight: viewportHeight)
+            if step.direction != 0, let target = PhotoGridGeometry.autoScrollTarget(direction: step.direction, gridTop: gridTop,
+                    viewportHeight: viewportHeight, width: gridWidth, columns: columnCount, count: shownIDs.count) {
+                withAnimation(.linear(duration: step.interval)) {
+                    scroller.scrollTo(shownIDs[target], anchor: step.direction > 0 ? .bottom : .top)
+                }
+                updateDragSelection()
+            }
+            try? await Task.sleep(for: .seconds(step.direction == 0 ? 0.05 : step.interval))
+            updateDragSelection()
+        }
+    }
+
+    private func endDrag() {
+        autoScroll?.cancel()
+        autoScroll = nil
+        drag = nil
+        dragIsScroll = false
+        fingerInViewport = nil
     }
 
     private var isReadable: Bool { status == .authorized || status == .limited }

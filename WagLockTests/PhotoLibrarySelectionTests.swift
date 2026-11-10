@@ -117,4 +117,30 @@ final class PhotoLibrarySelectionTests: XCTestCase {
         XCTAssertEqual(index(10, 10_000, count: 7), 6, "Below the last row clamps to the last tile")
         XCTAssertNil(PhotoGridGeometry.index(at: .zero, width: 298, columns: 3, count: 0))
     }
+
+    func testAutoScrollOnlyNearTheEdgesAndFasterCloserIn() {
+        let middle = PhotoGridGeometry.autoScrollStep(fingerY: 400, viewportHeight: 800)
+        XCTAssertEqual(middle.direction, 0)
+        let lowZone = PhotoGridGeometry.autoScrollStep(fingerY: 740, viewportHeight: 800)
+        let bottomEdge = PhotoGridGeometry.autoScrollStep(fingerY: 800, viewportHeight: 800)
+        XCTAssertEqual(lowZone.direction, 1)
+        XCTAssertEqual(bottomEdge.direction, 1)
+        XCTAssertLessThan(bottomEdge.interval, lowZone.interval, "Closer to the edge scrolls faster")
+        XCTAssertEqual(PhotoGridGeometry.autoScrollStep(fingerY: 900, viewportHeight: 800).interval, 0.08, accuracy: 0.0001)
+        XCTAssertEqual(PhotoGridGeometry.autoScrollStep(fingerY: 10, viewportHeight: 800).direction, -1)
+        XCTAssertEqual(PhotoGridGeometry.autoScrollStep(fingerY: 10, viewportHeight: 100).direction, 0, "Too short to have edge zones")
+    }
+
+    func testAutoScrollTargetsTheNextRowPastTheEdgeAndStopsAtTheEnds() {
+        // 3 columns of 98-pt tiles (100-pt rows), 30 items = 10 rows, 800-pt viewport.
+        func target(_ direction: Int, top: CGFloat, count: Int = 30) -> Int? {
+            PhotoGridGeometry.autoScrollTarget(direction: direction, gridTop: top, viewportHeight: 800,
+                                               width: 298, columns: 3, count: count)
+        }
+        XCTAssertEqual(target(1, top: 0), 27, "Bottom edge is in row 8; scroll to row 9")
+        XCTAssertNil(target(-1, top: 0), "Already at the top")
+        XCTAssertEqual(target(-1, top: -250), 3, "Top edge is in row 2; scroll to row 1")
+        XCTAssertNil(target(1, top: -200), "Last row already reaches the bottom edge")
+        XCTAssertNil(target(1, top: 0, count: 6), "Everything fits")
+    }
 }

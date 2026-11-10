@@ -156,4 +156,33 @@ enum PhotoGridGeometry {
         let row = max(Int(point.y / (tile + spacing)), 0)
         return min(row * columns + column, count - 1)
     }
+
+    /// Edge auto-scroll during a drag: direction (-1 up, 0 none, 1 down) and how long each
+    /// row step takes. Within `edge` points of the top or bottom it scrolls; the closer
+    /// to the edge (or past it), the faster.
+    static func autoScrollStep(fingerY: CGFloat, viewportHeight: CGFloat, edge: CGFloat = 70)
+        -> (direction: Int, interval: Double) {
+        guard viewportHeight > edge * 2 else { return (0, 0) }
+        let depth: CGFloat
+        let direction: Int
+        if fingerY > viewportHeight - edge { direction = 1; depth = fingerY - (viewportHeight - edge) }
+        else if fingerY < edge { direction = -1; depth = edge - fingerY }
+        else { return (0, 0) }
+        let closeness = min(max(depth / edge, 0), 1)       // 0 at the zone's inner line, 1 at the edge or beyond
+        return (direction, 0.25 - 0.17 * Double(closeness)) // 0.25 s per row down to 0.08 s
+    }
+
+    /// The tile to scroll to so one more row shows past the edge being dragged towards.
+    static func autoScrollTarget(direction: Int, gridTop: CGFloat, viewportHeight: CGFloat, width: CGFloat,
+                                 columns: Int, spacing: CGFloat = 2, count: Int) -> Int? {
+        guard direction != 0, width > 0, columns > 0, count > 0 else { return nil }
+        let tile = (width - spacing * CGFloat(columns - 1)) / CGFloat(columns)
+        let edgeY = (direction > 0 ? viewportHeight : 0) - gridTop  // the edge, in grid coordinates
+        let edgeRow = Int(floor(edgeY / (tile + spacing)))
+        let lastRow = (count - 1) / columns
+        let row = min(max(edgeRow + direction, 0), lastRow)
+        if direction > 0, edgeRow >= lastRow { return nil }     // already at the bottom
+        if direction < 0, edgeY <= 0 { return nil }              // already at the top
+        return min(row * columns, count - 1)
+    }
 }
