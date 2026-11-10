@@ -101,6 +101,23 @@ class ImportViewModel: ObservableObject {
         }
     }
 
+    /// Assets chosen in WagLock's own photo browser (the one with Select All). Their
+    /// identifiers feed the same "Remove from Photos…" offer as the system picker.
+    func importFromLibraryAssets(_ identifiers: [String]) {
+        guard !isImporting, !identifiers.isEmpty else { return }
+        errorMessage = nil
+        isImporting = true
+        importedCount = 0
+        removablePhotoAssetIDs = []
+        removableFileSources = []
+        importingFromFiles = false
+        lastImportWasPaste = false
+        pendingPhotoAssetIDs = identifiers
+        startImportTask { password, progress in
+            try await self.importService.importLibraryAssets(identifiers, password: password, progress: progress)
+        }
+    }
+
     /// Items from the system Paste button. Nothing reads the clipboard without that tap.
     @Published private(set) var lastImportWasPaste = false
 

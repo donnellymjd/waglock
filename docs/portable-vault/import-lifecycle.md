@@ -69,3 +69,16 @@ Nothing is ever deleted without the explicit tap and confirmation, and Keep is a
 - **Live Photos and location:** the system camera can't capture Live Photos and doesn't add location.
 
 Tests: `WagLockTests/CameraCaptureTests.swift` (camera metadata kept, the import leaves no plaintext folder, a captured movie moves into an owned folder). Not compiled or run in this environment.
+
+## Select all from Photos (2026-11-10)
+
+The iOS photo picker has no Select All, so Add to WagLock now has a second Photos row, **Select all from Photos**, that opens WagLock's own browser (`PhotoLibraryBrowserView`). "Photos & videos" still opens the system picker, which needs no Photos access.
+
+- **Access:** the browser asks for Photos read access only when opened. With limited access it shows only the allowed items and says so. If access is off, it explains that the system picker still works and offers Settings.
+- **Selecting:** album chips (All, Videos, Favorites, your albums), tap to toggle, and **Select All / Deselect All** for the album shown. Picks from other albums stay selected. Import follows the order items were selected.
+- **Thumbnails:** requested from Photos' image manager and held in memory only. Nothing is written until **Add** is tapped.
+- **Import:** for each asset, `PhotoLibraryAssetExport` writes the current photo or video (the same version the system picker's `.current` mode gives) into an owned `waglock-media-import-` folder. Live Photos keep the still and paired video together. `MediaImportService.importLibraryAssets` then encrypts them through the byte-preserving Files path or `importLivePhoto`, inside the usual batch, commit, session, lock and reserve rules. The folder is removed afterwards whatever the outcome. iCloud originals download through iOS.
+- **Originals:** the selected identifiers feed the existing "Remove from Photos…" offer, which still needs an explicit tap and the iOS prompt.
+- The Files picker and the album import buttons are unchanged.
+
+Tests: `WagLockTests/PhotoLibrarySelectionTests.swift` (Select All and Deselect All per album, order, Live and edited resource choice, unsafe names, owned folder). Not compiled or run in this environment.

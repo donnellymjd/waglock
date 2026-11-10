@@ -14,7 +14,7 @@
 
 "NSMicrophoneUsageDescription" = "Record audio memos and store them encrypted on this device.";
 
-"NSPhotoLibraryUsageDescription" = "Access your photo library to encrypt photos and videos in your private space on this device, and to remove originals from Photos only when you choose. Your content stays on your device, with no uploads or tracking.";
+"NSPhotoLibraryUsageDescription" = "Access your photo library to browse and select photos and videos to encrypt in your private space on this device, and to remove originals from Photos only when you choose. Your content stays on your device, with no uploads or tracking.";
 
 "NSFaceIDUsageDescription" = "Use Face ID to unlock WagLock and albums you choose to protect with biometrics.";
 "NSPhotoLibraryAddUsageDescription" = "Save a Live Photo back to your photo library only when you choose. WagLock keeps its own encrypted copy.";

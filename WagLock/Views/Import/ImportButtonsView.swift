@@ -39,6 +39,7 @@ private struct ScopedImportButtonsView: View {
     @State private var completedAssetIDs: [String] = []
     @State private var completedFileOriginals = 0
     @State private var showCamera = false
+    @State private var showLibraryBrowser = false
 
     // MARK: - Body
 
@@ -75,6 +76,12 @@ private struct ScopedImportButtonsView: View {
                 ) { urls in
                     viewModel.importFromFiles(urls: urls)
                 }
+            }
+            .fullScreenCover(isPresented: $showLibraryBrowser) {
+                PhotoLibraryBrowserView(add: { identifiers in
+                    showLibraryBrowser = false
+                    viewModel.importFromLibraryAssets(identifiers)
+                }, cancel: { showLibraryBrowser = false })
             }
             .sheet(isPresented: $viewModel.reservedSpaceFull) { StorageFullView() }
             .fullScreenCover(isPresented: $showCamera) {
@@ -215,6 +222,10 @@ private struct ScopedImportButtonsView: View {
                     Button { viewModel.selectPhotos() } label: {
                         WagLockRow(symbol: "photo.on.rectangle", title: "Photos & videos", detail: "Choose from your photo library")
                     }.buttonStyle(.plain).accessibilityIdentifier("import.photos")
+                    Button { showLibraryBrowser = true } label: {
+                        WagLockRow(symbol: "checkmark.circle", title: "Select all from Photos",
+                                   detail: "Browse an album and select everything in it. Needs access to your photo library")
+                    }.buttonStyle(.plain).accessibilityIdentifier("import.photosSelectAll")
                     Button { viewModel.selectFiles() } label: {
                         WagLockRow(symbol: "folder", title: "Files", detail: "Documents, archives and other files")
                     }.buttonStyle(.plain).accessibilityIdentifier("import.files")

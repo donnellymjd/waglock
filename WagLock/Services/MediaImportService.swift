@@ -157,6 +157,23 @@ class MediaImportService {
         }
     }
 
+    /// Imports photo-library assets picked in WagLock's own browser (Select All). Each
+    /// asset's resources are copied to an owned folder, encrypted through the same paths
+    /// as Files (byte-preserving) or as a Live Photo pair, and the copy is removed.
+    func importLibraryAssets(_ identifiers: [String], password: String,
+                             progress: @escaping (ImportProgress) -> Void = { _ in }) async throws -> [MediaItem] {
+        try await importBatch(Array(identifiers.enumerated())) { index, identifier in
+            let current = ImportProgress(current: index + 1, total: identifiers.count, currentFileName: "Item \(index + 1)")
+            await MainActor.run { progress(current) }
+            guard let written = try await PhotoLibraryAssetExport.write(localIdentifier: identifier) else { return nil }
+            defer { try? FileManager.default.removeItem(at: written.folder) }
+            if let motion = written.motion {
+                return try await self.importLivePhoto(still: written.primary, video: motion, password: password)
+            }
+            return try await self.importSingleFile(url: written.primary, password: password)
+        }
+    }
+
     /// Import items the person pasted with the system Paste button. Each item's own
     /// representation is copied into an owned, protected temporary folder, encrypted
     /// through the same paths as Photos and Files, and the copy is removed afterwards.
