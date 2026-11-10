@@ -73,4 +73,48 @@ final class PhotoLibrarySelectionTests: XCTestCase {
         let permissions = try FileManager.default.attributesOfItem(atPath: folder.path)[.posixPermissions] as? Int
         XCTAssertEqual(permissions, 0o700)
     }
+
+    func testDragSelectsTheRunAndMovingBackRestoresEarlierState() {
+        let shown = ["a", "b", "c", "d", "e"]
+        var before = PhotoLibrarySelection()
+        before.toggle("d")                       // picked earlier by tap
+        let drag = PhotoDragSelection(anchor: 1, shown: shown, selection: before)
+        XCTAssertTrue(drag.selecting, "Starting on an unselected tile selects")
+        XCTAssertEqual(Set(drag.selection(shown: shown, current: 3).identifiers), ["b", "c", "d"])
+        // Back towards the start: c and d go back to how they were (d stays picked).
+        XCTAssertEqual(Set(drag.selection(shown: shown, current: 1).identifiers), ["b", "d"])
+        // Past the start in the other direction.
+        XCTAssertEqual(Set(drag.selection(shown: shown, current: 0).identifiers), ["a", "b", "d"])
+        // Beyond the ends is clamped.
+        XCTAssertEqual(drag.selection(shown: shown, current: 99).count, 4)
+    }
+
+    func testDragStartingOnASelectedTileDeselects() {
+        let shown = ["a", "b", "c", "d"]
+        var before = PhotoLibrarySelection()
+        before.selectAll(shown)
+        before.selectAll(["other-album"])
+        let drag = PhotoDragSelection(anchor: 2, shown: shown, selection: before)
+        XCTAssertFalse(drag.selecting)
+        XCTAssertEqual(Set(drag.selection(shown: shown, current: 0).identifiers), ["d", "other-album"])
+        XCTAssertEqual(drag.selection(shown: [], current: 0), before)
+    }
+
+    func testGridHitTesting() {
+        // 3 columns of 98-pt tiles with 2-pt spacing in a 298-pt grid.
+        XCTAssertEqual(PhotoGridGeometry.columns(width: 298), 3)
+        XCTAssertEqual(PhotoGridGeometry.columns(width: 0), 3)
+        XCTAssertEqual(PhotoGridGeometry.columns(width: 800), 8)
+        func index(_ x: CGFloat, _ y: CGFloat, count: Int = 100) -> Int? {
+            PhotoGridGeometry.index(at: CGPoint(x: x, y: y), width: 298, columns: 3, count: count)
+        }
+        XCTAssertEqual(index(10, 10), 0)
+        XCTAssertEqual(index(150, 10), 1)
+        XCTAssertEqual(index(290, 10), 2)
+        XCTAssertEqual(index(10, 110), 3)
+        XCTAssertEqual(index(-20, -20), 0, "Outside the grid clamps to the nearest tile")
+        XCTAssertEqual(index(500, 10), 2)
+        XCTAssertEqual(index(10, 10_000, count: 7), 6, "Below the last row clamps to the last tile")
+        XCTAssertNil(PhotoGridGeometry.index(at: .zero, width: 298, columns: 3, count: 0))
+    }
 }

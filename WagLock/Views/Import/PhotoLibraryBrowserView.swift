@@ -18,6 +18,10 @@ struct PhotoLibraryBrowserView: View {
     @State private var shownIDs: [String] = []
     @State private var selection = PhotoLibrarySelection()
     @State private var observer: LibraryChangeObserver?
+    @State private var gridWidth: CGFloat = 0
+    @State private var drag: PhotoDragSelection?
+    /// A drag that started mostly vertically is a scroll, not a selection.
+    @State private var dragIsScroll = false
 
     struct Album: Identifiable, Hashable {
         static let allID = "all"
@@ -123,12 +127,14 @@ struct PhotoLibraryBrowserView: View {
 
     // MARK: Grid
 
+    private var columnCount: Int { PhotoGridGeometry.columns(width: gridWidth) }
+
     private var grid: some View {
         ScrollView {
             if shownIDs.isEmpty {
                 Text("Nothing here").font(.wlBody).foregroundStyle(Graphite.textMuted).padding(.top, 60)
             }
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 2)], spacing: 2) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: columnCount), spacing: 2) {
                 ForEach(0..<assets.count, id: \.self) { index in
                     let asset = assets.object(at: index)
                     PhotoLibraryTile(asset: asset, selected: selection.contains(asset.localIdentifier))
@@ -136,8 +142,36 @@ struct PhotoLibraryBrowserView: View {
                         .onTapGesture { selection.toggle(asset.localIdentifier) }
                 }
             }
+            .coordinateSpace(name: "photoGrid")
+            .background(GeometryReader { proxy in
+                Color.clear.onAppear { gridWidth = proxy.size.width }
+                    .onChange(of: proxy.size.width) { _, width in gridWidth = width }
+            })
+            // Drag sideways across tiles to select or deselect a run of them, as in Photos.
+            // A drag that starts vertically scrolls instead. Simultaneous, so scrolling
+            // still works and a selection drag can carry on down the grid.
+            .simultaneousGesture(DragGesture(minimumDistance: 10, coordinateSpace: .named("photoGrid"))
+                .onChanged(dragChanged)
+                .onEnded { _ in drag = nil; dragIsScroll = false })
             .id(albumID)
         }
+    }
+
+    private func dragChanged(_ value: DragGesture.Value) {
+        guard !dragIsScroll else { return }
+        let count = shownIDs.count
+        if drag == nil {
+            let moved = value.translation
+            guard abs(moved.width) > abs(moved.height) else { dragIsScroll = true; return }
+            guard let start = PhotoGridGeometry.index(at: value.startLocation, width: gridWidth, columns: columnCount, count: count)
+            else { return }
+            drag = PhotoDragSelection(anchor: start, shown: shownIDs, selection: selection)
+            UISelectionFeedbackGenerator().selectionChanged()
+        }
+        guard let drag, let current = PhotoGridGeometry.index(at: value.location, width: gridWidth, columns: columnCount, count: count)
+        else { return }
+        let updated = drag.selection(shown: shownIDs, current: current)
+        if updated != selection { selection = updated }
     }
 
     private var isReadable: Bool { status == .authorized || status == .limited }

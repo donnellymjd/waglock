@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Photos
 
@@ -116,4 +117,43 @@ struct PhotoLibrarySelection: Equatable {
 
     /// Identifiers in the order they were selected.
     var identifiers: [String] { order }
+}
+
+/// Drag to select in the photo browser, as in Photos: the start tile decides whether the
+/// drag selects or deselects, the range from the start tile to the finger takes that
+/// state, and moving back gives the tiles left behind their earlier state.
+struct PhotoDragSelection: Equatable {
+    let anchor: Int
+    let selecting: Bool
+    let before: PhotoLibrarySelection
+
+    init(anchor: Int, shown: [String], selection: PhotoLibrarySelection) {
+        self.anchor = anchor
+        self.before = selection
+        selecting = shown.indices.contains(anchor) ? !selection.contains(shown[anchor]) : true
+    }
+
+    func selection(shown: [String], current: Int) -> PhotoLibrarySelection {
+        guard !shown.isEmpty, shown.indices.contains(anchor) else { return before }
+        let end = min(max(current, 0), shown.count - 1)
+        let ids = anchor <= end ? Array(shown[anchor...end]) : Array(shown[end...anchor].reversed())
+        var result = before
+        if selecting { result.selectAll(ids) } else { result.deselectAll(ids) }
+        return result
+    }
+}
+
+/// Which tile of a fixed-column grid is under a point, in the grid's own coordinates.
+enum PhotoGridGeometry {
+    static func columns(width: CGFloat, minimumTile: CGFloat = 96, spacing: CGFloat = 2) -> Int {
+        max(3, Int((width + spacing) / (minimumTile + spacing)))
+    }
+
+    static func index(at point: CGPoint, width: CGFloat, columns: Int, spacing: CGFloat = 2, count: Int) -> Int? {
+        guard width > 0, columns > 0, count > 0 else { return nil }
+        let tile = (width - spacing * CGFloat(columns - 1)) / CGFloat(columns)
+        let column = min(max(Int(point.x / (tile + spacing)), 0), columns - 1)
+        let row = max(Int(point.y / (tile + spacing)), 0)
+        return min(row * columns + column, count - 1)
+    }
 }
