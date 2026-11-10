@@ -350,11 +350,14 @@ struct AlbumBrowserView: View {
         }
     }
 
+    /// iOS's picker. When the whole batch is added, offers to remove the originals from
+    /// Photos for the items iOS identified (it identifies items picked from the library).
     private func importPhotos(_ results: [PHPickerResult]) {
         guard let parent, canAccess, !busy else { return }
         busy = true
         operation = Task {
             defer { busy = false }
+            var added: [String] = []
             do {
                 for result in results {
                     try Task.checkCancellation()
@@ -362,7 +365,10 @@ struct AlbumBrowserView: View {
                     defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
                     try Task.checkCancellation()
                     try await store.importFile(url, into: parent, albums: albums, context: context)
+                    if let identifier = result.assetIdentifier { added.append(identifier) }
                 }
+                guard canAccess, !Task.isCancelled, !added.isEmpty else { return }
+                photosImport = AlbumPhotosImportResult(albumName: parent.name, addedAssetIDs: added, skipped: 0)
             } catch is CancellationError {} catch { self.error = error.localizedDescription }
         }
     }
