@@ -16,8 +16,14 @@ struct PhotoDetailView: View {
     struct Entry: Identifiable {
         let source: MediaItem
         let snapshot: MediaPreviewSnapshot
+        /// Live Photo motion, captured as immutable values while the library is mounted.
+        let motionPath: String?
+        let motionExtension: String?
         var id: UUID { snapshot.id }
-        init(_ item: MediaItem) { source = item; snapshot = MediaPreviewSnapshot(item) }
+        init(_ item: MediaItem) {
+            source = item; snapshot = MediaPreviewSnapshot(item)
+            motionPath = item.livePhotoVideoPath; motionExtension = item.livePhotoVideoExtension
+        }
     }
     private let originatingSessionID: UUID?
 
@@ -40,6 +46,9 @@ struct PhotoDetailView: View {
     @State private var exportError: String?
     @State private var showExportError = false
     @State private var showMoveToAlbum = false
+    @State private var playingLive: Entry?
+    @State private var liveSaveMessage: String?
+    @State private var isSavingLive = false
 
     // MARK: - Initialization
 
@@ -74,9 +83,28 @@ struct PhotoDetailView: View {
                     .simultaneousGesture(TapGesture().onEnded { withAnimation(.easeInOut(duration: 0.2)) { showControls.toggle() } })
                     .accessibilityAction(named: showControls ? "Hide controls" : "Show controls") { showControls.toggle() }
 
-                    if showControls {
+                    if let playing = playingLive, let motion = playing.motionPath {
+                        LivePhotoPlaybackView(stillPath: playing.snapshot.encryptedPath, stillExtension: playing.snapshot.fileExtension,
+                                              motionPath: motion, motionExtension: playing.motionExtension ?? ".MOV",
+                                              sessionID: originatingSessionID) { playingLive = nil }
+                            .transition(.opacity)
+                            .zIndex(1)
+                    }
+
+                    if showControls && playingLive == nil {
                         VStack(spacing: 0) {
                             topBar(current)
+                            if current.motionPath != nil {
+                                HStack {
+                                    Button { playingLive = current } label: { LivePhotoBadge() }
+                                        .accessibilityLabel("Play Live Photo")
+                                        .accessibilityHint("Plays the motion recorded with this photo")
+                                        .accessibilityIdentifier("photo.live.play")
+                                        .simultaneousGesture(LongPressGesture(minimumDuration: 0.25).onEnded { _ in playingLive = current })
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 22).padding(.top, 10)
+                            }
                             Spacer()
                             if !landscape {
                                 WagLockActionBar(actions: actions).padding(.horizontal, 22).padding(.bottom, 8)
@@ -96,6 +124,10 @@ struct PhotoDetailView: View {
             }
         }
         .statusBarHidden(!showControls)
+        .alert("Live Photo", isPresented: Binding(get: { liveSaveMessage != nil }, set: { if !$0 { liveSaveMessage = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: { Text(liveSaveMessage ?? "") }
+        .onChange(of: currentIndex) { _, _ in playingLive = nil }
         .sheet(isPresented: $showPhotoInfo) {
             if isCurrentSession, let current = currentPhoto {
                 PhotoInfoSheet(snapshot: current.snapshot) { showPhotoInfo = false }
@@ -158,6 +190,10 @@ struct PhotoDetailView: View {
             Menu {
                 Button("Info", systemImage: "info.circle") { showPhotoInfo = true }
                 Button("Export", systemImage: "square.and.arrow.up") { sharePhoto() }
+                if current.motionPath != nil {
+                    Button("Save to Photos as Live Photo", systemImage: "livephoto") { saveLiveToPhotos(current) }
+                        .disabled(isSavingLive)
+                }
                 Button("Delete", systemImage: "trash", role: .destructive) { showDeleteAlert = true }
             } label: {
                 Image(systemName: "ellipsis").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
@@ -175,6 +211,34 @@ struct PhotoDetailView: View {
             WagLockAction(id: "photo.share", symbol: "square.and.arrow.up", title: "Export", enabled: !isExporting) { sharePhoto() },
             WagLockAction(id: "photo.delete", symbol: "trash", title: "Delete", destructive: true) { showDeleteAlert = true },
         ]
+    }
+
+    /// Rebuilds a Live Photo in the person's photo library from temporary decrypted copies,
+    /// which are removed afterwards. Asks for add-only Photos access on first use.
+    private func saveLiveToPhotos(_ entry: Entry) {
+        guard isCurrentSession, let motion = entry.motionPath, let password = authViewModel.sessionPassword else { return }
+        isSavingLive = true
+        let storage = vaultServices.storage
+        Task {
+            defer { isSavingLive = false }
+            var copies: [URL] = []
+            defer { for url in copies { try? FileManager.default.removeItem(at: url) } }
+            do {
+                let still = try await storage.createDecryptedTempFileAsync(path: entry.snapshot.encryptedPath, password: password,
+                                                                           preferredExtension: entry.snapshot.fileExtension)
+                copies.append(still)
+                let video = try await storage.createDecryptedTempFileAsync(path: motion, password: password,
+                                                                           preferredExtension: entry.motionExtension ?? ".MOV")
+                copies.append(video)
+                guard isCurrentSession else { return }
+                try await LivePhotoSupport.saveToPhotos(still: still, video: video)
+                liveSaveMessage = "Saved to Photos as a Live Photo. That copy is outside WagLock."
+            } catch LivePhotoSupport.SaveFailure.notAuthorized {
+                liveSaveMessage = "WagLock needs permission to add to Photos. Nothing was saved."
+            } catch {
+                liveSaveMessage = "The Live Photo couldn’t be saved to Photos. Nothing was saved."
+            }
+        }
     }
 
     /// After a verified move into an album the original record is gone; drop it locally.
@@ -233,7 +297,7 @@ struct PhotoDetailView: View {
         let photoToDelete = entry.source
         isDeleting = true
 
-        let encryptedPath = photoToDelete.encryptedPath
+        let encryptedPaths = photoToDelete.encryptedPaths // Includes Live Photo motion.
 
         // Commit the database deletion first, then close the screen and delete files;
         // on failure, stay on the screen and show an error instead of dismissing silently
@@ -258,10 +322,9 @@ struct PhotoDetailView: View {
             }
         }
 
-        do {
-            try vaultServices.storage.deleteFile(path: encryptedPath)
-        } catch {
+        for path in encryptedPaths {
             // The record is gone; a failed file delete only leaves an unreferenced encrypted file
+            try? vaultServices.storage.deleteFile(path: path)
         }
 
         isDeleting = false

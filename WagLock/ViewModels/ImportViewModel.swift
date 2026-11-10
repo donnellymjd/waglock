@@ -267,7 +267,7 @@ class ImportViewModel: ObservableObject {
             }
             isImporting = true
             let items = try await operation(password)
-            createdPaths = items.map(\.encryptedPath)
+            createdPaths = items.flatMap(\.encryptedPaths)
             try Task.checkCancellation()
             guard token == importGeneration, auth.isAuthenticated,
                   auth.sessionPasswordData === session, GuestModeManager.shared.isOwnerMode else {

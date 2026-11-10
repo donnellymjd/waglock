@@ -207,6 +207,20 @@ final class PortableExportSnapshotService {
                           thumbnail: item.thumbnailData, createdAt: item.createdAt, modifiedAt: item.modifiedAt,
                           width: item.width, height: item.height, duration: item.duration,
                           source: try source(item.encryptedPath)), to: .root)
+            // Live Photo motion travels as a sibling video with the same base name
+            // (IMG_0001.HEIC + IMG_0001.MOV), the layout Files and Photos already pair.
+            // Never omitted: a missing or unreadable motion file fails the snapshot.
+            if let motion = item.livePhotoVideoPath {
+                guard let ext = item.livePhotoVideoExtension, ext.hasPrefix("."), ext.count > 1 else {
+                    throw Failure.invalidInventory
+                }
+                let motionSource = try source(motion)
+                try add(.init(id: LivePhotoSupport.motionAssetID(for: item.id), albumID: nil, name: item.fileName,
+                              fileExtension: ext, storedType: MediaType.video.rawValue, effectiveType: .video,
+                              bytes: motionSource.ciphertextBytes, thumbnail: nil, createdAt: item.createdAt,
+                              modifiedAt: item.modifiedAt, width: nil, height: nil, duration: nil,
+                              source: motionSource), to: .root)
+            }
         }
         let albumRevision = albums.revision
         for album in records {
@@ -281,7 +295,8 @@ final class PortableExportSnapshotService {
         // Explicit field inventory: adding a model OR a persisted field requires review.
         let supported: [String: Set<String>] = [
             "MediaItem": ["id", "fileName", "fileExtension", "fileSize", "typeRawValue", "encryptedPath",
-                          "thumbnailData", "createdAt", "modifiedAt", "width", "height", "duration"],
+                          "thumbnailData", "createdAt", "modifiedAt", "width", "height", "duration",
+                          "livePhotoVideoPath", "livePhotoVideoExtension"],
             "SecretNote": ["id", "title", "content", "createdAt", "modifiedAt", "isFavorite", "tags"],
             "VaultAlbum": ["id", "parentID", "name", "protectionRawValue", "wrappedKey", "encryptedCatalog",
                            "biometricAccount", "createdAt"]]

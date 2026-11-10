@@ -34,6 +34,10 @@ struct GridItemView: View {
                     overlayInfo
                 }
 
+                if mediaItem.isLivePhoto {
+                    VStack { HStack { LivePhotoBadge().padding(5); Spacer() }; Spacer() }
+                }
+
                 // Selection mode marker
                 if isSelectionMode {
                     selectionOverlay

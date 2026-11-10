@@ -388,7 +388,7 @@ struct PhotosView: View {
     }
 
     private func deletePhoto(_ photo: MediaItem) {
-        let encryptedPath = photo.encryptedPath
+        let encryptedPaths = photo.encryptedPaths // Includes Live Photo motion.
 
         // Commit the database deletion first and delete files only after it succeeds,
         // so a failed save never leaves records pointing at deleted files
@@ -403,10 +403,9 @@ struct PhotosView: View {
             return
         }
 
-        do {
-            try vaultServices.storage.deleteFile(path: encryptedPath)
-        } catch {
+        for path in encryptedPaths {
             // The record is gone; a failed file delete only leaves an unreferenced encrypted file
+            try? vaultServices.storage.deleteFile(path: path)
         }
     }
 
@@ -414,7 +413,7 @@ struct PhotosView: View {
     private func deletePhotos(_ items: [MediaItem]) {
         guard !items.isEmpty else { return }
 
-        let encryptedPaths = items.map { $0.encryptedPath }
+        let encryptedPaths = items.flatMap(\.encryptedPaths)
 
         // Commit the database deletion first and delete files only after it succeeds,
         // so a failed save never leaves records pointing at deleted files

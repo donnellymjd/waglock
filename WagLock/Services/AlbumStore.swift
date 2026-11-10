@@ -382,11 +382,29 @@ final class AlbumStore: ObservableObject {
             try Self.fileDigest(source) == Self.fileDigest(verification)
         }.value
         guard matches, token == generation else { throw VaultAccessError.invalidData }
+        // Albums hold one file per asset, so Live Photo motion moves as its own verified
+        // video beside the still (same base name). It is never silently dropped.
+        let motionPath = media.livePhotoVideoPath
+        if let motionPath {
+            let ext = media.livePhotoVideoExtension ?? ".MOV"
+            let motion = try await storage.createDecryptedTempFileAsync(path: motionPath, password: root, preferredExtension: ext)
+            defer { try? FileManager.default.removeItem(at: motion) }
+            guard token == generation else { throw CancellationError() }
+            let importedMotion = try await importFile(motion, into: album, albums: albums, context: context,
+                                                      originalName: media.fileName + ext)
+            let motionCheck = try await preview(importedMotion, in: album, albums: albums)
+            defer { try? FileManager.default.removeItem(at: motionCheck.deletingLastPathComponent()) }
+            let motionMatches = try await Task.detached {
+                try Self.fileDigest(motion) == Self.fileDigest(motionCheck)
+            }.value
+            guard motionMatches, token == generation else { throw VaultAccessError.invalidData }
+        }
         _ = try key(for: album, albums: albums)
         // Destination is committed and verified before the original record or ciphertext is removed.
         context.delete(media)
         do { try LibraryWriteCoordinator.save(context) } catch { context.rollback(); throw error }
         try? storage.deleteFile(path: sourcePath)
+        if let motionPath { try? storage.deleteFile(path: motionPath) }
         mediaLoader.clearCache(forPath: sourcePath)
         thumbnails.clearAll()
         revision += 1

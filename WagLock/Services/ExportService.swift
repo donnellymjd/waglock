@@ -103,7 +103,16 @@ final class ExportService: ObservableObject {
         guard !items.isEmpty else { completion(.failure(.noItemsSelected)); return nil }
         guard !password.isEmpty else { completion(.failure(.invalidPassword)); return nil }
         let snapshots: [Item]
-        do { snapshots = try items.map { try snapshot($0) } }
+        // A Live Photo exports as its still plus the paired video with the same base name.
+        do {
+            snapshots = try items.flatMap { item -> [Item] in
+                var parts = [try snapshot(path: item.encryptedPath, fileName: item.fullFileName)]
+                if let motion = item.livePhotoVideoPath {
+                    parts.append(try snapshot(path: motion, fileName: item.fileName + (item.livePhotoVideoExtension ?? ".MOV")))
+                }
+                return parts
+            }
+        }
         catch { completion(.failure(.exportFailed)); return nil }
         let id = UUID()
         let output = directory.appendingPathComponent(id.uuidString, isDirectory: true)
@@ -182,15 +191,15 @@ final class ExportService: ObservableObject {
         catch { pendingCleanup.insert(url) }
     }
 
-    private func snapshot(_ item: MediaItem) throws -> Item {
+    private func snapshot(path: String, fileName: String) throws -> Item {
         let root = storage.getStorageDirectory().resolvingSymlinksInPath().standardizedFileURL
-        let source = try storage.getFileURL(for: item.encryptedPath).standardizedFileURL
+        let source = try storage.getFileURL(for: path).standardizedFileURL
         let attributes = try FileManager.default.attributesOfItem(atPath: source.path)
         guard attributes[.type] as? FileAttributeType == .typeRegular,
               source.resolvingSymlinksInPath().path == root.appendingPathComponent(source.lastPathComponent).path else {
             throw ExportError.exportFailed
         }
-        let name = item.fullFileName.map { character -> Character in
+        let name = fileName.map { character -> Character in
             if character == "/" || character == "\\" || character == ":"
                 || character.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) { return "_" }
             return character

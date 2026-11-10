@@ -144,3 +144,7 @@ The owner chose to implement the whole 2026-11-08 handover, the 16-slot passcode
 ## Fixed-size storage — November9 (ADR-030)
 
 Fixed mode is a pseudorandom reserve file sized so WagLock's whole container equals the chosen size, not a container format. Every media write must go through `FileStorageService.checkStorageSpace` (which claims from the reserve before writing), deletes must invalidate usage and post `wagLockStorageChanged`, and mode changes only allocate or free the reserve: never move, rewrite or convert library data. Storage screens are app-wide and must never show container usage or any library's size; show only the chosen size, iPhone free space, a percentage and time left. The reserve and mode file are erase roots. See docs/portable-vault/fixed-size-storage.md for what it does not hide.
+
+## Live Photos — November10
+
+A Live Photo is one `MediaItem` with optional `livePhotoVideoPath`/`livePhotoVideoExtension`. Every delete, rollback and cleanup path must use `MediaItem.encryptedPaths`, and every new export, backup or move path must carry the motion or fail rather than drop it. Pair Files imports only on matching base name and content identifier, and keep a pair all-or-nothing. Plaintext playback/save copies are temporary and removed on finish, lock or session change. See docs/portable-vault/live-photos.md.
