@@ -282,7 +282,8 @@ final class AlbumStore: ObservableObject {
             throw VaultAccessError.invalidData
         }
         let required: Set<String> = ["id", "fileName", "encryptedPath", "fileSize", "type", "createdAt"]
-        let supported = required.union(["thumbnail"])
+        // The motion asset is its own catalog record, so a backup carries both files.
+        let supported = required.union(["thumbnail", "livePhotoMotionID"])
         for record in records {
             let keys = Set(record.keys)
             guard required.isSubset(of: keys), keys.isSubset(of: supported) else { throw VaultAccessError.invalidData }
@@ -398,6 +399,7 @@ final class AlbumStore: ObservableObject {
                 try Self.fileDigest(motion) == Self.fileDigest(motionCheck)
             }.value
             guard motionMatches, token == generation else { throw VaultAccessError.invalidData }
+            try linkLivePhoto(still: imported.id, motion: importedMotion.id, in: album, albums: albums, context: context)
         }
         _ = try key(for: album, albums: albums)
         // Destination is committed and verified before the original record or ciphertext is removed.
@@ -423,11 +425,54 @@ final class AlbumStore: ObservableObject {
         var catalog = try assets(in: album, albums: albums)
         guard let index = catalog.firstIndex(where: { $0.id == asset.id }) else { throw VaultAccessError.invalidData }
         let removed = catalog.remove(at: index)
+        // A Live Photo's motion goes with its still; a still that pointed at a deleted motion stays a plain photo.
+        var removedPaths = [removed.encryptedPath]
+        if let motionID = removed.livePhotoMotionID, let motionIndex = catalog.firstIndex(where: { $0.id == motionID }) {
+            removedPaths.append(catalog.remove(at: motionIndex).encryptedPath)
+        }
+        for i in catalog.indices where catalog[i].livePhotoMotionID == removed.id { catalog[i].livePhotoMotionID = nil }
         let previous = album.encryptedCatalog
         album.encryptedCatalog = try crypto.encrypt(data: JSONEncoder().encode(catalog), password: secret)
         do { try LibraryWriteCoordinator.save(context) } catch { album.encryptedCatalog = previous; throw error }
-        try? storage.deleteFile(path: removed.encryptedPath)
+        for path in removedPaths { try? storage.deleteFile(path: path) }
         revision += 1
+    }
+
+    /// Links an album still to the album video holding its motion. Both must already be
+    /// committed in this album's catalog; the motion must be a video not linked elsewhere.
+    func linkLivePhoto(still: UUID, motion: UUID, in album: VaultAlbum, albums: [VaultAlbum], context: ModelContext) throws {
+        let secret = try key(for: album, albums: albums)
+        var catalog = try assets(in: album, albums: albums)
+        guard let stillIndex = catalog.firstIndex(where: { $0.id == still }), catalog[stillIndex].type == .photo,
+              let motionAsset = catalog.first(where: { $0.id == motion }), motionAsset.type == .video,
+              !catalog.contains(where: { $0.livePhotoMotionID == motion }) else { throw VaultAccessError.invalidData }
+        catalog[stillIndex].livePhotoMotionID = motion
+        let previous = album.encryptedCatalog
+        album.encryptedCatalog = try crypto.encrypt(data: JSONEncoder().encode(catalog), password: secret)
+        do { try LibraryWriteCoordinator.save(context) } catch { album.encryptedCatalog = previous; throw error }
+        revision += 1
+    }
+
+    /// Decrypts an album Live Photo's still and motion into temporary preview folders.
+    /// The caller removes both folders; a lock in between discards them here.
+    func previewLivePhoto(_ still: AlbumAsset, in album: VaultAlbum, albums: [VaultAlbum]) async throws -> (still: URL, motion: URL) {
+        let catalog = try assets(in: album, albums: albums)
+        guard let current = catalog.first(where: { $0.id == still.id && $0.encryptedPath == still.encryptedPath }),
+              let motionID = current.livePhotoMotionID,
+              let motion = catalog.first(where: { $0.id == motionID }) else { throw VaultAccessError.invalidData }
+        let stillURL = try await preview(current, in: album, albums: albums)
+        do {
+            let motionURL = try await preview(motion, in: album, albums: albums)
+            return (stillURL, motionURL)
+        } catch {
+            try? FileManager.default.removeItem(at: stillURL.deletingLastPathComponent())
+            throw error
+        }
+    }
+
+    /// Album motion assets that belong to a still; the grid shows the pair once.
+    static func motionIDs(in catalog: [AlbumAsset]) -> Set<UUID> {
+        Set(catalog.compactMap(\.livePhotoMotionID))
     }
 
     func rename(_ album: VaultAlbum, name: String, albums: [VaultAlbum], context: ModelContext) throws {

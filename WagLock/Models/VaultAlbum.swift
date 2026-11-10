@@ -54,6 +54,9 @@ struct AlbumAsset: Codable, Identifiable {
     var type: MediaType
     var thumbnail: Data?
     var createdAt: Date
+    /// Live Photo: the album video asset holding this still's motion. Optional, so
+    /// catalogs written before Live Photo support decode unchanged.
+    var livePhotoMotionID: UUID? = nil
 
     var fileExtension: String { (fileName as NSString).pathExtension }
 }

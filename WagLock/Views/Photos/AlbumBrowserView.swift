@@ -32,6 +32,12 @@ struct AlbumBrowserView: View {
         guard canAccess, let parent else { return [] }
         return (try? store.assets(in: parent, albums: albums)) ?? []
     }
+    /// A Live Photo shows once: its motion asset is reached through the still.
+    private var visibleAssets: [AlbumAsset] {
+        let all = assets
+        let motion = AlbumStore.motionIDs(in: all)
+        return all.filter { !motion.contains($0.id) }
+    }
 
     var body: some View {
         Group {
@@ -150,7 +156,7 @@ struct AlbumBrowserView: View {
                 if let parent { albumHeader(parent) } else { rootHeader }
                 if busy { ProgressView("Encrypting import…").tint(Graphite.accentText).font(.wlMeta) }
                 if parent != nil {
-                    if assets.isEmpty {
+                    if visibleAssets.isEmpty {
                         WagLockNote(kind: .info, text: "Import media into this album. Its contents, filenames and thumbnails are encrypted separately.")
                     } else {
                         assetGrid
@@ -188,14 +194,15 @@ struct AlbumBrowserView: View {
 
     private func albumHeader(_ album: VaultAlbum) -> some View {
         let protection = AlbumProtection(rawValue: album.protectionRawValue)
-        let photosCount = assets.filter { $0.type == .photo }.count
-        let videoCount = assets.filter { $0.type == .video }.count
+        let shown = visibleAssets
+        let photosCount = shown.filter { $0.type == .photo }.count
+        let videoCount = shown.filter { $0.type == .video }.count
         let parts = [photosCount > 0 ? "\(photosCount) photo\(photosCount == 1 ? "" : "s")" : nil,
                      videoCount > 0 ? "\(videoCount) video\(videoCount == 1 ? "" : "s")" : nil].compactMap { $0 }
         return VStack(alignment: .leading, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 WagLockTitle(text: album.name, size: .display)
-                Text("\(assets.count) item\(assets.count == 1 ? "" : "s")" + (parts.isEmpty ? "" : " · " + parts.joined(separator: ", ")))
+                Text("\(shown.count) item\(shown.count == 1 ? "" : "s")" + (parts.isEmpty ? "" : " · " + parts.joined(separator: ", ")))
                     .font(WagLockFonts.poppins(13, .regular, relativeTo: .footnote)).foregroundStyle(Graphite.textSecondary)
             }
             HStack(spacing: 8) {
@@ -214,7 +221,7 @@ struct AlbumBrowserView: View {
 
     private var assetGrid: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 4), spacing: 6) {
-            ForEach(assets) { asset in
+            ForEach(visibleAssets) { asset in
                 Button { selectedAsset = asset } label: {
                     GeometryReader { proxy in
                         ZStack {
@@ -232,7 +239,11 @@ struct AlbumBrowserView: View {
                                     Text(asset.fileName).font(.wlMeta).lineLimit(2)
                                 }.padding(6).foregroundStyle(Graphite.textPrimary)
                             }
-                        }.clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .overlay(alignment: .topLeading) {
+                            if asset.livePhotoMotionID != nil { LivePhotoBadge().padding(4) }
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                     }.aspectRatio(1, contentMode: .fit)
                 }.buttonStyle(.plain).accessibilityLabel(asset.fileName)
                     .accessibilityIdentifier("album.asset")

@@ -145,6 +145,18 @@ class MediaImportService {
         return items
     }
 
+    /// Imports files WagLock itself wrote to owned temporary folders (camera captures).
+    /// The folders are removed afterwards, whatever the outcome.
+    func importOwnedFiles(_ urls: [URL], password: String,
+                          progress: @escaping (ImportProgress) -> Void = { _ in }) async throws -> [MediaItem] {
+        defer { for url in urls { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) } }
+        return try await importBatch(Array(urls.enumerated())) { index, url in
+            let current = ImportProgress(current: index + 1, total: urls.count, currentFileName: url.lastPathComponent)
+            await MainActor.run { progress(current) }
+            return try await self.importSingleFile(url: url, password: password)
+        }
+    }
+
     /// Import items the person pasted with the system Paste button. Each item's own
     /// representation is copied into an owned, protected temporary folder, encrypted
     /// through the same paths as Photos and Files, and the copy is removed afterwards.

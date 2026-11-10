@@ -104,6 +104,22 @@ class ImportViewModel: ObservableObject {
     /// Items from the system Paste button. Nothing reads the clipboard without that tap.
     @Published private(set) var lastImportWasPaste = false
 
+    /// A photo or video just taken with the camera; never saved to the camera roll.
+    func importFromCamera(_ url: URL) {
+        guard !isImporting else { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()); return }
+        errorMessage = nil
+        isImporting = true
+        importedCount = 0
+        removablePhotoAssetIDs = []
+        removableFileSources = []
+        importingFromFiles = false
+        pendingPhotoAssetIDs = []
+        lastImportWasPaste = false
+        startImportTask { password, progress in
+            try await self.importService.importOwnedFiles([url], password: password, progress: progress)
+        }
+    }
+
     func importFromPasteboard(providers: [NSItemProvider]) {
         guard !isImporting, !providers.isEmpty else { return }
         errorMessage = nil

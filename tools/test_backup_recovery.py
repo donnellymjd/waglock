@@ -64,6 +64,23 @@ class BackupRecoveryTests(unittest.TestCase):
         self.assertEqual(files["media/" + ASSET], bytes(range(256)))
         self.assertEqual(json.loads(files["metadata.json"])["assets"][0]["name"].encode(), meta["assets"][0]["name"].encode())
 
+    def test_live_photo_link_is_preserved_and_validated(self):
+        motion = "45678901-4567-4321-ABCD-123456789ABC"
+        still = asset_record(); still.update(fileExtension=".HEIC", storedType="photo", effectiveType="photo",
+                                            thumbnail=None, livePhotoMotionID=motion)
+        video = asset_record(); video.update(id=motion, fileExtension=".MOV", storedType="video", effectiveType="video",
+                                            payload="media/" + motion, thumbnail=None)
+        files = {"media/" + ASSET: b"still", "media/" + motion: b"motion"}
+        meta = metadata(); meta["assets"] = [still, video]
+        _, out = self.unpack(archive(meta, files))
+        self.assertEqual(json.loads(out["metadata.json"])["assets"][0]["livePhotoMotionID"], motion)
+        for broken in [dict(still, livePhotoMotionID=ASSET),                       # links to itself
+                       dict(still, livePhotoMotionID="56789012-5678-4321-ABCD-123456789ABC"),  # missing motion
+                       dict(still, effectiveType="document", storedType="document")]:    # not a photo
+            meta = metadata(); meta["assets"] = [broken, video]
+            with self.subTest(broken=broken), self.assertRaises(InvalidBackup):
+                self.unpack(archive(meta, files))
+
     def test_encrypted_vault_draft_is_recovered_and_unknown_origin_rejected(self):
         meta = metadata()
         meta["drafts"] = [{"origin": "encryptedVault", "title": "Vault draft", "content": "# Kept encrypted", "updatedAt": 44}]

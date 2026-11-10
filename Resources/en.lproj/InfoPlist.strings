@@ -18,3 +18,4 @@
 
 "NSFaceIDUsageDescription" = "Use Face ID to unlock WagLock and albums you choose to protect with biometrics.";
 "NSPhotoLibraryAddUsageDescription" = "Save a Live Photo back to your photo library only when you choose. WagLock keeps its own encrypted copy.";
+"NSCameraUsageDescription" = "Take photos and videos straight into WagLock. They are encrypted on this iPhone and not saved to your camera roll.";

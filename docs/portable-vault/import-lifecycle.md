@@ -56,3 +56,16 @@ After an import, the completion screen offers to delete the originals:
 - **Pasted items** have no original to delete. The completion screen offers Clear clipboard instead.
 
 Nothing is ever deleted without the explicit tap and confirmation, and Keep is always offered. Tests: `WagLockTests/ImportedOriginalsRemoverTests.swift` (only verified originals deleted, mismatched or unreadable copies keep their originals, plaintext copies removed, lock stops before deletion). Not compiled or run in this environment.
+
+## Camera capture (2026-11-10)
+
+**Take photo or video** in the Add to WagLock sheet opens the system camera (`UIImagePickerController`). It is hidden where no camera exists, such as the Simulator.
+
+- **Never in the camera roll:** captures are not saved to Photos.
+- **Photos:** encoded once to HEIC (JPEG where HEIC isn't available) with the camera's metadata dictionary and EXIF orientation.
+- **Videos:** the camera's temporary movie is moved into an owned folder.
+- **Owned temporary folder:** each capture is written into a protected folder with the same `waglock-media-import-` prefix as other import copies, so launch cleanup also removes abandoned ones. It is imported through `MediaImportService.importOwnedFiles`, the usual commit, session, lock and reserve path, and the folder is removed afterwards whatever the outcome.
+- **Permissions:** the camera permission string is added; video reuses the existing microphone string.
+- **Live Photos and location:** the system camera can't capture Live Photos and doesn't add location.
+
+Tests: `WagLockTests/CameraCaptureTests.swift` (camera metadata kept, the import leaves no plaintext folder, a captured movie moves into an owned folder). Not compiled or run in this environment.

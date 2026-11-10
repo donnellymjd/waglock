@@ -62,7 +62,7 @@ struct LivePhotoPlaybackView: View {
     }
 
     /// Waits for the full-quality result; iOS may deliver a degraded one first.
-    private static func request(still: URL, motion: URL) async -> PHLivePhoto? {
+    static func request(still: URL, motion: URL) async -> PHLivePhoto? {
         await withCheckedContinuation { continuation in
             var resumed = false
             PHLivePhoto.request(withResourceFileURLs: [still, motion], placeholderImage: nil,
@@ -88,8 +88,10 @@ struct LivePhotoPlaybackView: View {
     }
 }
 
-private struct LivePhotoUIView: UIViewRepresentable {
+struct LivePhotoUIView: UIViewRepresentable {
     let livePhoto: PHLivePhoto
+    /// False shows the still with touch-and-hold playback; true plays once on appear.
+    var autoplay = true
     let finished: () -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(finished) }
@@ -100,7 +102,7 @@ private struct LivePhotoUIView: UIViewRepresentable {
         view.backgroundColor = .clear
         view.delegate = context.coordinator
         view.livePhoto = livePhoto
-        view.startPlayback(with: .full)
+        if autoplay { view.startPlayback(with: .full) }
         return view
     }
 

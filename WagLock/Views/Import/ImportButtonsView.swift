@@ -38,6 +38,7 @@ private struct ScopedImportButtonsView: View {
     @State private var completedCount: Int?
     @State private var completedAssetIDs: [String] = []
     @State private var completedFileOriginals = 0
+    @State private var showCamera = false
 
     // MARK: - Body
 
@@ -76,6 +77,13 @@ private struct ScopedImportButtonsView: View {
                 }
             }
             .sheet(isPresented: $viewModel.reservedSpaceFull) { StorageFullView() }
+            .fullScreenCover(isPresented: $showCamera) {
+                CameraCaptureView { url in
+                    showCamera = false
+                    if let url { viewModel.importFromCamera(url) }
+                }
+                .ignoresSafeArea()
+            }
             .sheet(isPresented: $viewModel.showAudioPicker) {
                 DocumentPickerRepresentable(
                     isPresented: $viewModel.showAudioPicker,
@@ -199,6 +207,11 @@ private struct ScopedImportButtonsView: View {
                     WagLockTitle(text: "Add to WagLock", size: .sheet)
                     Text("Selected items are copied into this library. Your originals stay where they are.")
                         .font(.wlBody).foregroundStyle(Graphite.textMuted)
+                    if CameraCaptureView.isAvailable {
+                        Button { showCamera = true } label: {
+                            WagLockRow(symbol: "camera", title: "Take photo or video", detail: "Goes straight into WagLock, not your camera roll")
+                        }.buttonStyle(.plain).accessibilityIdentifier("import.camera")
+                    }
                     Button { viewModel.selectPhotos() } label: {
                         WagLockRow(symbol: "photo.on.rectangle", title: "Photos & videos", detail: "Choose from your photo library")
                     }.buttonStyle(.plain).accessibilityIdentifier("import.photos")
