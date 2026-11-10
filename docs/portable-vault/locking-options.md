@@ -45,7 +45,7 @@ The owner extended the choice to album and backup passwords later the same day (
 
 **Risks stated in the app:**
 - A 4-digit PIN has only 10,000 possibilities.
-- On the iPhone, the shared attempt counter and 30-second wait slow guessing. Someone with a full copy of the iPhone's data, including its Keychain, could try every 4-digit passcode within an hour. Each guess costs one scrypt derivation (N = 2^16) however many libraries there are.
+- On the iPhone, the shared attempt counter allows 4 wrong tries, then waits 5, 10, 20, 40 and then 60 minutes before each further try, so trying every 4-digit PIN would take months. Someone with a full copy of the iPhone's data, including its Keychain, could try every 4-digit passcode within an hour. Each guess costs one scrypt derivation (N = 2^16) however many libraries there are.
 - A backup file has no wait. Anyone who gets a copy, for example from a cloud account, could try every 4-digit backup password within hours on an ordinary computer (age scrypt, N = 2^18). When Short is on, the backup screen repeats this and recommends several random words.
 
 ## Tests

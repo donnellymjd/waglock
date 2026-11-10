@@ -112,7 +112,7 @@ struct PasscodeLengthOptions: View {
             WagLockOptionCard(selected: allowShort, title: "Short",
                               detail: "Passcodes, album passwords and backup passwords can be as short as \(PasscodePolicy.shortMinimum) characters, such as a 4-digit PIN.",
                               caveats: ["A 4-digit PIN has only 10,000 possibilities.",
-                                        "On this iPhone, the 30-second wait after each wrong guess slows guessing down. Someone with a full copy of the iPhone’s data could try every 4-digit passcode within an hour.",
+                                        "On this iPhone, after 4 wrong tries WagLock makes you wait, up to an hour per try, so guessing takes months. Someone with a full copy of the iPhone’s data could try every 4-digit passcode within an hour.",
                                         "A backup file has no wait at all. Anyone who gets a copy, for example from a cloud account, could try every 4-digit backup password within hours on an ordinary computer.",
                                         "Applies to new and changed passcodes and passwords in every library."]) {
                 set(true)
