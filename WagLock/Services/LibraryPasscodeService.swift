@@ -145,12 +145,15 @@ final class LibraryPasscodeService {
             throw Failure.unavailable
         }
         await pad(from: start)
-        // The reserved guess stays spent; only a verified passcode resets the counter.
-        _ = reservation.failures
+        // A rejected proposal stays counted and adds the 30-second wait. An accepted one
+        // gives its attempt back: the person is inside a library and could reset the counter
+        // by verifying their own passcode anyway, so this adds nothing to probing, and it
+        // keeps the lock screen's "tries left" accurate after an add or change.
         guard acceptable else {
             try? limiter.imposeWait()
             throw Failure.rejected
         }
+        try? limiter.recordSuccess(reservation)
     }
 
     /// The length rule is the same for every library and shown in the app, so a too-short

@@ -97,3 +97,4 @@ Not applicable. WagLock is not in a regulated industry and includes no protected
 - **Encryption:** Apple's encryption questionnaire is separate. Use [the encryption facts](encryption-brief.md); don't claim an exemption in this reply.
 - **Screenshots:** they must show this build's actual UI (Guideline 2.3.3). The build-65 screenshots show the earlier design.
 - **Build check:** the redesign was written without a compiler in a Linux environment. It needs an Xcode build, `xcodebuild test` and the recording on a physical device before upload.
+- **Open review findings:** [the 2026-11-10 code review](../../portable-vault/review-2026-11-10.md) lists four low-severity issues still open. None blocks review, but check them against the build you upload.

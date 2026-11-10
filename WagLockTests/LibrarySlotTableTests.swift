@@ -111,6 +111,15 @@ final class LibrarySlotTableTests: XCTestCase {
         catch { XCTAssertEqual(error as? LibraryPasscodeService.Failure, .rejected) }
     }
 
+    func testAcceptedAddGivesItsAttemptBackSoTriesLeftStayAccurate() async throws {
+        let service = makeService()
+        _ = try await service.createFirstLibrary(passcode: "first-passcode")
+        try await service.addLibrary(passcode: "second-passcode")
+        // The next wrong passcode is the first failure, not the second.
+        let outcome = await service.unlock("never-a-passcode")
+        XCTAssertEqual(outcome, .wrong(failures: 1))
+    }
+
     func testChangeRewritesOnlyThisLibraryAndKeepsItsSecret() async throws {
         let service = makeService()
         let (first, secret) = try await service.createFirstLibrary(passcode: "first-passcode")

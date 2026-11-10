@@ -47,7 +47,9 @@ struct AlbumPreviewView: View {
                     url = pair.still; motionURL = pair.motion
                     guard store.isUnlocked(album, albums: albums) else { cleanup(); return }
                     // If the pair can't be assembled, the still still opens normally.
-                    livePhoto = await LivePhotoPlaybackView.request(still: pair.still, motion: pair.motion)
+                    let photo = await LivePhotoPlaybackView.request(still: pair.still, motion: pair.motion)
+                    guard store.isUnlocked(album, albums: albums) else { cleanup(); return }
+                    livePhoto = photo
                 } else {
                     url = try await store.preview(asset, in: album, albums: albums)
                 }

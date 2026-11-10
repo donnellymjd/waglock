@@ -76,7 +76,7 @@ final class PortableBackupSession: ObservableObject {
                 if case .password(let password) = rootCredential {
                     guard password.utf8.count <= 16384 else { throw Failure.credentials }
                     if passwordSource == .currentVault {
-                        guard acknowledgedReuse, !password.isEmpty, auth.verifyPassword(password) else { throw Failure.vaultPassword }
+                        guard acknowledgedReuse, !password.isEmpty, await auth.verifyPasswordForSecurityOperation(password) else { throw Failure.vaultPassword }
                         try check()
                     } else { guard password.count >= PasscodePolicy.backupPasswordMinimum else { throw Failure.credentials } }
                 } else if case .recipient(let recipient) = rootCredential {

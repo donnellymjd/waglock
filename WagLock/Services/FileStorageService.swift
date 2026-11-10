@@ -146,6 +146,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
             // Return a relative path (file name only), not an absolute path
             return fileName
         } catch {
+            releaseClaim()
             throw FileStorageError.fileSaveFailed
         }
     }
@@ -178,6 +179,7 @@ nonisolated class FileStorageService: @unchecked Sendable {
             }
         } catch {
             try? fileManager.removeItem(at: destinationURL)
+            releaseClaim()
             throw error
         }
 
@@ -346,12 +348,21 @@ nonisolated class FileStorageService: @unchecked Sendable {
         do { try reserve.claim(requiredBytes) }
         catch StorageReserve.Failure.full { throw FileStorageError.reservedSpaceFull }
         catch { throw FileStorageError.insufficientStorage }
-        let freeSpace = try availableCapacity(storageDirectory)
+        let freeSpace: Int64
+        do { freeSpace = try availableCapacity(storageDirectory) } catch { releaseClaim(); throw error }
         let safetyMargin: Int64 = 100 * 1024 * 1024
         guard requiredBytes >= 0, freeSpace >= safetyMargin,
               requiredBytes <= freeSpace - safetyMargin else {
+            releaseClaim()
             throw FileStorageError.insufficientStorage
         }
+    }
+
+    /// A claimed write didn't happen: re-measure and let the reserve grow back, so a failed
+    /// write never leaves WagLock's fixed size smaller than chosen.
+    private func releaseClaim() {
+        reserve.invalidateUsage()
+        NotificationCenter.default.post(name: .wagLockStorageChanged, object: nil)
     }
 
     private static func readAvailableCapacity(at directory: URL) throws -> Int64 {

@@ -37,8 +37,9 @@ enum LibraryContentRemover {
     }
 
     static func remove(_ library: LibraryReference, namespace: String,
-                       keychain: (any VaultResetKeychain)? = nil) {
+                       keychain: (any VaultResetKeychain)? = nil, reserve: StorageReserve? = nil) {
         let keychain = keychain ?? SystemVaultResetKeychain()
+        let reserve = reserve ?? .shared
         let fm = FileManager.default
         let documents = fm.urls(for: .documentDirectory, in: .userDomainMask)[0].resolvingSymlinksInPath()
         let support = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].resolvingSymlinksInPath()
@@ -55,6 +56,10 @@ enum LibraryContentRemover {
                 try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
                     attributes: [.posixPermissions: 0o700, .protectionKey: FileProtectionType.complete])
             }
+            // Fixed-size storage: the freed space goes back into the reserve, so WagLock's
+            // size doesn't drop and show that a library was deleted (ADR-030).
+            reserve.invalidateUsage()
+            NotificationCenter.default.post(name: .wagLockStorageChanged, object: nil)
         }
     }
 }

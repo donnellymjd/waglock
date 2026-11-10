@@ -49,13 +49,17 @@ struct LivePhotoPlaybackView: View {
     private func load() async {
         guard isCurrentSession, let password = auth.sessionPassword else { failed = true; return }
         do {
+            // Recheck the session after every await and discard late plaintext.
             let still = try await services.storage.createDecryptedTempFileAsync(path: stillPath, password: password, preferredExtension: stillExtension)
             copies.append(still)
+            guard isCurrentSession, !Task.isCancelled else { cleanup(); return }
             let motion = try await services.storage.createDecryptedTempFileAsync(path: motionPath, password: password, preferredExtension: motionExtension)
             copies.append(motion)
             guard isCurrentSession, !Task.isCancelled else { cleanup(); return }
-            livePhoto = await Self.request(still: still, motion: motion)
-            if livePhoto == nil { failed = true }
+            let photo = await Self.request(still: still, motion: motion)
+            guard isCurrentSession, !Task.isCancelled else { cleanup(); return }
+            livePhoto = photo
+            if photo == nil { failed = true }
         } catch {
             failed = true
         }

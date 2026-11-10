@@ -404,7 +404,7 @@ final class AuthenticationViewModel: ObservableObject {
 
     func enableBiometricUnlock(password: String) async throws {
         guard canManageBiometricUnlock else { throw VaultAccessError.locked }
-        guard try verifyCurrentPassword(password) else { throw VaultAccessError.invalidPassword }
+        guard try await verifyCurrentPasswordOffMain(password) else { throw VaultAccessError.invalidPassword }
         let token = authenticationGeneration
         let secret: String
         if usesLibrarySlots {
@@ -686,6 +686,22 @@ final class AuthenticationViewModel: ObservableObject {
     /// Check whether a password is correct
     func verifyPassword(_ password: String) -> Bool {
         (try? verifyCurrentPassword(password)) == true
+    }
+
+    /// Same check for security operations that can await. With library slots the scrypt
+    /// derivation runs off the main actor (through `LibraryPasscodeService.verify`, which
+    /// shares the lock-screen counter), so the UI doesn't freeze while it works.
+    func verifyPasswordForSecurityOperation(_ password: String) async -> Bool {
+        (try? await verifyCurrentPasswordOffMain(password)) == true
+    }
+
+    private func verifyCurrentPasswordOffMain(_ password: String) async throws -> Bool {
+        guard usesLibrarySlots else { return try verifyCurrentPassword(password) }
+        guard isAuthenticated, GuestModeManager.shared.isOwnerMode, let currentLibrary else { throw VaultAccessError.locked }
+        do {
+            _ = try await passcodes.verify(password, library: currentLibrary)
+            return true
+        } catch LibraryPasscodeService.Failure.wrongPasscode { return false }
     }
 
     /// Selected-vault security operations share a durable budget, even after biometric entry.
