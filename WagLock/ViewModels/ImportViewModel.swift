@@ -87,11 +87,28 @@ class ImportViewModel: ObservableObject {
         isImporting = true
         importedCount = 0
         removablePhotoAssetIDs = []
+        lastImportWasPaste = false
         let identifiers = results.compactMap(\.assetIdentifier)
         pendingPhotoAssetIDs = identifiers.count == results.count ? identifiers : []
 
         startImportTask { password, progress in
             try await self.importService.importMedia(from: results, password: password, progress: progress)
+        }
+    }
+
+    /// Items from the system Paste button. Nothing reads the clipboard without that tap.
+    @Published private(set) var lastImportWasPaste = false
+
+    func importFromPasteboard(providers: [NSItemProvider]) {
+        guard !isImporting, !providers.isEmpty else { return }
+        errorMessage = nil
+        isImporting = true
+        importedCount = 0
+        removablePhotoAssetIDs = []
+        pendingPhotoAssetIDs = []
+        lastImportWasPaste = true
+        startImportTask { password, progress in
+            try await self.importService.importPasted(providers, password: password, progress: progress)
         }
     }
 
@@ -123,6 +140,7 @@ class ImportViewModel: ObservableObject {
         }
 
         // Import non-encrypted files normally
+        lastImportWasPaste = false
         pendingPhotoAssetIDs = []
         removablePhotoAssetIDs = []
         errorMessage = nil

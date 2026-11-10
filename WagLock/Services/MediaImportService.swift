@@ -114,6 +114,43 @@ class MediaImportService {
         }
     }
 
+    /// Import items the person pasted with the system Paste button. Each item's own
+    /// representation is copied into an owned, protected temporary folder, encrypted
+    /// through the same paths as Photos and Files, and the copy is removed afterwards.
+    func importPasted(
+        _ providers: [NSItemProvider],
+        password: String,
+        progress: @escaping (ImportProgress) -> Void = { _ in }
+    ) async throws -> [MediaItem] {
+        try await importBatch(Array(providers.enumerated())) { index, provider in
+            let current = ImportProgress(current: index + 1, total: providers.count,
+                                         currentFileName: provider.suggestedName ?? "Pasted item \(index + 1)")
+            await MainActor.run { progress(current) }
+            return try await self.importSinglePasted(provider, password: password)
+        }
+    }
+
+    private func importSinglePasted(_ provider: NSItemProvider, password: String) async throws -> MediaItem? {
+        if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+            return try await importImage(from: provider, password: password)
+        }
+        if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
+            return try await importVideo(from: provider, password: password)
+        }
+        // Prefer the item's content over references to it (URLs are not files).
+        guard let type = Self.pastedContentType(provider.registeredTypeIdentifiers) else { return nil }
+        let url = try await ownedRepresentation(from: provider, type: type)
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        return try await importSingleFile(url: url, password: password)
+    }
+
+    nonisolated static func pastedContentType(_ identifiers: [String]) -> String? {
+        identifiers.first { identifier in
+            guard let type = UTType(identifier) else { return false }
+            return type.conforms(to: .data) && !type.conforms(to: .url)
+        }
+    }
+
     /// True when the last batch stopped early because reserved space was full.
     private(set) var lastBatchStoppedForReservedSpace = false
 

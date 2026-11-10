@@ -29,3 +29,15 @@ The full iOS 18.4 suite exposed a calculator-model deinitialization crash. Its s
 The earlier iOS 26.5 attempt failed before execution with a Mach server-died launch error. Build 24's UI workflow had already passed after the user-approved shared simulator-service restart. The initial build 25 full run recorded the older-runtime allocator crash and was not counted as a complete pass.
 
 Final combined results/log: `/private/tmp/vaultito-build25-complete-tests.xcresult`, `/private/tmp/vaultito-build25-complete-tests.log`. Signed build: `/private/tmp/vaultito-build25-complete-device.log`. Reproduction: `/private/tmp/vaultito-import-before.log`. Evidence is local/ephemeral. Device installation and manual results are recorded separately in BUILD_ERRORS_SUMMARY.md; no phone pass is inferred from compilation.
+
+## Paste (2026-11-09)
+
+The Add to WagLock sheet has a **Paste** row backed by the system `PasteButton`. iOS releases the clipboard only to that tap, so no "Allow Paste" prompt appears, and WagLock never reads the clipboard on its own (no background or launch-time access, no polling).
+
+- **Accepted items:** images and movies take the same paths as Photos imports. Other items, such as audio, PDFs, documents, archives and plain text, are copied through `MediaImportService.importPasted` into an owned protected temporary folder, encrypted through `importSingleFile`, and the copy is removed.
+- **Skipped items:** links and other references (`public.url`, `public.file-url`) are not files and are skipped. If nothing on the clipboard can be added, the sheet says so instead of closing.
+- **Commit and storage:** pasted batches use the same commit-after-save boundary, session checks, stop-on-lock behavior and fixed-size reserve claims as other imports.
+- **Clearing the clipboard:** the completion screen warns that what was copied is still on the clipboard and can sync to the person's other devices (Universal Clipboard), and offers **Clear clipboard**, which empties `UIPasteboard.general`. Clearing is never automatic. The source the item was copied from is not changed.
+- **Albums:** album menus do not offer Paste yet; pasted items land in the Library and can be moved into an album from there.
+
+Tests: `WagLockTests/PasteImportTests.swift` (content preferred over references, image and text items encrypted, links skipped, temporary copies removed). Not compiled or run in this environment.

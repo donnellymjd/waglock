@@ -45,7 +45,8 @@ private struct ScopedImportButtonsView: View {
             ZStack {
                 Graphite.base.ignoresSafeArea()
                 if let completedCount {
-                    ImportCompleteView(count: completedCount, photoAssetIDs: completedAssetIDs) { dismiss() }
+                    ImportCompleteView(count: completedCount, photoAssetIDs: completedAssetIDs,
+                                       pasted: viewModel.lastImportWasPaste) { dismiss() }
                 } else if viewModel.isImporting {
                     importProgressView
                 } else {
@@ -115,7 +116,9 @@ private struct ScopedImportButtonsView: View {
                 viewModel.authViewModel = authViewModel
                 viewModel.onImportComplete = { items in
                     onImportComplete(items)
-                    if items.isEmpty {
+                    if items.isEmpty && viewModel.lastImportWasPaste {
+                        viewModel.errorMessage = "Nothing on the clipboard could be added. Copy a photo, video, audio file or document, then paste again."
+                    } else if items.isEmpty {
                         dismiss()
                     } else {
                         completedAssetIDs = viewModel.removablePhotoAssetIDs
@@ -125,6 +128,32 @@ private struct ScopedImportButtonsView: View {
             }
         }
         .interactiveDismissDisabled(viewModel.isImporting)
+    }
+
+    // MARK: - Paste
+
+    /// The system Paste button reads the clipboard only when tapped, so iOS shows no
+    /// paste prompt and WagLock never inspects the clipboard on its own.
+    private var pasteRow: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "doc.on.clipboard").font(.system(size: 18)).foregroundStyle(Graphite.accentText)
+                .frame(width: 40, height: 40).background(Graphite.surface2, in: RoundedRectangle(cornerRadius: 11))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Paste").font(.wlBodyStrong).foregroundStyle(Graphite.textPrimary)
+                Text("Photos, videos, audio or files you copied").font(.wlMeta).foregroundStyle(Graphite.textMuted)
+            }
+            Spacer(minLength: 8)
+            PasteButton(supportedContentTypes: [.image, .movie, .audio, .data]) { providers in
+                Task { @MainActor in viewModel.importFromPasteboard(providers: providers) }
+            }
+            .labelStyle(.iconOnly)
+            .buttonBorderShape(.capsule)
+            .tint(Graphite.accentStrong)
+            .accessibilityIdentifier("import.paste")
+        }
+        .padding(.horizontal, 14).padding(.vertical, 12)
+        .background(Graphite.surface1, in: RoundedRectangle(cornerRadius: 14))
     }
 
     // MARK: - Import progress
@@ -175,6 +204,7 @@ private struct ScopedImportButtonsView: View {
                     Button { viewModel.selectAudio() } label: {
                         WagLockRow(symbol: "waveform", title: "Audio", detail: "Import recordings and audio files")
                     }.buttonStyle(.plain).accessibilityIdentifier("import.audio")
+                    pasteRow
                     WagLockNote(kind: .info, title: "Choosing a cloud file?",
                                 text: "The iOS picker may download it first. That transfer is handled by iOS.")
                     Text(LibraryStoragePolicy.encryptedMetadata ? "Keep independent originals and verify your encrypted backups." : "Use sample media in this early test build. Keep independent originals.")
@@ -195,10 +225,12 @@ private struct ScopedImportButtonsView: View {
 private struct ImportCompleteView: View {
     let count: Int
     let photoAssetIDs: [String]
+    var pasted = false
     let done: () -> Void
     @EnvironmentObject private var reminders: BackupReminderStore
     @State private var removal: Removal = .idle
     @State private var showBackup = false
+    @State private var clipboardCleared = false
     enum Removal: Equatable { case idle, kept, removing, removed, failed(String) }
 
     var body: some View {
@@ -211,6 +243,7 @@ private struct ImportCompleteView: View {
                     WagLockTitle(text: "\(count) item\(count == 1 ? "" : "s") added", size: .sheet)
                     Text("Encrypted and saved in your Library").font(.wlBody).foregroundStyle(Graphite.textMuted)
                     if !photoAssetIDs.isEmpty { originalsCard }
+                    if pasted { clipboardCard }
                     Button { showBackup = true } label: {
                         WagLockRow(symbol: "icloud.and.arrow.up", title: "Back up now",
                                    detail: reminders.lastSaved.map { "Last encrypted backup " + $0.formatted(.relative(presentation: .named)) }
@@ -227,6 +260,24 @@ private struct ImportCompleteView: View {
             NavigationStack {
                 PortableBackupView()
                     .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { showBackup = false } } }
+            }
+        }
+    }
+
+    /// Pasted items stay on the clipboard, which can sync to other devices (Universal Clipboard).
+    private var clipboardCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if clipboardCleared {
+                WagLockNote(kind: .info, title: "Clipboard cleared", text: "The copied item is no longer on this iPhone’s clipboard.")
+            } else {
+                WagLockNote(kind: .caution, title: "Still on your clipboard",
+                            text: "What you copied stays on the clipboard and can sync to your other devices. The original you copied it from is unchanged.")
+                Button("Clear clipboard") {
+                    UIPasteboard.general.items = []
+                    clipboardCleared = true
+                }
+                .buttonStyle(WagLockSecondaryButtonStyle())
+                .accessibilityIdentifier("import.complete.clearClipboard")
             }
         }
     }
