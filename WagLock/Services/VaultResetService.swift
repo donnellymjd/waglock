@@ -57,9 +57,13 @@ final class VaultResetService {
         self.roots = roots; self.extraRoots = extraRoots; self.clearPreferences = clearPreferences; self.checkpoint = checkpoint
     }
 
+    static let liveNamespaces: Set<String> = ["com.d2sci.waglock", "com.d2sci.waglock.dev"]
+
     static func live() -> VaultResetService? {
         let namespace = AppConstants.bundleIdentifier
-        guard LibraryStoragePolicy.encryptedMetadata, namespace == "com.d2sci.waglock" else { return nil }
+        // Exact encrypted-library identities only: the release and WagLock Dev Encrypted.
+        // Legacy WagLock Dev (com.d2sci.vaultito.dev) never gets an erase factory.
+        guard LibraryStoragePolicy.encryptedMetadata, liveNamespaces.contains(namespace) else { return nil }
         let fm = FileManager.default
         let documents = fm.urls(for: .documentDirectory, in: .userDomainMask)[0].resolvingSymlinksInPath()
         let support = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].resolvingSymlinksInPath()

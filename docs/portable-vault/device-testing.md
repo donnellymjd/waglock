@@ -1,3 +1,5 @@
+> **Deprecated (2026-11-10):** the WagLock Dev build described here (`com.d2sci.vaultito.dev`) is being retired, with a deletion goal of **December 15, 2026**. New phone testing uses **WagLock Dev Encrypted** (`com.d2sci.waglock.dev`, scheme `WagLock Dev Encrypted`). Export anything worth keeping before deleting it. See [WagLock Dev Encrypted](dev-encrypted-build.md).
+
 > **October26 build62:** optional verified vault-password backups and private monthly reminders, configurable/off.349 full security tests, actual-release UI and independent public-fixture recovery pass; signed62 installed over61, retaining Dev44. [Evidence and hardware checks](../release/evidence/build-62/README.md). Both phone vaults preserved; owner UAT pending.
 
 > **October26 build61:** explicit Use entered password action for setup/change/alternative setup; actual Release regression passes and signed61 installed over60, retaining Dev44. [Evidence](../release/evidence/build-61/README.md). Both vaults preserved; owner1Password acceptance is pending.

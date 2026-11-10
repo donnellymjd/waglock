@@ -1,0 +1,17 @@
+// WagLock Dev Encrypted: the phone-testing build for the encrypted-library code path.
+// Its own app identity, Keychain namespace and data container, installed alongside
+// WagLock Dev (com.d2sci.vaultito.dev, deprecated; deletion goal 2026-12-15) and the
+// App Store candidate (com.d2sci.waglock). It starts with a fresh, empty library:
+// nothing is migrated from either other identity.
+// No App ID registration, provisioning update, upload or migration is implied.
+PRODUCT_BUNDLE_IDENTIFIER = com.d2sci.waglock.dev
+INFOPLIST_KEY_CFBundleDisplayName = WagLock Dev+
+MARKETING_VERSION = 1.0
+PRODUCT_MODULE_NAME = WagLock
+
+// Same storage policy as the release candidate: password-keyed encrypted metadata,
+// thumbnails and index, and the 16-slot passcode model.
+WAGLOCK_ENCRYPTED_LIBRARY = YES
+
+// No CODE_SIGN_ENTITLEMENTS: the webcredentials association lists only the release
+// App ID, so Password AutoFill domain pairing is not expected in this build.

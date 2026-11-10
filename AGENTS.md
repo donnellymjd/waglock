@@ -148,3 +148,7 @@ Fixed mode is a pseudorandom reserve file sized so WagLock's whole container equ
 ## Live Photos — November10
 
 A Live Photo is one `MediaItem` with optional `livePhotoVideoPath`/`livePhotoVideoExtension`. Every delete, rollback and cleanup path must use `MediaItem.encryptedPaths`, and every new export, backup or move path must carry the motion or fail rather than drop it. Pair Files imports only on matching base name and content identifier, and keep a pair all-or-nothing. Plaintext playback/save copies are temporary and removed on finish, lock or session change. See docs/portable-vault/live-photos.md.
+
+## WagLock Dev Encrypted and Dev deprecation — November10 (ADR-031)
+
+Phone testing moves to **WagLock Dev Encrypted**: scheme `WagLock Dev Encrypted`, configuration `DevEncrypted`, `config/DevEncrypted.xcconfig`, App ID `com.d2sci.waglock.dev`, home-screen name WagLock Dev+, `WAGLOCK_ENCRYPTED_LIBRARY = YES`. It is a fresh, separate identity; never migrate into it, and never let it read or erase release or legacy Dev data. The legacy WagLock Dev build (`com.d2sci.vaultito.dev`) is **deprecated, with a deletion goal of December 15, 2026**. Deleting the phone app is a manual owner step after export; no code may delete another app's data, and historical Keychain namespaces stay unrenamed. Until then keep its configuration building and its tests passing. The erase factory accepts exactly `com.d2sci.waglock` and `com.d2sci.waglock.dev`. See docs/portable-vault/dev-encrypted-build.md.
