@@ -31,10 +31,14 @@ final class LibraryPasscodeService {
     private let limiter: PasswordAttemptLimiter
     private let minimumDuration: Duration
     private let makeSecret: () throws -> String
+    /// Minimum length for new and changed passcodes (PasscodePolicy). Unlock never checks length.
+    private let minimumLength: () -> Int
 
     init(keychain: KeychainService, table: LibrarySlotTable? = nil, limiter: PasswordAttemptLimiter,
          minimumDuration: Duration = .milliseconds(1500),
-         makeSecret: (() throws -> String)? = nil) {
+         makeSecret: (() throws -> String)? = nil,
+         minimumLength: @escaping () -> Int = { PasscodePolicy.minimumLength }) {
+        self.minimumLength = minimumLength
         self.keychain = keychain
         self.table = table ?? keychain.librarySlotTable()
         self.limiter = limiter
@@ -49,7 +53,7 @@ final class LibraryPasscodeService {
 
     /// First run: creates the table and the first library. Every library made here is independent.
     func createFirstLibrary(passcode: String) async throws -> (LibraryReference, String) {
-        guard KeychainService.validatePasswordStrength(passcode).isValid else { throw Failure.rejected }
+        guard PasscodePolicy.validate(passcode, minimum: minimumLength()).isValid else { throw Failure.rejected }
         guard try !table.exists() else { throw Failure.unavailable }
         let library = LibraryReference.independent(UUID())
         let payload = LibrarySlotPayload(library: library, secret: try makeSecret())
@@ -126,7 +130,7 @@ final class LibraryPasscodeService {
     private func propose(_ passcode: String) async throws {
         let reservation = try reserve()
         let start = ContinuousClock.now
-        var acceptable = KeychainService.validatePasswordStrength(passcode).isValid
+        var acceptable = PasscodePolicy.validate(passcode, minimum: minimumLength()).isValid
         do {
             let record = try table.requireRecord()
             if try await evaluate(passcode, record: record) != nil { acceptable = false }

@@ -237,8 +237,12 @@ struct SettingsView: View {
                     }
                 }
                 if LibraryStoragePolicy.encryptedMetadata {
-                    securityRow("lock.rotation", "Auto-lock", "Immediately when you leave the app")
-                        .accessibilityIdentifier("settings.autoLock.immediate").wagLockCardRow()
+                    NavigationLink { AutoLockSettingsView() } label: {
+                        securityRow("lock.rotation", "Auto-lock", settings.autoLockTimeout.optionTitle)
+                    }.accessibilityIdentifier("settings.autoLock").wagLockCardRow()
+                    NavigationLink { PasscodeLengthSettingsView() } label: {
+                        securityRow("textformat.123", "Passcode length", PasscodePolicy.allowsShortPasscodes ? "Short allowed" : "Standard")
+                    }.accessibilityIdentifier("settings.passcodeLength").wagLockCardRow()
                 } else {
                 NavigationLink {
                     List {

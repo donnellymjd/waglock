@@ -11,6 +11,8 @@ final class EncryptedReleaseUITests: XCTestCase {
         if start.waitForExistence(timeout: 8) { start.tap() }
         let storage = app.buttons["onboarding.storage.continue"]
         if storage.waitForExistence(timeout: 3) { storage.tap() } // Standard is the default.
+        let locking = app.buttons["onboarding.locking.continue"]
+        if locking.waitForExistence(timeout: 3) { locking.tap() } // Immediately and Standard length are the defaults.
     }
     @MainActor private func acknowledgeNoReset(_ app: XCUIApplication) {
         let toggle = app.switches["setup.acknowledge"]
@@ -29,7 +31,7 @@ final class EncryptedReleaseUITests: XCTestCase {
         continueAfterFailure = false
         let app = XCUIApplication(bundleIdentifier: "com.d2sci.waglock")
         app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-waglock.passwordKeyboard", "fullKeyboard"]
-        // Old timeout preferences must not weaken the release background-lock policy.
+        // Values other than an offered option fall back to Immediately (ADR-032).
         if autoLock >= 0 { app.launchArguments += ["-autoLockTimeout", String(autoLock)] }
         app.launch()
         beginOnboarding(app)
@@ -61,8 +63,9 @@ final class EncryptedReleaseUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["Albums"].waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["Settings"].firstMatch.tap()
         app.buttons["settings.security"].tap()
-        XCTAssertTrue(app.otherElements["settings.autoLock.immediate"].exists || app.staticTexts["Immediately when you leave the app"].exists, app.debugDescription)
-        XCTAssertFalse(app.buttons["settings.autoLock"].exists)
+        // Auto-lock and passcode length are choices now, defaulting to the most private.
+        XCTAssertTrue(app.buttons["settings.autoLock"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(app.buttons["settings.passcodeLength"].exists, app.debugDescription)
         app.navigationBars.buttons.element(boundBy: 0).tap()
         app.tabBars.buttons["Library"].tap()
         return app

@@ -182,7 +182,7 @@ final class AuthenticationViewModel: ObservableObject {
         errorMessage = nil
 
         // Validate the password
-        let validation = KeychainService.validatePasswordStrength(password)
+        let validation = usesLibrarySlots ? PasscodePolicy.validate(password) : KeychainService.validatePasswordStrength(password)
         guard validation.isValid else {
             errorMessage = validation.message
             return
@@ -785,6 +785,7 @@ final class AuthenticationViewModel: ObservableObject {
 
     private func finishErasureState() {
         StorageReserveCoordinator.shared.refresh() // Standard after erase.
+        AppSettings.shared.autoLockTimeout = .immediately // Preferences were cleared; match them in memory.
         requiresEraseCompletion = false
         isBiometricUnlockEnabled = UserDefaults.standard.bool(forKey: "vaultito.faceID.enabled")
         failedAttempts = 0; lockoutUntil = nil

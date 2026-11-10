@@ -5,6 +5,7 @@
 WagLock is an independent fork of [SealedPocket / ZeroNet Space](https://github.com/materialofair/zeroNet_Space). This project is based on ZeroNet Space but is not the official version.
 
 - [Libraries and passcodes: 16-slot model](library-slots.md): ADR-029 symmetric libraries, key slots, shared attempts, time lock, delete, Face ID, known deniability gaps and open crypto-review items (2026-11-09, unbuilt).
+- [Auto-lock delay and short passcodes](locking-options.md): ADR-032 informed choices in onboarding and Settings, with the risks shown (2026-11-10, unbuilt).
 - [WagLock Dev Encrypted](dev-encrypted-build.md): ADR-031 third build `com.d2sci.waglock.dev` on the encrypted library; legacy WagLock Dev deprecated, deletion goal 2026-12-15 (2026-11-10).
 - [Live Photos](live-photos.md): still plus paired motion as one encrypted item, Photos/Files import, playback, export, Save to Photos, album moves and backup layout (2026-11-10, unbuilt).
 - [Fixed-size storage](fixed-size-storage.md): ADR-030 reserve file that keeps WagLock's size constant, modes, screens and what it does not hide (2026-11-09, unbuilt).

@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// First run for the multi-library model: Welcome → Storage privacy → Create passcode →
+/// First run for the multi-library model: Welcome → Storage privacy → Locking → Create passcode →
 /// (after the library opens) Backups. A Fixed-size choice is applied once the first
 /// library has opened (docs/portable-vault/fixed-size-storage.md).
 struct OnboardingFlowView: View {
     @EnvironmentObject private var viewModel: AuthenticationViewModel
     @State private var step: Step = .welcome
     @State private var fixedGigabytes: Int?
-    enum Step { case welcome, storage, passcode }
+    enum Step { case welcome, storage, locking, passcode }
 
     var body: some View {
         Group {
@@ -16,8 +16,9 @@ struct OnboardingFlowView: View {
             case .storage:
                 OnboardingStorageView(fixedGigabytes: $fixedGigabytes) {
                     StorageReserveCoordinator.shared.pendingFixedGigabytes = fixedGigabytes
-                    step = .passcode
+                    step = .locking
                 }
+            case .locking: OnboardingLockingView { step = .passcode }
             case .passcode: OnboardingPasscodeView()
             }
         }

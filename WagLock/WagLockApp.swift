@@ -40,7 +40,8 @@ struct WagLockApp: App {
     // if multi-window is enabled later, the privacy cover and auto-lock must move to the scene level
     @Environment(\.scenePhase) private var scenePhase
     /// Time the app last went to the background (used for auto-lock)
-    @State private var lastBackgroundedAt: Date?
+    /// Monotonic, including sleep: changing the iPhone's clock can't stretch the auto-lock delay.
+    @State private var lastBackgroundedAt: ContinuousClock.Instant?
 
     // MARK: - Scene
 
@@ -135,10 +136,13 @@ struct WagLockApp: App {
                 switch newPhase {
                 case .background:
                     storage.pause()
-                    lastBackgroundedAt = Date()
-                    // Fresh 1.0 libraries always drop their session keys on background.
+                    lastBackgroundedAt = .now
+                    // Encrypted libraries lock on background unless the person chose a delay
+                    // (ADR-032). Album keys, previews and exports always close here; with a
+                    // delay, the library key stays in memory and the delay is checked on return.
                     // New recording is disabled there; preserve the legacy Dev recording policy.
-                    authViewModel.handleBackground(lockImmediately: LibraryStoragePolicy.encryptedMetadata)
+                    authViewModel.handleBackground(lockImmediately: LibraryStoragePolicy.encryptedMetadata
+                        && AppSettings.shared.autoLockTimeout == .immediately)
                 case .active:
                     screenCaptured = UIScreen.main.isCaptured
                     if screenCaptured { revokeCapturedSession() }
@@ -179,7 +183,7 @@ struct WagLockApp: App {
         let timeout = AppSettings.shared.autoLockTimeout
         guard timeout != .never else { return }
 
-        if Date().timeIntervalSince(backgroundedAt) >= Double(timeout.rawValue) {
+        if ContinuousClock.now - backgroundedAt >= .seconds(timeout.rawValue) {
             authViewModel.logout()
         }
     }

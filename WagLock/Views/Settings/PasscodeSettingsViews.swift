@@ -54,6 +54,7 @@ private func isRejection(_ error: Error) -> Bool {
 
 struct SecurityAccessView: View {
     @EnvironmentObject private var auth: AuthenticationViewModel
+    @ObservedObject private var settings = AppSettings.shared
     @State private var confirmLock = false
 
     var body: some View {
@@ -61,7 +62,8 @@ struct SecurityAccessView: View {
             VStack(alignment: .leading, spacing: 16) {
                 WagLockTitle(text: "Security & access")
                 HStack(spacing: 12) {
-                    statCard("timer", "Auto-lock", "Immediately", tint: Graphite.accentText)
+                    statCard("timer", "Auto-lock", settings.autoLockTimeout.optionTitle,
+                             tint: settings.autoLockTimeout == .immediately ? Graphite.accentText : Graphite.warn)
                     statCard("faceid", "Face ID", auth.isBiometricAssignedHere ? "On" : "Off", tint: Color(hex: 0xC9CFDB))
                 }
                 WagLockSectionLabel("Unlocking").padding(.top, 6)
@@ -76,6 +78,16 @@ struct SecurityAccessView: View {
                     NavigationLink { TimeLockView() } label: {
                         WagLockRow(symbol: "hourglass", title: "Time lock", detail: "Off · Keep this library closed for a set time")
                     }.buttonStyle(.plain).accessibilityIdentifier("settings.timeLock")
+                }
+                WagLockSectionLabel("Locking").padding(.top, 6)
+                VStack(spacing: 10) {
+                    NavigationLink { AutoLockSettingsView() } label: {
+                        WagLockRow(symbol: "timer", title: "Auto-lock", detail: settings.autoLockTimeout.optionTitle)
+                    }.buttonStyle(.plain).accessibilityIdentifier("settings.autoLock")
+                    NavigationLink { PasscodeLengthSettingsView() } label: {
+                        WagLockRow(symbol: "textformat.123", title: "Passcode length",
+                                   detail: PasscodePolicy.allowsShortPasscodes ? "Short allowed · \(PasscodePolicy.shortMinimum) or more" : "Standard · \(PasscodePolicy.standardMinimum) or more")
+                    }.buttonStyle(.plain).accessibilityIdentifier("settings.passcodeLength")
                 }
                 (Text("Keep your passcode safe. ").font(.wlMeta.weight(.semibold)).foregroundColor(Color(hex: 0xE3E7EF))
                  + Text("There is no passcode reset. Keep independent originals.").font(.wlMeta).foregroundColor(Graphite.textMuted))
@@ -182,7 +194,7 @@ struct ChangeLibraryPasscodeView: View {
                         .font(WagLockFonts.poppins(13, .regular, relativeTo: .footnote)).foregroundStyle(Graphite.textSecondary)
                     WagLockKeyboardPicker(numberPad: numberPad)
                     WagLockField(symbol: "lock", placeholder: "Current passcode", text: $current, numberPad: numberPad.wrappedValue)
-                    WagLockField(symbol: "key", placeholder: "New passcode (6–128 characters)", text: $new,
+                    WagLockField(symbol: "key", placeholder: "New passcode (\(PasscodePolicy.rangeText) characters)", text: $new,
                                  isError: error != nil, numberPad: numberPad.wrappedValue, contentType: .newPassword)
                     WagLockField(symbol: "checkmark", placeholder: "Confirm passcode", text: $confirm,
                                  numberPad: numberPad.wrappedValue, contentType: .newPassword)
@@ -258,7 +270,7 @@ struct AddPasscodeView: View {
                                     text: "Lock WagLock and enter the new passcode to open it.")
                     } else {
                         WagLockKeyboardPicker(numberPad: numberPad)
-                        WagLockField(symbol: "lock", placeholder: "New passcode (6–128 characters)", text: $passcode,
+                        WagLockField(symbol: "lock", placeholder: "New passcode (\(PasscodePolicy.rangeText) characters)", text: $passcode,
                                      isError: error != nil, numberPad: numberPad.wrappedValue, contentType: .newPassword)
                         WagLockField(symbol: "checkmark", placeholder: "Confirm passcode", text: $confirm,
                                      numberPad: numberPad.wrappedValue, contentType: .newPassword)
