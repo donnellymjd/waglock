@@ -37,7 +37,8 @@ enum LibraryContentRemover {
     }
 
     static func remove(_ library: LibraryReference, namespace: String,
-                       keychain: any VaultResetKeychain = SystemVaultResetKeychain()) {
+                       keychain: (any VaultResetKeychain)? = nil) {
+        let keychain = keychain ?? SystemVaultResetKeychain()
         let fm = FileManager.default
         let documents = fm.urls(for: .documentDirectory, in: .userDomainMask)[0].resolvingSymlinksInPath()
         let support = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].resolvingSymlinksInPath()
