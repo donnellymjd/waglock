@@ -3,6 +3,7 @@ import SwiftUI
 // Multi-library passcode screens. Every screen here renders identically in every
 // library, including an install with a single passcode: none of them reads, counts or
 // names other libraries, and every rejection uses the same text and 30-second wait.
+// A too-short passcode is said plainly: the length rule is public and the same everywhere.
 
 /// Clears entered secrets when the app leaves the foreground or the view disappears.
 private struct ClearsSecretsModifier: ViewModifier {
@@ -62,9 +63,14 @@ struct SecurityAccessView: View {
             VStack(alignment: .leading, spacing: 16) {
                 WagLockTitle(text: "Security & access")
                 HStack(spacing: 12) {
-                    statCard("timer", "Auto-lock", settings.autoLockTimeout.optionTitle,
-                             tint: settings.autoLockTimeout == .immediately ? Graphite.accentText : Graphite.warn)
-                    statCard("faceid", "Face ID", auth.isBiometricAssignedHere ? "On" : "Off", tint: Color(hex: 0xC9CFDB))
+                    // Each status card opens its setting.
+                    NavigationLink { AutoLockSettingsView() } label: {
+                        statCard("timer", "Auto-lock", settings.autoLockTimeout.optionTitle,
+                                 tint: settings.autoLockTimeout == .immediately ? Graphite.accentText : Graphite.warn)
+                    }.buttonStyle(.plain).accessibilityIdentifier("settings.autoLock.card")
+                    NavigationLink { LibraryFaceIDView() } label: {
+                        statCard("faceid", "Face ID", auth.isBiometricAssignedHere ? "On" : "Off", tint: Color(hex: 0xC9CFDB))
+                    }.buttonStyle(.plain).accessibilityIdentifier("settings.faceID.card")
                 }
                 WagLockSectionLabel("Unlocking").padding(.top, 6)
                 VStack(spacing: 10) {
@@ -108,7 +114,12 @@ struct SecurityAccessView: View {
 
     private func statCard(_ symbol: String, _ label: String, _ value: String, tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            Image(systemName: symbol).font(.system(size: 22)).foregroundStyle(tint).accessibilityHidden(true)
+            HStack {
+                Image(systemName: symbol).font(.system(size: 22)).foregroundStyle(tint)
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color(hex: 0x7D8597))
+            }
+            .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 0) {
                 Text(label.uppercased()).font(WagLockFonts.poppins(11, .semibold, relativeTo: .caption))
                     .tracking(1.5).foregroundStyle(Graphite.textMuted)
@@ -117,7 +128,9 @@ struct SecurityAccessView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading).padding(16)
         .background(Graphite.surface1, in: RoundedRectangle(cornerRadius: 16))
+        .contentShape(RoundedRectangle(cornerRadius: 16))
         .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
     }
 }
 
@@ -198,6 +211,9 @@ struct ChangeLibraryPasscodeView: View {
                                  isError: error != nil, numberPad: numberPad.wrappedValue, contentType: .newPassword)
                     WagLockField(symbol: "checkmark", placeholder: "Confirm passcode", text: $confirm,
                                  numberPad: numberPad.wrappedValue, contentType: .newPassword)
+                    if let hint = PasscodePolicy.lengthHint(new, minimum: PasscodePolicy.minimumLength) {
+                        Text(hint).font(.wlMeta).foregroundStyle(Graphite.warn).accessibilityIdentifier("passcodes.change.tooShort")
+                    }
                     PasswordConfirmationButton(password: new, confirmation: $confirm, identifier: "passcodes.change.useEntered")
                     if !confirm.isEmpty && !PasswordText.matches(new, confirm) {
                         Text("The new passcodes don’t match.").font(.wlMeta).foregroundStyle(Graphite.danger)
@@ -206,7 +222,7 @@ struct ChangeLibraryPasscodeView: View {
                 }
             }
             RetryingPrimaryButton(title: "Change passcode", retryAt: retryAt,
-                                  enabled: !current.isEmpty && !new.isEmpty && PasswordText.matches(new, confirm),
+                                  enabled: !current.isEmpty && new.count >= PasscodePolicy.minimumLength && PasswordText.matches(new, confirm),
                                   busy: busy, action: submit)
                 .accessibilityIdentifier("passcodes.change.submit")
         }
@@ -274,6 +290,9 @@ struct AddPasscodeView: View {
                                      isError: error != nil, numberPad: numberPad.wrappedValue, contentType: .newPassword)
                         WagLockField(symbol: "checkmark", placeholder: "Confirm passcode", text: $confirm,
                                      numberPad: numberPad.wrappedValue, contentType: .newPassword)
+                        if let hint = PasscodePolicy.lengthHint(passcode, minimum: PasscodePolicy.minimumLength) {
+                            Text(hint).font(.wlMeta).foregroundStyle(Graphite.warn).accessibilityIdentifier("passcodes.add.tooShort")
+                        }
                         PasswordConfirmationButton(password: passcode, confirmation: $confirm, identifier: "passcodes.add.useEntered")
                         if let error { rejectionNote(error) }
                         else {
@@ -285,7 +304,7 @@ struct AddPasscodeView: View {
             }
             if !created {
                 RetryingPrimaryButton(title: "Create library", retryAt: retryAt,
-                                      enabled: !passcode.isEmpty && PasswordText.matches(passcode, confirm),
+                                      enabled: passcode.count >= PasscodePolicy.minimumLength && PasswordText.matches(passcode, confirm),
                                       busy: busy, action: submit)
                     .accessibilityIdentifier("passcodes.add.submit")
             }

@@ -558,11 +558,14 @@ struct AlbumConfigurationView: View {
                     .accessibilityElement(children: .contain)
                     .accessibilityIdentifier("album.protection")
                     if protection.requiresPassword {
-                        SecureField("New album password (6+ characters)", text: $password)
+                        SecureField("New album password (\(PasscodePolicy.albumPasswordMinimum)+ characters)", text: $password)
                             .accessibilityIdentifier("album.password")
                             .textContentType(.newPassword)
                             .textInputAutocapitalization(.never).autocorrectionDisabled()
                             .modifier(GraphiteFieldChrome())
+                        if let hint = PasscodePolicy.lengthHint(password, minimum: PasscodePolicy.albumPasswordMinimum) {
+                            Text(hint).font(.wlMeta).foregroundStyle(Graphite.warn).accessibilityIdentifier("album.password.tooShort")
+                        }
                         SecureField("Confirm album password", text: $confirmation)
                             .accessibilityIdentifier("album.password.confirm")
                             .textContentType(.newPassword)

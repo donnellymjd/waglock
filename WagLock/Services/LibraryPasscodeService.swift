@@ -20,8 +20,12 @@ final class LibraryPasscodeService {
 
     enum Failure: Error, Equatable {
         case wrongPasscode(failures: Int)
-        /// Collision, weak passcode or no free slot. Always followed by a 30-second wait.
+        /// Collision or no free slot. Always followed by a 30-second wait.
         case rejected
+        /// Outside the public length rule (PasscodePolicy). Checked before anything else, so
+        /// it uses no attempt, has no wait and says nothing about any library.
+        case tooShort(minimum: Int)
+        case tooLong(maximum: Int)
         case blocked(seconds: Int)
         case unavailable
     }
@@ -53,7 +57,7 @@ final class LibraryPasscodeService {
 
     /// First run: creates the table and the first library. Every library made here is independent.
     func createFirstLibrary(passcode: String) async throws -> (LibraryReference, String) {
-        guard PasscodePolicy.validate(passcode, minimum: minimumLength()).isValid else { throw Failure.rejected }
+        try checkLength(passcode)
         guard try !table.exists() else { throw Failure.unavailable }
         let library = LibraryReference.independent(UUID())
         let payload = LibrarySlotPayload(library: library, secret: try makeSecret())
@@ -149,8 +153,17 @@ final class LibraryPasscodeService {
         }
     }
 
+    /// The length rule is the same for every library and shown in the app, so a too-short
+    /// or too-long passcode is reported plainly, before any attempt is used.
+    private func checkLength(_ passcode: String) throws {
+        let minimum = minimumLength()
+        if passcode.count < minimum { throw Failure.tooShort(minimum: minimum) }
+        if passcode.count > PasscodePolicy.maximum { throw Failure.tooLong(maximum: PasscodePolicy.maximum) }
+    }
+
     /// Adds another library. It opens on the next unlock with that passcode.
     func addLibrary(passcode: String) async throws {
+        try checkLength(passcode)
         try await propose(passcode)
         let payload = LibrarySlotPayload(library: .independent(UUID()), secret: try makeSecret())
         do {
@@ -164,6 +177,7 @@ final class LibraryPasscodeService {
     /// Verifies only this library's passcode, runs the same collision check and rewrites
     /// this library's slot in place. Keys and data are unchanged.
     func change(current: String, to new: String, library: LibraryReference) async throws {
+        try checkLength(new)
         let (match, record) = try await verify(current, library: library)
         do { try retireLegacyRecords(for: library) } catch { throw Failure.unavailable }
         try await propose(new)

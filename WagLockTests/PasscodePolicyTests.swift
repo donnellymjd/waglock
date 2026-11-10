@@ -33,6 +33,9 @@ final class PasscodePolicyTests: XCTestCase {
         XCTAssertTrue(PasscodePolicy.validate("1234", minimum: 4).isValid)
         XCTAssertFalse(PasscodePolicy.validate("123", minimum: 4).isValid)
         XCTAssertFalse(PasscodePolicy.validate("", minimum: 4).isValid)
+        XCTAssertEqual(PasscodePolicy.lengthHint("123", minimum: 4), "Too short. Use at least 4 characters.")
+        XCTAssertNil(PasscodePolicy.lengthHint("", minimum: 4), "No hint before typing")
+        XCTAssertNil(PasscodePolicy.lengthHint("1234", minimum: 4))
         XCTAssertFalse(PasscodePolicy.validate(String(repeating: "a", count: 129), minimum: 4).isValid)
         XCTAssertTrue(PasscodePolicy.validate(String(repeating: "a", count: 128), minimum: 4).isValid)
         // Backup passwords: 12+ by default, 4+ only with the Short choice.
@@ -55,13 +58,13 @@ final class PasscodePolicyTests: XCTestCase {
     func testShortPasscodesNeedTheChoiceAndKeepWorkingAfterItIsTurnedOff() async throws {
         let service = makeService()
         do { _ = try await service.createFirstLibrary(passcode: "1234"); XCTFail("short accepted under Standard") }
-        catch { XCTAssertEqual(error as? LibraryPasscodeService.Failure, .rejected) }
+        catch { XCTAssertEqual(error as? LibraryPasscodeService.Failure, .tooShort(minimum: 6)) }
 
         minimum = PasscodePolicy.shortMinimum
         let (first, _) = try await service.createFirstLibrary(passcode: "1234")
         do { try await service.addLibrary(passcode: "123"); XCTFail("3 characters accepted") }
-        catch { XCTAssertEqual(error as? LibraryPasscodeService.Failure, .rejected) }
-        elapsed += 31
+        catch { XCTAssertEqual(error as? LibraryPasscodeService.Failure, .tooShort(minimum: 4)) }
+        // No attempt used and no wait: the next proposal goes straight through.
         try await service.addLibrary(passcode: "9876")
 
         // Back to Standard: existing short passcodes still open their libraries...
@@ -73,6 +76,8 @@ final class PasscodePolicyTests: XCTestCase {
         guard case .opened = second else { return XCTFail("second short passcode stopped working") }
         // ...but new ones must meet the Standard rule again.
         do { try await service.addLibrary(passcode: "5555"); XCTFail("short accepted after switching back") }
-        catch { XCTAssertEqual(error as? LibraryPasscodeService.Failure, .rejected) }
+        catch { XCTAssertEqual(error as? LibraryPasscodeService.Failure, .tooShort(minimum: 6)) }
+        do { try await service.addLibrary(passcode: String(repeating: "x", count: 129)); XCTFail("129 accepted") }
+        catch { XCTAssertEqual(error as? LibraryPasscodeService.Failure, .tooLong(maximum: 128)) }
     }
 }

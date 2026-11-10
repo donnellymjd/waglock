@@ -7,7 +7,7 @@ Both choices apply to the encrypted builds (App Store and WagLock Dev Encrypted)
 ## Where they appear
 
 - **Onboarding:** a new step, "How should WagLock lock?", between Storage and Create passcode. It comes before the passcode so the length rule applies to the first one.
-- **Settings › Security & access › Locking:** Auto-lock and Passcode length rows. The Auto-lock stat card shows the current choice, in amber when it isn't Immediately.
+- **Settings › Security & access › Locking:** Auto-lock and Passcode length rows. The Auto-lock and Face ID status cards at the top open their settings; the Auto-lock card shows the current choice, in amber when it isn't Immediately.
 
 Each option is a card with its risks listed, like the storage modes (`WagLockOptionCard`, `LockingOptionsViews.swift`).
 
@@ -36,7 +36,8 @@ The owner extended the choice to album and backup passwords later the same day (
 | Short | 4–128 | 4–128 | 4+ |
 
 - `PasscodePolicy` holds the rules (`minimumLength`, `albumPasswordMinimum`, `backupPasswordMinimum`).
-  - `LibraryPasscodeService` checks the passcode rule on first setup, add and change. A too-short proposal gets the usual generic rejection and 30-second wait.
+  - `LibraryPasscodeService` checks the passcode rule on first setup, add and change, before anything else. A too-short or too-long passcode is reported plainly ("Too short. Use at least N characters.") with no attempt used and no wait: the rule is public and the same for every library, so this reveals nothing about other libraries. Only collisions and a full table get the generic rejection and 30-second wait.
+  - Every new-passcode and password field shows the same hint while it's too short, and its button stays disabled.
   - `AlbumStore` checks the album rule on create and on a security change.
   - `PortableBackupSession` and `PortableBackupView` check the backup rule.
 - **Unlocking never checks length**, so switching back to Standard never locks anyone out. Existing short passcodes and passwords keep working; new and changed ones must meet Standard again.

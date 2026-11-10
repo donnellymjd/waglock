@@ -618,6 +618,8 @@ final class AuthenticationViewModel: ObservableObject {
         switch error as? LibraryPasscodeService.Failure {
         case .wrongPasscode(let failures): return wrongPasscodeMessage(failures: failures)
         case .rejected: return "That passcode can't be used. Choose a different one and try again in 30 seconds."
+        case .tooShort(let minimum): return PasscodePolicy.tooShortMessage(minimum: minimum)
+        case .tooLong(let maximum): return "Too long. Use \(maximum) characters or fewer."
         case .blocked(let seconds): return waitMessage(seconds: seconds)
         default: return "WagLock couldn't confirm the change. Nothing was reset. Lock and try again."
         }

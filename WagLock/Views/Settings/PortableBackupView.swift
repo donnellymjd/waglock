@@ -62,6 +62,9 @@ private struct ScopedPortableBackupView: View {
                                 .accessibilityIdentifier("backup.reuseConsent")
                         } else {
                             passwordField("New backup password", text: $password, identifier: "backup.password", contentType: .newPassword)
+                            if let hint = PasscodePolicy.lengthHint(password, minimum: PasscodePolicy.backupPasswordMinimum) {
+                                Text(hint).font(.footnote).foregroundStyle(Graphite.warn).accessibilityIdentifier("backup.password.tooShort")
+                            }
                             passwordField("Confirm backup password", text: $confirmation, identifier: "backup.confirm", contentType: .newPassword)
                             PasswordConfirmationButton(password: password, confirmation: $confirmation, identifier: "backup.confirmEntered")
                             PasswordStrengthView(password: password)
@@ -99,6 +102,9 @@ private struct ScopedPortableBackupView: View {
                                     identifier: "backup.album." + album.id.uuidString,
                                     contentType: album.policy == .faceIDOnly ? .newPassword : .password)
                                 if album.policy == .faceIDOnly {
+                                    if let hint = PasscodePolicy.lengthHint(albumPasswords[album.id] ?? "", minimum: PasscodePolicy.backupPasswordMinimum) {
+                                        Text(hint).font(.footnote).foregroundStyle(Graphite.warn)
+                                    }
                                     passwordField("Confirm export password",
                                         text: Binding(get: { albumConfirmations[album.id] ?? "" }, set: { albumConfirmations[album.id] = $0 }),
                                         identifier: "backup.album.confirm." + album.id.uuidString, contentType: .newPassword)

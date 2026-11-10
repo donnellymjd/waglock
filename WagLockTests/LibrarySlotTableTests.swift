@@ -89,9 +89,9 @@ final class LibrarySlotTableTests: XCTestCase {
         do { try await service.addLibrary(passcode: "second-passcode"); XCTFail("wait skipped") }
         catch { XCTAssertEqual(error as? LibraryPasscodeService.Failure, .blocked(seconds: 30)) }
         elapsed += 31
+        // Too short is the public length rule: said plainly, with no attempt used and no wait.
         do { try await service.addLibrary(passcode: "short"); XCTFail("weak accepted") }
-        catch { XCTAssertEqual(error as? LibraryPasscodeService.Failure, .rejected) }
-        elapsed += 31
+        catch { XCTAssertEqual(error as? LibraryPasscodeService.Failure, .tooShort(minimum: 6)) }
         try await service.addLibrary(passcode: "second-passcode")
         let outcome1 = await service.unlock("second-passcode")
         let second = try XCTUnwrap(opened(outcome1))

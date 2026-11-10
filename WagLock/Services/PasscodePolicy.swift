@@ -36,6 +36,18 @@ enum PasscodePolicy {
     /// "6–128" or "4–128", for field placeholders.
     static var rangeText: String { "\(minimumLength)–\(maximum)" }
 
+    /// Plain "too short" wording. Safe to show at any time: the rule is the same for every
+    /// library and depends only on the setting shown in Security & access.
+    static func tooShortMessage(minimum: Int) -> String {
+        "Too short. Use at least \(minimum) characters."
+    }
+
+    /// The hint to show under a new-passcode or password field while it's too short, or nil.
+    static func lengthHint(_ text: String, minimum: Int) -> String? {
+        guard !text.isEmpty, text.count < minimum else { return nil }
+        return tooShortMessage(minimum: minimum)
+    }
+
     static func validate(_ passcode: String) -> (isValid: Bool, message: String?) {
         validate(passcode, minimum: minimumLength)
     }
@@ -43,7 +55,7 @@ enum PasscodePolicy {
     static func validate(_ passcode: String, minimum: Int) -> (isValid: Bool, message: String?) {
         if passcode.isEmpty { return (false, AppConstants.ErrorMessages.passwordEmpty) }
         if passcode.count < minimum {
-            return (false, String(format: String(localized: "error.passwordTooShort"), minimum))
+            return (false, tooShortMessage(minimum: minimum))
         }
         if passcode.count > maximum { return (false, AppConstants.ErrorMessages.passwordTooLong) }
         return (true, nil)

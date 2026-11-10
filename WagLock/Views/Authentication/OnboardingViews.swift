@@ -77,6 +77,9 @@ private struct OnboardingPasscodeView: View {
                     }.padding(.top, 40)
                     PasswordKeyboardPicker(selection: Binding(get: { keyboard }, set: { keyboardRaw = $0.rawValue }))
                     field("Passcode", text: $viewModel.password, id: "setup.password") {}
+                    if let hint = PasscodePolicy.lengthHint(viewModel.password, minimum: PasscodePolicy.minimumLength) {
+                        Text(hint).font(.wlMeta).foregroundStyle(Graphite.warn).accessibilityIdentifier("setup.tooShort")
+                    }
                     PasswordStrengthView(password: viewModel.password)
                     field("Confirm passcode", text: $viewModel.confirmPassword, id: "setup.confirmPassword") {
                         if canContinue { viewModel.setupPassword() }
